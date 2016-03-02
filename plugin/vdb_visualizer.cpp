@@ -2,7 +2,7 @@
 
 #include <lumaNodeId.h>
 
-const MTypeId VDBVisualizerShape::typeId(ID_OPENVDB_VISUALIZER);
+const MTypeId VDBVisualizerShape::typeId(ID_VDB_VISUALIZER);
 const MString VDBVisualizerShape::typeName("vdb_visualizer");
 const MString VDBVisualizerShape::drawDbClassification("drawdb/geometry/fractal/vdb_visualizer");
 
