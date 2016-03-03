@@ -15,6 +15,10 @@ public:
     static const MTypeId typeId;
     static const MString typeName;
     static const MString drawDbClassification;
+
+    static MObject s_vdbPath;
+    static MObject s_displayMode;
+    static MObject s_updateTrigger;
 };
 
 class VDBVisualizerShapeUI : public MPxSurfaceShapeUI {
