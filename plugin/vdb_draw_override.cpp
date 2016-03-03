@@ -1,5 +1,7 @@
 #include "vdb_draw_override.h"
 
+#include <maya/MFnDependencyNode.h>
+
 namespace MHWRender {
 
     namespace{
@@ -23,7 +25,8 @@ namespace MHWRender {
 
     VDBDrawOverride::VDBDrawOverride(const MObject& obj) : MPxDrawOverride(obj, draw_callback)
     {
-
+        MFnDependencyNode dnode(obj);
+        p_vdb_visualizer = dynamic_cast<VDBVisualizerShape*>(dnode.userNode());
     }
 
     VDBDrawOverride::~VDBDrawOverride()

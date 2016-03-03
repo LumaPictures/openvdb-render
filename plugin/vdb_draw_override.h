@@ -2,6 +2,8 @@
 
 #include <maya/MPxDrawOverride.h>
 
+#include "vdb_visualizer.h"
+
 namespace MHWRender {
 
     class VDBDrawOverride : public MPxDrawOverride {
@@ -27,6 +29,9 @@ namespace MHWRender {
                 const MDagPath& cameraPath) const;
 
         static bool init_shaders();
+
+    private:
+        VDBVisualizerShape* p_vdb_visualizer;
     };
 
 }

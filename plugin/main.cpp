@@ -58,6 +58,8 @@ MStatus initializePlugin(MObject obj)
         return status;
     }
 
+    openvdb::initialize();
+
     return status;
 }
 
@@ -85,6 +87,8 @@ MStatus uninitializePlugin(MObject obj)
         status.perror("Error deregistering the VDBVisualizer Draw Override.");
         return status;
     }
+
+    openvdb::uninitialize();
 
     return status;
 }
