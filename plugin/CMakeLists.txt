@@ -1,9 +1,9 @@
 set(PLUGIN_NAME openvdb_render)
 
-add_definitions(-DLINUX -Werror -D_BOOL -DREQUIRE_IOSTREAM -fPIC -pthread)
+add_definitions(-DLINUX -D_BOOL -DREQUIRE_IOSTREAM -pthread)
 
 find_package(Maya)
-find_package(Boost)
+find_package(Boost COMPONENTS regex)
 
 if (NOT ILMBASE_ROOT)
     set(ILMBASE_ROOT $ENV{ILMBASE_ROOT})
@@ -30,7 +30,10 @@ file(GLOB SRC *.cpp)
 
 add_library(${PLUGIN_NAME} SHARED ${SRC})
 set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
-target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${GLEW_STATIC_LIBRARY} GL ${OPENVDB_STATIC_LIBRARY})
+target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${GLEW_STATIC_LIBRARY} GL ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES})
 
 install(TARGETS ${PLUGIN_NAME}
         DESTINATION plug-ins)
+
+install(FILES template/AEvdb_visualizerTemplate.py
+        DESTINATION scripts)

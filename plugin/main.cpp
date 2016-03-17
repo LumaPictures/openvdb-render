@@ -11,9 +11,10 @@
 
 MStatus initializePlugin(MObject obj)
 {
+    const bool is_interactive = MGlobal::mayaState() == MGlobal::kInteractive;
     MStatus status = MS::kFailure;
 
-    if (MGlobal::mayaState() == MGlobal::kInteractive)
+    if (is_interactive)
     {
         if (glewInit() != GLEW_OK)
         {
@@ -32,6 +33,7 @@ MStatus initializePlugin(MObject obj)
             status.perror("Error initializing shaders.");
             return status;
         }
+
     }
 
     MFnPlugin plugin(obj, "Luma Pictures", "0.0.1", "Any");
@@ -59,6 +61,9 @@ MStatus initializePlugin(MObject obj)
     }
 
     openvdb::initialize();
+
+    if (is_interactive)
+        MGlobal::executePythonCommand("import AEvdb_visualizerTemplate.py");
 
     return status;
 }
