@@ -41,31 +41,32 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
             if self.emission_channel_grp != '':
                 pm.attrControlGrp(self.emission_channel_grp, edit=True, enable=True)
 
-    def setup_popup_menu(self, parent_ui, param_name):
+    @staticmethod
+    def setup_popup_menu_elems(parent_ui, param_name):
+        pm.popupMenu(parent_ui, edit=True, deleteAllItems=True)
         grid_names_str = pm.getAttr('%s.gridNames' % param_name.split('.')[0])
         if grid_names_str is not None and len(grid_names_str) > 0:
-            ret = pm.popupMenu(parent=parent_ui)
             for each in grid_names_str.split(' '):
-                pm.menuItem(label=each, command='pm.setAttr("%s", "%s", type="string")' % (param_name, each))
-            return ret
-        else:
-            return ''
+                pm.menuItem(label=each, parent=parent_ui, command='pm.setAttr("%s", "%s", type="string")' % (param_name, each))
+
+    def setup_popup_menu(self, parent_ui, param_name, pup):
+        if pup == '':
+            pup = pm.popupMenu(parent=parent_ui)
+        pm.popupMenu(pup, edit=True, postMenuCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.setup_popup_menu_elems("%s", "%s")' % (pup, param_name))
+        return pup
 
     def create_channel(self, annotation, channel_name, param_name):
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
         grp = pm.attrControlGrp(annotation=annotation, attribute=param_name)
         setattr(self, '%s_channel_grp' % channel_name, grp)
-        setattr(self, '%s_channel_popup' % channel_name, self.setup_popup_menu(grp, param_name))
+        self.update_channel(channel_name, param_name)
         pm.setUITemplate(popTemplate=True)
 
     def update_channel(self, channel_name, param_name):
         grp = getattr(self, '%s_channel_grp' % channel_name)
         pm.attrControlGrp(grp, edit=True, attribute=param_name)
-        pup_name = '%s_channel_popup'
-        pup = getattr(self, pup_name)
-        if pup != '':
-            pm.deleteUI(pup)
-        setattr(self, pup_name, self.setup_popup_menu(grp, param_name))
+        pup_name = '%s_channel_popup' % channel_name
+        setattr(self, pup_name, self.setup_popup_menu(grp, param_name, getattr(self, pup_name)))
 
     # TODO : maybe use something like templates in c++?
     def create_scattering_channel(self, param_name):
@@ -176,8 +177,8 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
 
     def __init__(self, node_name):
         for each in ['scattering', 'attenuation', 'emission']:
-            setattr(self, '%s_channel_grp', '')
-            setattr(self, '%s_channel_popup', '')
+            setattr(self, '%s_channel_grp' % each, '')
+            setattr(self, '%s_channel_popup' % each, '')
 
         self.vdb_path_grp = ''
         self.channel_stats = ''
