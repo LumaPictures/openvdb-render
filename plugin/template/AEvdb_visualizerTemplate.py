@@ -156,20 +156,22 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
         else:
             pm.setAttr(param_name, grid_name)
 
-    # TODO: use postMenuCommand to setup the menuItems dynamically, do the same for the channels
-    def setup_additional_channel_popup(self, param_name):
-        if self.additional_channel_export_popup != '':
-            pm.deleteUI(self.additional_channel_export_popup)
-            self.additional_channel_export_popup = ''
+    @staticmethod
+    def setup_additional_channel_menus(param_name, pup):
+        pm.popupMenu(pup, edit=True, deleteAllItems=True)
         grids = pm.getAttr('%s.gridNames' % param_name.split('.')[0]).split(' ')
         if grids is not None and len(grids) > 0:
-            self.additional_channel_export_popup = pm.popupMenu(parent=self.additional_channel_export)
             for grid in grids:
-                pm.menuItem(label=grid, command='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.add_additional_channel("%s", "%s")' % (param_name, grid))
+                pm.menuItem(label=grid, parent=pup, command='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.add_additional_channel("%s", "%s")' % (param_name, grid))
+
+    def setup_additional_channel_popup(self, param_name):
+        if self.additional_channel_export_popup == '':
+            self.additional_channel_export_popup = pm.popupMenu(parent=self.additional_channel_export)
+        pm.popupMenu(self.additional_channel_export_popup, edit=True, postMenuCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.setup_additional_channel_menus("%s", "%s")' % (param_name, self.additional_channel_export_popup))
 
     def create_additional_channel_export(self, param_name):
         self.additional_channel_export = pm.attrControlGrp(annotation='Channel Export', attribute=param_name)
-        self.setup_additional_channel_popup(param_name)
+        self.update_additional_channel_export(param_name)
 
     def update_additional_channel_export(self, param_name):
         pm.attrControlGrp(self.additional_channel_export, edit=True, attribute=param_name)
