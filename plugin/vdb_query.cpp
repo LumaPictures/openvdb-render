@@ -24,6 +24,9 @@ namespace {
     const char* grid_short_flag = "g";
     const char* grid_long_flag = "grid";
 
+    const char* grid_type_short_flag = "gt";
+    const char* grid_type_long_flag = "grid_type";
+
     const char* query_short_flag = "q";
     const char* query_long_flag = "query";
 
@@ -87,6 +90,7 @@ MSyntax VDBQueryCmd::create_syntax()
     syntax.addFlag(file_short_flag, file_long_flag, MSyntax::kString);
     syntax.addFlag(node_short_flag, node_long_flag, MSyntax::kSelectionItem);
     syntax.addFlag(grid_short_flag, grid_long_flag, MSyntax::kString);
+    syntax.addFlag(grid_type_short_flag, grid_type_long_flag, MSyntax::kString);
     syntax.addFlag(query_short_flag, query_long_flag, MSyntax::kString);
     syntax.addFlag(current_frame_short_flag, current_frame_long_flag);
     syntax.addFlag(start_frame_short_flag, start_frame_long_flag, MSyntax::kLong);
@@ -233,14 +237,18 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
     std::vector<std::string> grid_names;
     get_array_from_flag(grid_short_flag, grid_names);
 
-    const bool all_grids = grid_names.size() == 0 ? true : false;
+    std::vector<std::string> grid_types;
+    get_array_from_flag(grid_type_short_flag, grid_types);
+
+    const bool all_grids = grid_names.size() == 0 && grid_types.size() == 0;
 
     auto grid_required = [&](openvdb::GridBase::ConstPtr grid) -> bool {
         if (all_grids)
             return true;
         else
         {
-            return std::find(grid_names.begin(), grid_names.end(), grid->getName()) != grid_names.end();
+            return std::find(grid_names.begin(), grid_names.end(), grid->getName()) != grid_names.end() ||
+                   std::find(grid_types.begin(), grid_types.end(), grid->valueType()) != grid_types.end();
         }
     };
 
