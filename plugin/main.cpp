@@ -4,10 +4,9 @@
 #include <maya/MGlobal.h>
 #include <maya/MDrawRegistry.h>
 
-#include <iostream>
-
 #include "vdb_draw_override.h"
 #include "vdb_visualizer.h"
+#include "vdb_query.h"
 
 MStatus initializePlugin(MObject obj)
 {
@@ -18,19 +17,19 @@ MStatus initializePlugin(MObject obj)
     {
         if (glewInit() != GLEW_OK)
         {
-            status.perror("Error initializing glew.");
+            status.perror("[openvdb] Error initializing glew.");
             return status;
         }
 
         if (!glewIsSupported("GL_EXT_direct_state_access"))
         {
-            status.perror("Direct State Access is not available, update your drivers or use NVidia cards!");
+            status.perror("[openvdb] Direct State Access is not available, update your drivers or use a newer GPU!");
             return status;
         }
 
         if (!MHWRender::VDBDrawOverride::init_shaders())
         {
-            status.perror("Error initializing shaders.");
+            status.perror("[openvdb] Error initializing shaders.");
             return status;
         }
 
@@ -44,7 +43,7 @@ MStatus initializePlugin(MObject obj)
 
     if (!status)
     {
-        status.perror("Error registering the VDBVisualizer Node.");
+        status.perror("[openvdb] Error registering the VDBVisualizer Node.");
         return status;
     }
 
@@ -56,11 +55,19 @@ MStatus initializePlugin(MObject obj)
 
     if (!status)
     {
-        status.perror("Error registering the VDBVisualizer Draw Override.");
+        status.perror("[openvdb] Error registering the VDBVisualizer Draw Override.");
         return status;
     }
 
     openvdb::initialize();
+
+    status = plugin.registerCommand("vdb_query", VDBQueryCmd::creator, VDBQueryCmd::create_syntax);
+
+    if (!status)
+    {
+        status.perror("[openvdb] Error registering the VDBQuery Command.");
+        return status;
+    }
 
     if (is_interactive)
         MGlobal::executePythonCommand("import AEvdb_visualizerTemplate.py");
@@ -78,7 +85,7 @@ MStatus uninitializePlugin(MObject obj)
 
     if (!status)
     {
-        status.perror("Error deregistering the VDBVisualizer Node.");
+        status.perror("[openvdb] Error deregistering the VDBVisualizer Node.");
         return status;
     }
 
@@ -89,7 +96,15 @@ MStatus uninitializePlugin(MObject obj)
 
     if (!status)
     {
-        status.perror("Error deregistering the VDBVisualizer Draw Override.");
+        status.perror("[openvdb] Error deregistering the VDBVisualizer Draw Override.");
+        return status;
+    }
+
+    status = plugin.deregisterCommand("vdb_query");
+
+    if (!status)
+    {
+        status.perror("[openvdb] Error deregistering the VDBQuery Command.");
         return status;
     }
 

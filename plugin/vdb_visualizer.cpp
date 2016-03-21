@@ -22,6 +22,8 @@
 
 #include <sstream>
 
+#include "../util/maya_utils.hpp"
+
 const MTypeId VDBVisualizerShape::typeId(ID_VDB_VISUALIZER);
 const MString VDBVisualizerShape::typeName("vdb_visualizer");
 const MString VDBVisualizerShape::drawDbClassification("drawdb/geometry/fractal/vdb_visualizer");
@@ -39,6 +41,7 @@ MObject VDBVisualizerShape::s_out_vdb_path;
 MObject VDBVisualizerShape::s_grid_names;
 MObject VDBVisualizerShape::s_bbox_min;
 MObject VDBVisualizerShape::s_bbox_max;
+MObject VDBVisualizerShape::s_channel_stats;
 
 MObject VDBVisualizerShape::s_scattering_source;
 MObject VDBVisualizerShape::s_scattering;
@@ -60,11 +63,15 @@ MObject VDBVisualizerShape::s_emission_intensity;
 MObject VDBVisualizerShape::s_position_offset;
 MObject VDBVisualizerShape::s_interpolation;
 MObject VDBVisualizerShape::s_compensate_scaling;
+MObject VDBVisualizerShape::s_additional_channel_export;
+
+const boost::regex VDBVisualizerShape::s_frame_expr("[^#]*\\/[^/]+[\\._]#+[\\._][^/]*vdb");
+const boost::regex VDBVisualizerShape::s_hash_expr("#+");
 
 namespace {
     enum {
         CACHE_OUT_OF_RANGE_MODE_NONE = 0,
-        CACHE_OUT_OF_RANGE_MODE_RETAIN,
+        CACHE_OUT_OF_RANGE_MODE_HOLD,
         CACHE_OUT_OF_RANGE_MODE_REPEAT
     };
 }
@@ -113,11 +120,8 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
     {
         std::string vdb_path = dataBlock.inputValue(s_vdb_path).asString().asChar();
 
-        // std regex in gcc 4.8.3 is broken
-        static const boost::regex frame_expr("[^#]*\\/[^/]+[\\._]#+[\\._][^/]*vdb");
-        static const boost::regex hash_expr("#+");
 
-        if (boost::regex_match(vdb_path.c_str(), frame_expr))
+        if (boost::regex_match(vdb_path, s_frame_expr))
         {
             const double cache_time = dataBlock.inputValue(s_cache_time).asTime().as(MTime::uiUnit());
             const double cache_playback_offset = dataBlock.inputValue(s_cache_playback_offset).asTime().as(MTime::uiUnit());
@@ -130,7 +134,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 const short cache_before_mode = dataBlock.inputValue(s_cache_before_mode).asShort();
                 if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_NONE)
                     frame_in_range = false;
-                else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_RETAIN)
+                else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_HOLD)
                     cache_frame = cache_playback_start;
                 else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT)
                 {
@@ -143,7 +147,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 const short cache_after_mode = dataBlock.inputValue(s_cache_after_mode).asShort();
                 if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_NONE)
                     frame_in_range = false;
-                else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_RETAIN)
+                else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_HOLD)
                     cache_frame = cache_playback_end;
                 else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT)
                 {
@@ -165,7 +169,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 ss.fill('0');
                 ss.width(hash_count);
                 ss << cache_frame;
-                vdb_path = boost::regex_replace(vdb_path, hash_expr, ss.str());
+                vdb_path = boost::regex_replace(vdb_path, s_hash_expr, ss.str());
             }
             else
                 vdb_path = "";
@@ -183,12 +187,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
                 {
                     if (openvdb::GridBase::ConstPtr grid = *it)
-                    {
-                        openvdb::Vec3d point_in_bbox = grid->metaValue<openvdb::Vec3i>("file_bbox_min") * grid->voxelSize();
-                        m_vdb_data.bbox.expand(MPoint(point_in_bbox.x(), point_in_bbox.y(), point_in_bbox.z(), 1.0));
-                        point_in_bbox = grid->metaValue<openvdb::Vec3i>("file_bbox_max") * grid->voxelSize();
-                        m_vdb_data.bbox.expand(MPoint(point_in_bbox.x(), point_in_bbox.y(), point_in_bbox.z(), 1.0));
-                    }
+                        read_bounding_box(grid, m_vdb_data.bbox);
                 }
             }
             else
@@ -245,6 +244,27 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
             plug.child(1).setDouble(mx.y);
             plug.child(2).setDouble(mx.z);
         }
+        else if (plug == s_channel_stats)
+        {
+            std::stringstream ss;
+            if (m_vdb_data.vdb_file->isOpen())
+            {
+                ss << "Bounding box : " << "[ [";
+                ss << m_vdb_data.bbox.min().x << ", " << m_vdb_data.bbox.min().y << ", " << m_vdb_data.bbox.min().z;
+                ss << " ] [ ";
+                ss << m_vdb_data.bbox.max().x << ", " << m_vdb_data.bbox.max().y << ", " << m_vdb_data.bbox.max().z;
+                ss << " ] ]" << std::endl;
+                ss << "Channels : " << std::endl;
+                openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
+                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
+                {
+                    if (openvdb::GridBase::ConstPtr grid = *it)
+                        ss << " - " << grid->getName() << " (" << grid->valueType() << ")" << std::endl;
+                }
+            }
+
+            dataBlock.outputValue(s_channel_stats).setString(ss.str().c_str());
+        }
         else
             return MStatus::kUnknownParameter;
     }
@@ -272,26 +292,24 @@ MStatus VDBVisualizerShape::initialize()
     s_cache_playback_start = nAttr.create("cachePlaybackStart", "cache_playback_start", MFnNumericData::kInt);
     nAttr.setDefault(1);
     nAttr.setMin(0);
-    nAttr.setSoftMax(50);
 
     s_cache_playback_end = nAttr.create("cachePlaybackEnd", "cache_playback_end", MFnNumericData::kInt);
     nAttr.setDefault(100);
     nAttr.setMin(0);
-    nAttr.setSoftMax(200);
 
     s_cache_playback_offset = uAttr.create("cachePlaybackOffset", "cache_playback_offset", MFnUnitAttribute::kTime, 0.0);
 
     s_cache_before_mode = eAttr.create("cacheBeforeMode", "cache_before_mode");
     eAttr.addField("None", CACHE_OUT_OF_RANGE_MODE_NONE);
-    eAttr.addField("Retain", CACHE_OUT_OF_RANGE_MODE_RETAIN);
+    eAttr.addField("Hold", CACHE_OUT_OF_RANGE_MODE_HOLD);
     eAttr.addField("Repeat", CACHE_OUT_OF_RANGE_MODE_REPEAT);
-    eAttr.setDefault(0);
+    eAttr.setDefault(1);
 
     s_cache_after_mode = eAttr.create("cacheAfterMode", "cache_after_mode");
     eAttr.addField("None", CACHE_OUT_OF_RANGE_MODE_NONE);
-    eAttr.addField("Retain", CACHE_OUT_OF_RANGE_MODE_RETAIN);
+    eAttr.addField("Hold", CACHE_OUT_OF_RANGE_MODE_HOLD);
     eAttr.addField("Repeat", CACHE_OUT_OF_RANGE_MODE_REPEAT);
-    eAttr.setDefault(0);
+    eAttr.setDefault(1);
 
     s_display_mode = eAttr.create("displayMode", "display_mode");
     eAttr.addField("boundingBox", 0);
@@ -332,13 +350,18 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setWritable(false);
     nAttr.setReadable(true);
 
+    s_channel_stats = tAttr.create("channelStats", "channel_stats", MFnData::kString);
+    tAttr.setStorable(false);
+    tAttr.setWritable(false);
+    tAttr.setReadable(true);
+
     MObject input_params[] = {
         s_vdb_path, s_cache_time, s_cache_playback_start, s_cache_playback_end,
         s_cache_playback_offset, s_cache_before_mode, s_cache_after_mode
     };
 
     MObject output_params[] = {
-        s_update_trigger, s_grid_names, s_out_vdb_path, s_bbox_min, s_bbox_max
+        s_update_trigger, s_grid_names, s_out_vdb_path, s_bbox_min, s_bbox_max, s_channel_stats
     };
 
     for (auto output_param : output_params)
@@ -417,6 +440,9 @@ MStatus VDBVisualizerShape::initialize()
 
     s_compensate_scaling = nAttr.create("compensateScaling", "compensate_scaling", MFnNumericData::kBoolean);
     nAttr.setDefault(true);
+
+    s_additional_channel_export = tAttr.create("additionalChannelExport", "additional_channel_export", MFnData::kString);
+    addAttribute(s_additional_channel_export);
 
     MObject shader_params[] = {
             s_scattering_source, s_scattering, s_scattering_channel, s_scattering_color,

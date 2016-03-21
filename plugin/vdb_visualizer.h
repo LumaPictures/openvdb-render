@@ -5,6 +5,8 @@
 #include <maya/MBoundingBox.h>
 
 #include <openvdb/openvdb.h>
+// std regex in gcc 4.8.3 is broken
+#include <boost/regex.hpp>
 
 struct VDBVisualizerData{
     MBoundingBox bbox;
@@ -17,6 +19,7 @@ struct VDBVisualizerData{
 
     void clear();
 };
+
 
 class VDBVisualizerShape : public MPxSurfaceShape {
 public:
@@ -46,6 +49,7 @@ public:
     static MObject s_grid_names;
     static MObject s_bbox_min;
     static MObject s_bbox_max;
+    static MObject s_channel_stats;
 
     // shader parameters
     static MObject s_scattering_source;
@@ -68,6 +72,11 @@ public:
     static MObject s_position_offset;
     static MObject s_interpolation;
     static MObject s_compensate_scaling;
+
+    static MObject s_additional_channel_export;
+
+    static const boost::regex s_frame_expr;
+    static const boost::regex s_hash_expr;
 
     VDBVisualizerData* get_update();
 private:
