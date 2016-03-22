@@ -16,6 +16,7 @@
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnEnumAttribute.h>
 #include <maya/MFnUnitAttribute.h>
+#include <maya/MRampAttribute.h>
 #include <maya/MTime.h>
 
 #include <boost/regex.hpp>
@@ -64,6 +65,10 @@ MObject VDBVisualizerShape::s_position_offset;
 MObject VDBVisualizerShape::s_interpolation;
 MObject VDBVisualizerShape::s_compensate_scaling;
 MObject VDBVisualizerShape::s_additional_channel_export;
+
+VDBVisualizerShape::GradientParams VDBVisualizerShape::s_scattering_gradient("scattering");
+VDBVisualizerShape::GradientParams VDBVisualizerShape::s_attenuation_gradient("attenuation");
+VDBVisualizerShape::GradientParams VDBVisualizerShape::s_emission_gradient("emission");
 
 const boost::regex VDBVisualizerShape::s_frame_expr("[^#]*\\/[^/]+[\\._]#+[\\._][^/]*vdb");
 const boost::regex VDBVisualizerShape::s_hash_expr("#+");
@@ -444,6 +449,10 @@ MStatus VDBVisualizerShape::initialize()
     s_additional_channel_export = tAttr.create("additionalChannelExport", "additional_channel_export", MFnData::kString);
     addAttribute(s_additional_channel_export);
 
+    s_scattering_gradient.create_params();
+    s_scattering_gradient.create_params();
+    s_scattering_gradient.create_params();
+
     MObject shader_params[] = {
             s_scattering_source, s_scattering, s_scattering_channel, s_scattering_color,
             s_scattering_intensity, s_anisotropy, s_attenuation_source, s_attenuation,
@@ -458,7 +467,139 @@ MStatus VDBVisualizerShape::initialize()
         attributeAffects(shader_param, s_update_trigger);
     }
 
+    s_scattering_gradient.create_params();
+    s_attenuation_gradient.create_params();
+    s_emission_gradient.create_params();
+
+    s_scattering_gradient.affect_output(s_update_trigger);
+    s_attenuation_gradient.affect_output(s_update_trigger);
+    s_emission_gradient.affect_output(s_update_trigger);
+
     return status;
+}
+
+VDBVisualizerShape::GradientParams::GradientParams(const char* _gradient_name) : gradient_name(_gradient_name)
+{ }
+
+void VDBVisualizerShape::GradientParams::create_params()
+{
+    MFnEnumAttribute eAttr;
+    MFnNumericAttribute nAttr;
+    MRampAttribute rAttr;
+
+    type = eAttr.create(gradient_name + "GradientType", gradient_name + "_gradient_type");
+    eAttr.addField("None", 0);
+    eAttr.addField("Float", 1);
+    eAttr.addField("RGB", 2);
+    eAttr.setDefault(0);
+    MPxNode::addAttribute(type);
+
+    contrast = nAttr.create(gradient_name + "Contrast", gradient_name + "_contrast", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    MPxNode::addAttribute(contrast);
+
+    contrast_pivot = nAttr.create(gradient_name + "ContrastPivot", gradient_name + "_contrast_pivot", MFnNumericData::kFloat);
+    nAttr.setDefault(0.5f);
+    MPxNode::addAttribute(contrast_pivot);
+
+    input_min = nAttr.create(gradient_name + "InputMin", gradient_name + "_input_min", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    MPxNode::addAttribute(input_min);
+
+    input_max = nAttr.create(gradient_name + "InputMax", gradient_name + "_input_max", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    MPxNode::addAttribute(input_max);
+
+    bias = nAttr.create(gradient_name + "Bias", gradient_name + "_bias", MFnNumericData::kFloat);
+    nAttr.setDefault(0.5f);
+    MPxNode::addAttribute(bias);
+
+    gain = nAttr.create(gradient_name + "Gain", gradient_name + "_gain", MFnNumericData::kFloat);
+    nAttr.setDefault(0.5f);
+    MPxNode::addAttribute(gain);
+
+    output_min = nAttr.create(gradient_name + "OutputMin", gradient_name + "_output_min", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    MPxNode::addAttribute(output_min);
+
+    output_max = nAttr.create(gradient_name + "OutputMax", gradient_name + "_output_max", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    MPxNode::addAttribute(output_max);
+
+    clamp_min = nAttr.create(gradient_name + "ClampMin", gradient_name + "_clamp_min", MFnNumericData::kBoolean);
+    nAttr.setDefault(false);
+    MPxNode::addAttribute(clamp_min);
+
+    clamp_max = nAttr.create(gradient_name + "ClampMax", gradient_name + "_clamp_max", MFnNumericData::kBoolean);
+    nAttr.setDefault(false);
+    MPxNode::addAttribute(clamp_max);
+
+    gamma = nAttr.create(gradient_name + "Gamma", gradient_name + "_gamma", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(5.0f);
+    MPxNode::addAttribute(gamma);
+
+    hue_shift = nAttr.create(gradient_name + "HueShift", gradient_name + "_hue_shift", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    MPxNode::addAttribute(hue_shift);
+
+    saturation = nAttr.create(gradient_name + "Saturation", gradient_name + "_saturation", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setMax(1.0f);
+    MPxNode::addAttribute(saturation);
+
+    exposure = nAttr.create(gradient_name + "Exposure", gradient_name + "_exposure", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    nAttr.setSoftMin(-5.0f);
+    nAttr.setSoftMax(5.0f);
+    MPxNode::addAttribute(exposure);
+
+    multiply = nAttr.create(gradient_name + "Multiply", gradient_name + "_multiply", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(10.f);
+    MPxNode::addAttribute(multiply);
+
+    add = nAttr.create(gradient_name + "Add", gradient_name + "_add", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(10.f);
+    MPxNode::addAttribute(add);
+
+    float_ramp = rAttr.createCurveRamp(gradient_name + "FloatRamp", gradient_name + "_float_ramp");
+    addAttribute(float_ramp);
+
+    rgb_ramp = rAttr.createCurveRamp(gradient_name + "RgbRamp", gradient_name + "_rgb_ramp");
+    addAttribute(rgb_ramp);
+}
+
+void VDBVisualizerShape::GradientParams::affect_output(MObject& output_object)
+{
+    MPxNode::attributeAffects(type, output_object);
+
+    MPxNode::attributeAffects(contrast, output_object);
+    MPxNode::attributeAffects(contrast_pivot, output_object);
+
+    MPxNode::attributeAffects(input_min, output_object);
+    MPxNode::attributeAffects(input_max, output_object);
+    MPxNode::attributeAffects(bias, output_object);
+    MPxNode::attributeAffects(gain, output_object);
+    MPxNode::attributeAffects(output_min, output_object);
+    MPxNode::attributeAffects(output_max, output_object);
+    MPxNode::attributeAffects(clamp_min, output_object);
+    MPxNode::attributeAffects(clamp_max, output_object);
+
+    MPxNode::attributeAffects(gamma, output_object);
+    MPxNode::attributeAffects(hue_shift, output_object);
+    MPxNode::attributeAffects(saturation, output_object);
+    MPxNode::attributeAffects(exposure, output_object);
+    MPxNode::attributeAffects(multiply, output_object);
+    MPxNode::attributeAffects(add, output_object);
+
+    MPxNode::attributeAffects(float_ramp, output_object);
+    MPxNode::attributeAffects(rgb_ramp, output_object);
 }
 
 VDBVisualizerData* VDBVisualizerShape::get_update()
