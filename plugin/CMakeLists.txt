@@ -35,5 +35,7 @@ target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${GLEW_STATIC_LIBRARY} GL ${OP
 install(TARGETS ${PLUGIN_NAME}
         DESTINATION plug-ins)
 
-install(FILES template/AEvdb_visualizerTemplate.py
+file(GLOB TEMPLATES template/*.py)
+
+install(FILES ${TEMPLATES}
         DESTINATION scripts)

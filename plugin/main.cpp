@@ -7,6 +7,7 @@
 #include "vdb_draw_override.h"
 #include "vdb_visualizer.h"
 #include "vdb_query.h"
+#include "vdb_sampler.h"
 
 MStatus initializePlugin(MObject obj)
 {
@@ -47,6 +48,15 @@ MStatus initializePlugin(MObject obj)
         return status;
     }
 
+    status = plugin.registerNode(VDBSamplerNode::s_type_name, VDBSamplerNode::s_type_id,
+                                 VDBSamplerNode::creator, VDBSamplerNode::initialize, MPxNode::kDependNode, &VDBSamplerNode::s_classification);
+
+    if (!status)
+    {
+        status.perror("[openvdb] Error registering the VDBSampler Node.");
+        return status;
+    }
+
     status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
             VDBVisualizerShape::drawDbClassification,
             MHWRender::VDBDrawOverride::registrantId,
@@ -70,7 +80,7 @@ MStatus initializePlugin(MObject obj)
     }
 
     if (is_interactive)
-        MGlobal::executePythonCommand("import AEvdb_visualizerTemplate.py");
+        MGlobal::executePythonCommandOnIdle("import AEvdb_visualizerTemplate; import AEvdb_samplerTemplate");
 
     return status;
 }
@@ -86,6 +96,14 @@ MStatus uninitializePlugin(MObject obj)
     if (!status)
     {
         status.perror("[openvdb] Error deregistering the VDBVisualizer Node.");
+        return status;
+    }
+
+    status = plugin.deregisterNode(VDBSamplerNode::s_type_id);
+
+    if (!status)
+    {
+        status.perror("[openvdb] Error deregistering the VDBSampler Node.");
         return status;
     }
 

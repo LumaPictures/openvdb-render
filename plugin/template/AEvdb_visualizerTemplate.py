@@ -1,13 +1,9 @@
 import pymel.core as pm
 import re, os
 
-def node_attr(node_name, attr_name):
-    return '%s.%s' % (node_name, attr_name)
-
 class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
-
     def scattering_source(self, node_name):
-        if pm.getAttr(node_attr(node_name, 'scattering_source')) == 0:
+        if pm.getAttr('%s.scattering_source' % node_name) == 0:
             pm.editorTemplate(dimControl=(node_name, 'scattering', False))
             if self.scattering_channel_grp != '':
                 pm.attrControlGrp(self.scattering_channel_grp, edit=True, enable=False)
@@ -17,7 +13,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
                 pm.attrControlGrp(self.scattering_channel_grp, edit=True, enable=True)
 
     def attenuation_source(self, node_name):
-        source_val = pm.getAttr(node_attr(node_name, 'attenuation_source'))
+        source_val = pm.getAttr('%s.attenuation_source' % node_name)
         if source_val == 0:
             pm.editorTemplate(dimControl=(node_name, 'attenuation', False))
             if self.attenuation_channel_grp != '':
@@ -32,7 +28,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
                 pm.attrControlGrp(self.attenuation_channel_grp, edit=True, enable=False)
 
     def emission_source(self, node_name):
-        if pm.getAttr(node_attr(node_name, 'emission_source')) == 0:
+        if pm.getAttr('%s.emission_source' % node_name) == 0:
             pm.editorTemplate(dimControl=(node_name, 'emission', False))
             if self.emission_channel_grp != '':
                 pm.attrControlGrp(self.emission_channel_grp, edit=True, enable=False)

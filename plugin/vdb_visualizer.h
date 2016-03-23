@@ -8,6 +8,8 @@
 // std regex in gcc 4.8.3 is broken
 #include <boost/regex.hpp>
 
+#include "vdb_sampler.h"
+
 struct VDBVisualizerData{
     MBoundingBox bbox;
     std::string vdb_path;
@@ -73,41 +75,9 @@ public:
     static MObject s_interpolation;
     static MObject s_compensate_scaling;
 
-    struct GradientParams{
-        MString gradient_name;
-        MObject type;
-
-        MObject contrast;
-        MObject contrast_pivot;
-
-        MObject input_min;
-        MObject input_max;
-        MObject bias;
-        MObject gain;
-        MObject output_min;
-        MObject output_max;
-        MObject clamp_min;
-        MObject clamp_max;
-
-        MObject gamma;
-        MObject hue_shift;
-        MObject saturation;
-        MObject exposure;
-        MObject multiply;
-        MObject add;
-
-        MObject float_ramp;
-        MObject rgb_ramp;
-
-        GradientParams(const char* _gradient_name);
-
-        void create_params();
-        void affect_output(MObject& out_object);
-    };
-
-    static GradientParams s_scattering_gradient;
-    static GradientParams s_attenuation_gradient;
-    static GradientParams s_emission_gradient;
+    static VDBGradientParams s_scattering_gradient;
+    static VDBGradientParams s_attenuation_gradient;
+    static VDBGradientParams s_emission_gradient;
 
     static MObject s_additional_channel_export;
 

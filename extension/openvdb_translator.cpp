@@ -38,7 +38,7 @@ void check_maya_node(MObject node, std::set<void*>& checked_maya_nodes, std::set
     checked_maya_nodes.insert(dnode.userNode());
     // check if the MFnDependencyNode is something we want
     MString type_name = dnode.typeName();
-    if (type_name == "aiVolumeSampleFloat" || type_name == "aiVolumeSampleRgb")
+    if (type_name == "aiVolumeSampleFloat" || type_name == "aiVolumeSampleRgb" || type_name == "vdb_sampler")
     {
         MString channel = dnode.findPlug("channel").asString();
         if (channel.length())
@@ -98,7 +98,7 @@ void OpenvdbTranslator::Export(AtNode* volume)
 
     AtArray* grid_names = AiArrayAllocate(out_grids.size(), 1, AI_TYPE_STRING);
 
-    int id = 0;
+    unsigned int id = 0;
     for (auto out_grid : out_grids)
     {
         AiArraySetStr(grid_names, id, out_grid.c_str());
