@@ -109,8 +109,8 @@ namespace MHWRender {
                     {
                         if (openvdb::GridBase::ConstPtr grid = *it)
                         {
-                            read_grid_transformed_bbox_vertices(grid, mn, mx);
-                            add_wire_bounding_box(mn, mx);
+                            if (read_grid_transformed_bbox_vertices(grid, mn, mx))
+                                add_wire_bounding_box(mn, mx);
                         }
                     }
                 }

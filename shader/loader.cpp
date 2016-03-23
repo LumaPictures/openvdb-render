@@ -2,11 +2,13 @@
 #include <cstring>
 
 extern AtNodeMethods* openvdbShaderMethods;
+extern AtNodeMethods* openvdbSamplerMethods;
 
 namespace {
     enum
     {
-        SHADER_OPENVDB
+        SHADER_OPENVDB,
+        SHADER_SAMPLER
     };
 }
 
@@ -20,6 +22,12 @@ node_loader
             node->methods     = openvdbShaderMethods;
             node->output_type = AI_TYPE_RGB;
             node->name        = "openvdb_shader";
+            node->node_type   = AI_NODE_SHADER;
+            break;
+        case SHADER_SAMPLER:
+            node->methods     = openvdbSamplerMethods;
+            node->output_type = AI_TYPE_RGB;
+            node->name        = "openvdb_sampler";
             node->node_type   = AI_NODE_SHADER;
             break;
         default:
