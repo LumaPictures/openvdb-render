@@ -3,8 +3,9 @@
 #include <openvdb/openvdb.h>
 
 #include <maya/MBoundingBox.h>
+#include <maya/MMatrix.h>
 
-inline void read_bounding_box(openvdb::GridBase::ConstPtr grid, MBoundingBox& bbox)
+inline void read_grid_transformed_bbox_vertices(openvdb::GridBase::ConstPtr grid, MFloatVector& bbox_min, MFloatVector& bbox_max)
 {
     const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
     if (file_bbox_min.x() == std::numeric_limits<int>::max() ||
@@ -16,9 +17,45 @@ inline void read_bounding_box(openvdb::GridBase::ConstPtr grid, MBoundingBox& bb
         file_bbox_max.y() == std::numeric_limits<int>::min() ||
         file_bbox_max.z() == std::numeric_limits<int>::min())
         return;
-    const openvdb::Vec3d voxel_size = grid->voxelSize();
-    openvdb::Vec3d point_in_bbox = file_bbox_min * voxel_size;
-    bbox.expand(MPoint(point_in_bbox.x(), point_in_bbox.y(), point_in_bbox.z(), 1.0));
-    point_in_bbox = file_bbox_max * voxel_size;
-    bbox.expand(MPoint(point_in_bbox.x(), point_in_bbox.y(), point_in_bbox.z(), 1.0));
+    const openvdb::math::Transform& transform = grid->transform();
+    const openvdb::Vec3d bbmin = transform.indexToWorld(file_bbox_min);
+    const openvdb::Vec3d bbmax = transform.indexToWorld(file_bbox_max);
+
+    bbox_min.x = static_cast<float>(bbmin.x());
+    bbox_min.y = static_cast<float>(bbmin.y());
+    bbox_min.z = static_cast<float>(bbmin.z());
+
+    bbox_max.x = static_cast<float>(bbmax.x());
+    bbox_max.y = static_cast<float>(bbmax.y());
+    bbox_max.z = static_cast<float>(bbmax.z());
+}
+
+inline void read_transformed_bounding_box(openvdb::GridBase::ConstPtr grid, MBoundingBox& bbox)
+{
+    const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
+    if (file_bbox_min.x() == std::numeric_limits<int>::max() ||
+        file_bbox_min.y() == std::numeric_limits<int>::max() ||
+        file_bbox_min.z() == std::numeric_limits<int>::max())
+        return;
+    const openvdb::Vec3i file_bbox_max = grid->metaValue<openvdb::Vec3i>("file_bbox_max");
+    if (file_bbox_max.x() == std::numeric_limits<int>::min() ||
+        file_bbox_max.y() == std::numeric_limits<int>::min() ||
+        file_bbox_max.z() == std::numeric_limits<int>::min())
+        return;
+    const openvdb::math::Transform& transform = grid->transform();
+    const openvdb::Vec3d bbmin = transform.indexToWorld(file_bbox_min);
+    const openvdb::Vec3d bbmax = transform.indexToWorld(file_bbox_max);
+
+    bbox.expand(MPoint(bbmin.x(), bbmin.y(), bbmin.z(), 1.0));
+
+    bbox.expand(MPoint(bbmax.x(), bbmin.y(), bbmin.z(), 1.0));
+    bbox.expand(MPoint(bbmin.x(), bbmax.y(), bbmin.z(), 1.0));
+    bbox.expand(MPoint(bbmin.x(), bbmin.y(), bbmax.z(), 1.0));
+
+    bbox.expand(MPoint(bbmax.x(), bbmin.y(), bbmax.z(), 1.0));
+    bbox.expand(MPoint(bbmax.x(), bbmax.y(), bbmin.z(), 1.0));
+    bbox.expand(MPoint(bbmin.x(), bbmax.y(), bbmax.z(), 1.0));
+
+    bbox.expand(MPoint(bbmax.x(), bbmax.y(), bbmax.z(), 1.0));
+
 }

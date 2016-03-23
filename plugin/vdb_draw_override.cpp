@@ -3,6 +3,10 @@
 #include <maya/MFnDependencyNode.h>
 #include <maya/MDrawContext.h>
 
+#include <vector>
+
+#include "../util/maya_utils.hpp"
+
 namespace MHWRender {
 
     namespace{
@@ -10,10 +14,65 @@ namespace MHWRender {
         class DrawData : public MUserData {
         private:
             MBoundingBox m_bbox;
+            std::vector<MFloatVector> m_wireframe;
         public:
             DrawData() : MUserData(false)
             {
 
+            }
+
+            void clear()
+            {
+                std::vector<MFloatVector>().swap(m_wireframe);
+            }
+
+            void quick_reserve(size_t num_vertices)
+            {
+                if (m_wireframe.size() != num_vertices)
+                    clear();
+                else
+                    m_wireframe.clear();
+
+                m_wireframe.reserve(num_vertices);
+            }
+
+            void add_wire_bounding_box(const MFloatVector& mn, const MFloatVector& mx)
+            {
+                m_wireframe.push_back(MFloatVector(mn.x, mn.y, mn.z));
+                m_wireframe.push_back(MFloatVector(mx.x, mn.y, mn.z));
+
+                m_wireframe.push_back(MFloatVector(mn.x, mx.y, mn.z));
+                m_wireframe.push_back(MFloatVector(mx.x, mx.y, mn.z));
+
+                m_wireframe.push_back(MFloatVector(mn.x, mn.y, mx.z));
+                m_wireframe.push_back(MFloatVector(mx.x, mn.y, mx.z));
+
+                m_wireframe.push_back(MFloatVector(mn.x, mx.y, mx.z));
+                m_wireframe.push_back(MFloatVector(mx.x, mx.y, mx.z));
+
+                m_wireframe.push_back(MFloatVector(mn.x, mn.y, mn.z));
+                m_wireframe.push_back(MFloatVector(mn.x, mx.y, mn.z));
+
+                m_wireframe.push_back(MFloatVector(mx.x, mn.y, mn.z));
+                m_wireframe.push_back(MFloatVector(mx.x, mx.y, mn.z));
+
+                m_wireframe.push_back(MFloatVector(mn.x, mn.y, mx.z));
+                m_wireframe.push_back(MFloatVector(mn.x, mx.y, mx.z));
+
+                m_wireframe.push_back(MFloatVector(mx.x, mn.y, mx.z));
+                m_wireframe.push_back(MFloatVector(mx.x, mx.y, mx.z));
+
+                m_wireframe.push_back(MFloatVector(mn.x, mn.y, mn.z));
+                m_wireframe.push_back(MFloatVector(mn.x, mn.y, mx.z));
+
+                m_wireframe.push_back(MFloatVector(mn.x, mx.y, mn.z));
+                m_wireframe.push_back(MFloatVector(mn.x, mx.y, mx.z));
+
+                m_wireframe.push_back(MFloatVector(mx.x, mn.y, mn.z));
+                m_wireframe.push_back(MFloatVector(mx.x, mn.y, mx.z));
+
+                m_wireframe.push_back(MFloatVector(mx.x, mx.y, mn.z));
+                m_wireframe.push_back(MFloatVector(mx.x, mx.y, mx.z));
             }
 
             void update(VDBVisualizerData* vdb_data)
@@ -21,6 +80,42 @@ namespace MHWRender {
                 if (vdb_data == 0)
                     return;
                 m_bbox = vdb_data->bbox;
+                if (vdb_data->display_mode == DISPLAY_AXIS_ALIGNED_BBOX)
+                {
+                    quick_reserve(24);
+
+                    add_wire_bounding_box(m_bbox.min(), m_bbox.max());
+                }
+                else if (vdb_data->display_mode == DISPLAY_GRID_BBOX)
+                {
+                    if (vdb_data->vdb_file == nullptr || !vdb_data->vdb_file->isOpen())
+                    {
+                        clear();
+                        return;
+                    }
+
+                    openvdb::GridPtrVecPtr grids = vdb_data->vdb_file->readAllGridMetadata();
+                    const size_t num_vertices = grids->size() * 24;
+                    if (num_vertices == 0)
+                    {
+                        clear();
+                        return;
+                    }
+
+                    quick_reserve(num_vertices);
+
+                    MFloatVector mn(0.0f, 0.0f, 0.0f), mx(0.0f, 0.0f, 0.0f);
+                    for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
+                    {
+                        if (openvdb::GridBase::ConstPtr grid = *it)
+                        {
+                            read_grid_transformed_bbox_vertices(grid, mn, mx);
+                            add_wire_bounding_box(mn, mx);
+                        }
+                    }
+                }
+                else if (m_wireframe.size())
+                    clear();
             }
 
             void draw(const MDrawContext& context) const
@@ -31,50 +126,10 @@ namespace MHWRender {
                 if (status && !frustum_box.intersects(m_bbox))
                     return;
 
-                const MFloatVector mn = m_bbox.min();
-                const MFloatVector mx = m_bbox.max();
-
                 glBegin(GL_LINES);
 
-                glVertex3f(mn.x, mn.y, mn.z);
-                glVertex3f(mx.x, mn.y, mn.z);
-
-                glVertex3f(mn.x, mx.y, mn.z);
-                glVertex3f(mx.x, mx.y, mn.z);
-
-                glVertex3f(mn.x, mn.y, mx.z);
-                glVertex3f(mx.x, mn.y, mx.z);
-
-                glVertex3f(mn.x, mx.y, mx.z);
-                glVertex3f(mx.x, mx.y, mx.z);
-
-                // -------------------------
-
-                glVertex3f(mn.x, mn.y, mn.z);
-                glVertex3f(mn.x, mx.y, mn.z);
-
-                glVertex3f(mx.x, mn.y, mn.z);
-                glVertex3f(mx.x, mx.y, mn.z);
-
-                glVertex3f(mn.x, mn.y, mx.z);
-                glVertex3f(mn.x, mx.y, mx.z);
-
-                glVertex3f(mx.x, mn.y, mx.z);
-                glVertex3f(mx.x, mx.y, mx.z);
-
-                // -------------------------
-
-                glVertex3f(mn.x, mn.y, mn.z);
-                glVertex3f(mn.x, mn.y, mx.z);
-
-                glVertex3f(mn.x, mx.y, mn.z);
-                glVertex3f(mn.x, mx.y, mx.z);
-
-                glVertex3f(mx.x, mn.y, mn.z);
-                glVertex3f(mx.x, mn.y, mx.z);
-
-                glVertex3f(mx.x, mx.y, mn.z);
-                glVertex3f(mx.x, mx.y, mx.z);
+                for (const auto& vertex : m_wireframe)
+                    glVertex3f(vertex.x, vertex.y, vertex.z);
 
                 glEnd();
             }

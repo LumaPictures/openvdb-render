@@ -10,18 +10,30 @@
 
 #include "vdb_sampler.h"
 
+enum VDBDisplayMode{
+    DISPLAY_AXIS_ALIGNED_BBOX = 0,
+    DISPLAY_GRID_BBOX,
+    DISPLAY_POINT_CLOUD,
+    DISPLAY_NON_SHADED,
+    DISPLAY_SHADED,
+    DISPLAY_MESH
+};
+
 struct VDBVisualizerData{
     MBoundingBox bbox;
+
     std::string vdb_path;
+
     openvdb::io::File* vdb_file;
+
     int update_trigger;
+    VDBDisplayMode display_mode;
 
     VDBVisualizerData();
     ~VDBVisualizerData();
 
     void clear();
 };
-
 
 class VDBVisualizerShape : public MPxSurfaceShape {
 public:

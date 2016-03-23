@@ -265,7 +265,7 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
                     if (openvdb::GridBase::ConstPtr grid = *it)
                     {
                         if (grid_required(grid))
-                            read_bounding_box(grid, bbox);
+                            read_transformed_bounding_box(grid, bbox);
                     }
                 }
             }

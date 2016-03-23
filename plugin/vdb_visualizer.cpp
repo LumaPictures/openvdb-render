@@ -81,7 +81,7 @@ namespace {
     };
 }
 
-VDBVisualizerData::VDBVisualizerData() : vdb_path(""), vdb_file(0), update_trigger(0)
+VDBVisualizerData::VDBVisualizerData() : vdb_path(""), vdb_file(nullptr), update_trigger(0)
 {
 }
 
@@ -98,7 +98,7 @@ void VDBVisualizerData::clear()
             vdb_file->close();
         delete vdb_file;
     }
-    vdb_file = 0;
+    vdb_file = nullptr;
     bbox = MBoundingBox();
 }
 
@@ -192,7 +192,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
                 {
                     if (openvdb::GridBase::ConstPtr grid = *it)
-                        read_bounding_box(grid, m_vdb_data.bbox);
+                        read_transformed_bounding_box(grid, m_vdb_data.bbox);
                 }
             }
             else
@@ -317,13 +317,13 @@ MStatus VDBVisualizerShape::initialize()
     eAttr.setDefault(1);
 
     s_display_mode = eAttr.create("displayMode", "display_mode");
-    eAttr.addField("boundingBox", 0);
-    eAttr.addField("multiBoundingBox", 1);
-    eAttr.addField("pointCloud", 2);
-    eAttr.addField("volumetricNonShaded", 3);
-    eAttr.addField("volumetricShaded", 4);
-    eAttr.addField("mesh", 5);
-    eAttr.setDefault(0);
+    eAttr.addField("Axis Aligned Bounding Box", DISPLAY_AXIS_ALIGNED_BBOX);
+    eAttr.addField("Per Grid Bounding Box", DISPLAY_GRID_BBOX);
+    eAttr.addField("Point Cloud", DISPLAY_POINT_CLOUD);
+    eAttr.addField("Volumetric Non Shaded", DISPLAY_NON_SHADED);
+    eAttr.addField("Volumetric Shaded", DISPLAY_SHADED);
+    eAttr.addField("Mesh", DISPLAY_MESH);
+    eAttr.setDefault(DISPLAY_GRID_BBOX);
 
     addAttribute(s_display_mode);
 
@@ -484,6 +484,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
 
     if (update_trigger != m_vdb_data.update_trigger)
     {
+        m_vdb_data.display_mode = static_cast<VDBDisplayMode>(MPlug(thisMObject(), s_display_mode).asShort());
         m_vdb_data.update_trigger = update_trigger;
         return &m_vdb_data;
     }
