@@ -5,7 +5,7 @@
 #include <maya/MBoundingBox.h>
 #include <maya/MMatrix.h>
 
-inline bool read_grid_transformed_bbox_vertices(openvdb::GridBase::ConstPtr grid, MFloatVector& bbox_min, MFloatVector& bbox_max)
+inline bool read_grid_transformed_bbox_wire(openvdb::GridBase::ConstPtr grid, std::array<MFloatVector, 8>& vertices)
 {
     const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
     if (file_bbox_min.x() == std::numeric_limits<int>::max() ||
@@ -18,16 +18,30 @@ inline bool read_grid_transformed_bbox_vertices(openvdb::GridBase::ConstPtr grid
         file_bbox_max.z() == std::numeric_limits<int>::min())
         return false;
     const openvdb::math::Transform& transform = grid->transform();
-    const openvdb::Vec3d bbmin = transform.indexToWorld(file_bbox_min);
-    const openvdb::Vec3d bbmax = transform.indexToWorld(file_bbox_max);
 
-    bbox_min.x = static_cast<float>(bbmin.x());
-    bbox_min.y = static_cast<float>(bbmin.y());
-    bbox_min.z = static_cast<float>(bbmin.z());
+    openvdb::Vec3d pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_min.x(), file_bbox_min.y(), file_bbox_min.z()));
+    vertices[0] = MFloatVector(static_cast<float>(pnt.x()), static_cast<float>(pnt.y()), static_cast<float>(pnt.z()));
 
-    bbox_max.x = static_cast<float>(bbmax.x());
-    bbox_max.y = static_cast<float>(bbmax.y());
-    bbox_max.z = static_cast<float>(bbmax.z());
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_min.x(), file_bbox_max.y(), file_bbox_min.z()));
+    vertices[1] = MFloatVector(static_cast<float>(pnt.x()), static_cast<float>(pnt.y()), static_cast<float>(pnt.z()));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_min.x(), file_bbox_max.y(), file_bbox_max.z()));
+    vertices[2] = MFloatVector(static_cast<float>(pnt.x()), static_cast<float>(pnt.y()), static_cast<float>(pnt.z()));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_min.x(), file_bbox_min.y(), file_bbox_max.z()));
+    vertices[3] = MFloatVector(static_cast<float>(pnt.x()), static_cast<float>(pnt.y()), static_cast<float>(pnt.z()));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_max.x(), file_bbox_min.y(), file_bbox_min.z()));
+    vertices[4] = MFloatVector(static_cast<float>(pnt.x()), static_cast<float>(pnt.y()), static_cast<float>(pnt.z()));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_max.x(), file_bbox_max.y(), file_bbox_min.z()));
+    vertices[5] = MFloatVector(static_cast<float>(pnt.x()), static_cast<float>(pnt.y()), static_cast<float>(pnt.z()));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_max.x(), file_bbox_max.y(), file_bbox_max.z()));
+    vertices[6] = MFloatVector(static_cast<float>(pnt.x()), static_cast<float>(pnt.y()), static_cast<float>(pnt.z()));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_max.x(), file_bbox_min.y(), file_bbox_max.z()));
+    vertices[7] = MFloatVector(static_cast<float>(pnt.x()), static_cast<float>(pnt.y()), static_cast<float>(pnt.z()));
 
     return true;
 }
@@ -45,20 +59,30 @@ inline bool read_transformed_bounding_box(openvdb::GridBase::ConstPtr grid, MBou
         file_bbox_max.z() == std::numeric_limits<int>::min())
         return false;
     const openvdb::math::Transform& transform = grid->transform();
-    const openvdb::Vec3d bbmin = transform.indexToWorld(file_bbox_min);
-    const openvdb::Vec3d bbmax = transform.indexToWorld(file_bbox_max);
 
-    bbox.expand(MPoint(bbmin.x(), bbmin.y(), bbmin.z(), 1.0));
+    openvdb::Vec3d pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_min.x(), file_bbox_min.y(), file_bbox_min.z()));
+    bbox.expand(MPoint(pnt.x(), pnt.y(), pnt.z(), 1.0));
 
-    bbox.expand(MPoint(bbmax.x(), bbmin.y(), bbmin.z(), 1.0));
-    bbox.expand(MPoint(bbmin.x(), bbmax.y(), bbmin.z(), 1.0));
-    bbox.expand(MPoint(bbmin.x(), bbmin.y(), bbmax.z(), 1.0));
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_max.x(), file_bbox_min.y(), file_bbox_min.z()));
+    bbox.expand(MPoint(pnt.x(), pnt.y(), pnt.z(), 1.0));
 
-    bbox.expand(MPoint(bbmax.x(), bbmin.y(), bbmax.z(), 1.0));
-    bbox.expand(MPoint(bbmax.x(), bbmax.y(), bbmin.z(), 1.0));
-    bbox.expand(MPoint(bbmin.x(), bbmax.y(), bbmax.z(), 1.0));
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_min.x(), file_bbox_max.y(), file_bbox_min.z()));
+    bbox.expand(MPoint(pnt.x(), pnt.y(), pnt.z(), 1.0));
 
-    bbox.expand(MPoint(bbmax.x(), bbmax.y(), bbmax.z(), 1.0));
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_min.x(), file_bbox_min.y(), file_bbox_max.z()));
+    bbox.expand(MPoint(pnt.x(), pnt.y(), pnt.z(), 1.0));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_max.x(), file_bbox_max.y(), file_bbox_min.z()));
+    bbox.expand(MPoint(pnt.x(), pnt.y(), pnt.z(), 1.0));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_max.x(), file_bbox_min.y(), file_bbox_max.z()));
+    bbox.expand(MPoint(pnt.x(), pnt.y(), pnt.z(), 1.0));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_min.x(), file_bbox_max.y(), file_bbox_max.z()));
+    bbox.expand(MPoint(pnt.x(), pnt.y(), pnt.z(), 1.0));
+
+    pnt = transform.indexToWorld(openvdb::Vec3i(file_bbox_max.x(), file_bbox_max.y(), file_bbox_max.z()));
+    bbox.expand(MPoint(pnt.x(), pnt.y(), pnt.z(), 1.0));
 
     return true;
 }

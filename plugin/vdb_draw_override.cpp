@@ -109,8 +109,46 @@ namespace MHWRender {
                     {
                         if (openvdb::GridBase::ConstPtr grid = *it)
                         {
-                            if (read_grid_transformed_bbox_vertices(grid, mn, mx))
-                                add_wire_bounding_box(mn, mx);
+                            // TODO : do things properly
+                            static std::array<MFloatVector, 8> vertices;
+                            if (read_grid_transformed_bbox_wire(grid, vertices))
+                            {
+                                m_wireframe.push_back(vertices[0]);
+                                m_wireframe.push_back(vertices[4]);
+
+                                m_wireframe.push_back(vertices[1]);
+                                m_wireframe.push_back(vertices[5]);
+
+                                m_wireframe.push_back(vertices[2]);
+                                m_wireframe.push_back(vertices[6]);
+
+                                m_wireframe.push_back(vertices[3]);
+                                m_wireframe.push_back(vertices[7]);
+
+                                m_wireframe.push_back(vertices[0]);
+                                m_wireframe.push_back(vertices[1]);
+
+                                m_wireframe.push_back(vertices[1]);
+                                m_wireframe.push_back(vertices[2]);
+
+                                m_wireframe.push_back(vertices[2]);
+                                m_wireframe.push_back(vertices[3]);
+
+                                m_wireframe.push_back(vertices[3]);
+                                m_wireframe.push_back(vertices[0]);
+
+                                m_wireframe.push_back(vertices[4]);
+                                m_wireframe.push_back(vertices[5]);
+
+                                m_wireframe.push_back(vertices[5]);
+                                m_wireframe.push_back(vertices[6]);
+
+                                m_wireframe.push_back(vertices[6]);
+                                m_wireframe.push_back(vertices[7]);
+
+                                m_wireframe.push_back(vertices[7]);
+                                m_wireframe.push_back(vertices[4]);
+                            }
                         }
                     }
                 }
