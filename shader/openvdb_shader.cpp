@@ -62,6 +62,10 @@ namespace {
 
     struct ShaderData
     {
+        Gradient scattering_gradient;
+        Gradient attenuation_gradient;
+        Gradient emission_gradient;
+
         std::string scattering_channel;
         std::string attenuation_channel;
         std::string emission_channel;
@@ -112,8 +116,12 @@ namespace {
             AiFree(d);
         }
 
-        void update(AtNode* node, AtParamValue*)
+        void update(AtNode* node, AtParamValue* params)
         {
+            scattering_gradient.update("scattering", node, params);
+            attenuation_gradient.update("attenuation", node, params);
+            emission_gradient.update("emission", node, params);
+
             // position offset
             position_offset = AiNodeGetVec(node, "position_offset");
 
