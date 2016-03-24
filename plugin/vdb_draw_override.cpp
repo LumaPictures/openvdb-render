@@ -229,5 +229,4 @@ namespace MHWRender {
     {
         return true;
     }
-
 }
