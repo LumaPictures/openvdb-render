@@ -184,6 +184,8 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
         {
             m_vdb_data.clear();
             m_vdb_data.vdb_path = vdb_path;
+            if (m_vdb_data.vdb_file != nullptr)
+                delete m_vdb_data.vdb_file;
             m_vdb_data.vdb_file = new openvdb::io::File(vdb_path.c_str());
             m_vdb_data.vdb_file->open(false);
             if (m_vdb_data.vdb_file->isOpen())
@@ -210,7 +212,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
         if (plug == s_grid_names)
         {
             MDataHandle grid_names_handle = dataBlock.outputValue(s_grid_names);
-            if (m_vdb_data.vdb_file->isOpen())
+            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen())
             {
                 std::stringstream grid_names;
                 openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
@@ -227,7 +229,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
         }
         else if (plug == s_update_trigger)
         {
-            if (m_vdb_data.vdb_file->isOpen())
+            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen())
             {
                 MDataHandle update_trigger_handle = dataBlock.outputValue(s_update_trigger);
                 update_trigger_handle.setInt(m_vdb_data.update_trigger + 1);
@@ -252,7 +254,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
         else if (plug == s_channel_stats)
         {
             std::stringstream ss;
-            if (m_vdb_data.vdb_file->isOpen())
+            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen())
             {
                 ss << "Bounding box : " << "[ [";
                 ss << m_vdb_data.bbox.min().x << ", " << m_vdb_data.bbox.min().y << ", " << m_vdb_data.bbox.min().z;
