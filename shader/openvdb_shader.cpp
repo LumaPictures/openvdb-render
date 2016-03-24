@@ -3,6 +3,8 @@
 #include <string>
 #include <assert.h>
 
+#include "gradient.hpp"
+
 AI_SHADER_NODE_EXPORT_METHODS(openvdbShaderMethods);
 
 namespace {
@@ -258,6 +260,10 @@ node_parameters
     AiParameterVec("position_offset", 0, 0, 0);
     AiParameterEnum("interpolation", AI_VOLUME_INTERP_TRILINEAR, interpolation_labels);
     AiParameterBool("compensate_scaling", true);
+
+    Gradient::parameters("scattering", params, mds);
+    Gradient::parameters("attenuation", params, mds);
+    Gradient::parameters("emission", params, mds);
 
     AiMetaDataSetBool(mds, 0, "maya.hide", true);
 }

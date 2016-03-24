@@ -38,6 +38,8 @@ node_parameters
     AiParameterEnum("interpolation", AI_VOLUME_INTERP_TRILINEAR, interpolations);
 
     Gradient::parameters("base", params, mds);
+
+    AiMetaDataSetBool(mds, 0, "maya.hide", true);
 }
 
 static void Initialize(AtNode* node, AtParamValue*)
