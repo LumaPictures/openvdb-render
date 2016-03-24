@@ -17,6 +17,7 @@ private:
     std::vector<AtRGB> m_rgb_ramp;
 
     float m_contrast;
+    float m_contrast_pivot;
     float m_input_min;
     float m_input_max;
     float m_bias;
@@ -29,15 +30,138 @@ private:
     float m_exposure;
     float m_multiply;
     float m_add;
+    float m_inv_input_range;
+    float m_output_range;
+    float m_inv_bias;
+    float m_inv_gain;
+    float m_inv_one_minus_gain;
     int m_gradient_type;
     bool m_clamp_min;
     bool m_clamp_max;
 
+    inline float bias(float value) const
+    {
+        return value / (((m_inv_bias - 2.0f) * (1.0f - value)) + 1.0f);
+    }
+
+    inline float gain(float value) const
+    {
+        if (value < 0.5f)
+            return bias(value * 2.0f) * 0.5f;
+        else
+            return bias(value * 2.0f - 1.0f) * 0.5f + 0.5f;
+    }
+
+    inline float apply_float_gradient(float value) const
+    {
+        value = (value - m_input_min) * m_inv_input_range;
+        value = (value - m_contrast_pivot) * m_contrast + m_contrast_pivot;
+        if (m_bias != 0.5f)
+            value = bias(value);
+        if (m_gain != 0.5f)
+            value = gain(value);
+        value = value * m_output_range + m_output_min;
+        if (m_clamp_min)
+            value = std::max(value, m_output_min);
+        if (m_clamp_max)
+            value = std::min(value, m_output_max);
+        return value;
+    }
+
+    // don't worry, we are modifying the color, so copying is appropriate
+    inline AtRGB apply_rgb_gradient(AtRGB color) const
+    {
+        if (m_gamma != 1.0f)
+            AiColorGamma(&color, m_gamma);
+
+        if (m_hue_shift != 0.0f || m_saturation != 1.0f)
+        {
+            color = convertFromRGB(color);
+
+            color.r += m_hue_shift;
+            color.r = color.r - floorf(color.r); // keep hue in [0, 1]
+
+            color.g *= m_saturation;
+            color = convertToRGB(color);
+        }
+
+        if (m_contrast != 1.0f)
+            color = (color - m_contrast_pivot) * m_contrast + m_contrast_pivot;
+
+        if (m_exposure > AI_EPSILON)
+            color *= powf(2.0f, m_exposure);
+
+        if (m_multiply != 1.0f)
+            color *= m_multiply;
+
+        if (m_add != 0.0f)
+            color += m_add;
+
+        return color;
+    }
+
+    static AtRGB convertToRGB(const AtColor& color)
+    {
+        const float hue6 = fmod(color.r, 1.0f) * 6.0f;
+        float hue2 = hue6;
+
+        if (hue6 > 4.0f) hue2 -= 4.0f;
+        else if (hue6 > 2.0f) hue2 -= 2.0f;
+
+        const float sat = CLAMP(color.g, 0.0f, 1.0f);
+        const float chroma = (1.0f - fabsf(2.0f * color.b - 1.0f)) * sat;
+        const float component = chroma * (1.0f - fabsf(hue2 - 1.0f));
+
+        AtColor rgb = AI_RGB_BLACK;
+        if (hue6 < 1)
+            AiColorCreate(rgb, chroma, component, 0.0f);
+        else if (hue6 < 2)
+            AiColorCreate(rgb, component, chroma, 0.0f);
+        else if (hue6 < 3)
+            AiColorCreate(rgb, 0.0f, chroma, component);
+        else if (hue6 < 4)
+            AiColorCreate(rgb, 0.0f, component, chroma);
+        else if (hue6 < 5)
+            AiColorCreate(rgb, component, 0.0f, chroma);
+        else
+            AiColorCreate(rgb, chroma, 0.0f, component);
+
+        rgb += color.b - chroma * 0.5f;
+        return rgb;
+    }
+
+    static AtRGB convertFromRGB(const AtColor& color)
+    {
+        const float cmax = AiColorMaxRGB(color);
+        const float cmin = std::min(std::min(color.r, color.g), color.b);
+        const float chroma = cmax - cmin;
+
+        float hue = 0.0f;
+        if (chroma == 0.0f)
+            hue = 0.0f;
+        else if (cmax == color.r)
+            hue = (color.g - color.b) / chroma;
+        else if (cmax == color.g)
+            hue = (color.b - color.r) / chroma + 2.0f;
+        else
+            hue = (color.r - color.g) / chroma + 4.0f;
+
+        hue *= 1.0f / 6.0f;
+        if (hue < 0.0f)
+            hue += 1.0f;
+
+        const float lightness = (cmax + cmin) * 0.5f;
+        const float saturation = chroma == 0.0f ? 0.0f : chroma / (1.0f - fabsf(2.0f * lightness - 1.0f));
+        return AiColor(hue, saturation, lightness);
+    }
+
 public:
-    Gradient() : m_contrast(1.0f), m_input_min(0.0f), m_input_max(1.0f),
+    Gradient() : m_contrast(1.0f), m_contrast_pivot(0.5f), m_input_min(0.0f), m_input_max(1.0f),
                  m_bias(0.5f), m_gain(0.5f), m_output_min(0.0f), m_output_max(1.0f),
                  m_gamma(1.0f), m_hue_shift(0.0f), m_saturation(1.0f), m_exposure(0.0f),
-                 m_multiply(1.0f), m_add(0.0f), m_gradient_type(GRADIENT_NONE), m_clamp_min(false), m_clamp_max(false)
+                 m_multiply(1.0f), m_add(0.0f), m_inv_input_range(1.0f), m_output_range(1.0f),
+                 m_inv_bias(2.0f), m_inv_gain(2.0f), m_inv_one_minus_gain(2.0f),
+                 m_gradient_type(GRADIENT_NONE), m_clamp_min(false), m_clamp_max(false)
     {
 
     }
@@ -53,6 +177,7 @@ public:
 
         AiParameterEnum((base + "_gradient_type").c_str(), GRADIENT_NONE, gradient_types);
         AiParameterFlt((base + "_contrast").c_str(), 1.0f);
+        AiParameterFlt((base + "_contrast_pivot").c_str(), 0.5f);
         AiParameterFlt((base + "_input_min").c_str(), 0.0f);
         AiParameterFlt((base + "_input_max").c_str(), 1.0f);
         AiParameterFlt((base + "_bias").c_str(), 0.5f);
@@ -75,6 +200,7 @@ public:
     {
 
         m_contrast = AiNodeGetFlt(node, (base + "_contrast").c_str());
+        m_contrast_pivot = AiNodeGetFlt(node, (base + "_contrast_pivot").c_str());
         m_input_min = AiNodeGetFlt(node, (base + "_input_min").c_str());
         m_input_max = AiNodeGetFlt(node, (base + "_input_max").c_str());
         m_bias = AiNodeGetFlt(node, (base + "_bias").c_str());
@@ -126,37 +252,56 @@ public:
         }
         else
             std::vector<AtRGB>().swap(m_rgb_ramp);
+
+        m_inv_input_range = 1.0f / (m_input_max - m_input_min);
+        m_output_range = m_output_max - m_output_min;
+        m_inv_bias = 1.0f / m_bias;
+        m_inv_gain = 1.0f / m_gain;
+        m_inv_one_minus_gain = 1.0f / (1.0f - m_gain);
     }
 
-    AtRGB evaluate(const AtRGB& input) const
+    inline AtRGB evaluate(const AtRGB& input) const
     {
-        return input;
+        if (m_gradient_type == GRADIENT_NONE)
+            return input;
+        else if (m_gradient_type == GRADIENT_FLOAT)
+            return AI_RGB_WHITE * apply_float_gradient(input.r);
+        else
+            return apply_rgb_gradient(input);
     }
 
-    AtRGB evaluate(AtNode*, AtShaderGlobals* sg, const AtString& channel, int interpolation) const
+    inline AtRGB evaluate(AtNode*, AtShaderGlobals* sg, const AtString& channel, int interpolation) const
     {
-        AtRGB input = AI_RGB_BLACK;
-
-        if (m_gradient_type == GRADIENT_FLOAT) // check if float gradient
+        if (m_gradient_type == GRADIENT_NONE)
+        {
+            AtRGB input = AI_RGB_BLACK;
+            if (!AiVolumeSampleRGB(channel, interpolation, &input))
+            {
+                AiVolumeSampleFlt(channel, interpolation, &input.r);
+                input.g = input.b = input.r;
+            }
+            return input;
+        }
+        else if (m_gradient_type == GRADIENT_FLOAT)
         {
             float v = 0.0f;
             if (!AiVolumeSampleFlt(channel, interpolation, &v))
             {
+                AtRGB input = AI_RGB_BLACK;
                 AiVolumeSampleRGB(channel, interpolation, &input);
                 v = (input.r + input.g + input.b) / 3.0f;
             }
-            input = v;
+            return AI_RGB_WHITE * apply_float_gradient(v);
         }
         else
         {
+            AtRGB input = AI_RGB_BLACK;
             if (!AiVolumeSampleRGB(channel, interpolation, &input))
             {
-                float v = 0.0f;
-                AiVolumeSampleFlt(channel, interpolation, &v);
-                input = v;
+                AiVolumeSampleFlt(channel, interpolation, &input.r);
+                input.g = input.b = input.r;
             }
+            return apply_rgb_gradient(input);
         }
-
-        return evaluate(input);
     }
 };
