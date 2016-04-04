@@ -16,7 +16,7 @@ include_directories(${LUMA_NODE_ID_INCLUDE})
 include_directories(${GLEW_INCLUDE})
 include_directories(${OPENVDB_INCLUDE})
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${ILMBASE_ROOT}/include)
+include_directories(SYSTEM ${ILMBASE_ROOT}/include) #register is deprecated with c++11
 
 include_directories(${MAYA_INCLUDE_DIRS})
 link_directories(${MAYA_LIBRARY_DIR})
