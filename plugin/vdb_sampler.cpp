@@ -18,9 +18,10 @@ void VDBGradientParams::create_params()
 
     mode = eAttr.create(gradient_name + "ChannelMode", gradient_name + "_channel_mode");
     eAttr.addField("Raw", 0);
-    eAttr.addField("Float to Float", 1);
-    eAttr.addField("Float to RGB", 2);
-    eAttr.addField("RGB", 3);
+    eAttr.addField("Float", 1);
+    eAttr.addField("RGB", 2);
+    eAttr.addField("Float to Float", 3);
+    eAttr.addField("Float to RGB", 4);
     eAttr.setDefault(0);
     MPxNode::addAttribute(mode);
 

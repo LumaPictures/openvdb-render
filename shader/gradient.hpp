@@ -9,9 +9,10 @@ class Gradient {
 private:
     enum {
         CHANNEL_MODE_RAW,
+        CHANNEL_MODE_RGB,
+        CHANNEL_MODE_FLOAT,
         CHANNEL_MODE_FLOAT_TO_FLOAT,
-        CHANNEL_MODE_FLOAT_TO_RGB,
-        CHANNEL_MODE_RGB
+        CHANNEL_MODE_FLOAT_TO_RGB
     };
 
     std::vector<float> m_float_ramp;
@@ -213,7 +214,7 @@ public:
 
     static void parameters(const std::string& base, AtList* params, AtMetaDataStore*)
     {
-        static const char* gradient_types[] = {"Raw", "Float to Float", "Float to RGB", "RGB", nullptr};
+        static const char* gradient_types[] = {"Raw", "Float", "RGB", "Float to Float", "Float to RGB", nullptr};
 
         AiParameterEnum((base + "_channel_mode").c_str(), CHANNEL_MODE_RAW, gradient_types);
         AiParameterFlt((base + "_contrast").c_str(), 1.0f);
@@ -325,6 +326,27 @@ public:
             }
             return input;
         }
+        else if (m_channel_mode == CHANNEL_MODE_FLOAT)
+        {
+            float v = 0.0f;
+            if (!AiVolumeSampleFlt(channel, interpolation, &v))
+            {
+                AtRGB input = AI_RGB_BLACK;
+                AiVolumeSampleRGB(channel, interpolation, &input);
+                v = (input.r + input.g + input.b) / 3.0f;
+            }
+            return AI_RGB_WHITE * apply_float_controls(v);
+        }
+        else if (m_channel_mode == CHANNEL_MODE_RGB)
+        {
+            AtRGB input = AI_RGB_BLACK;
+            if (!AiVolumeSampleRGB(channel, interpolation, &input))
+            {
+                AiVolumeSampleFlt(channel, interpolation, &input.r);
+                input.g = input.b = input.r;
+            }
+            return apply_rgb_controls(input);
+        }
         else if (m_channel_mode == CHANNEL_MODE_FLOAT_TO_FLOAT)
         {
             float v = 0.0f;
@@ -336,7 +358,7 @@ public:
             }
             return AI_RGB_WHITE * apply_float_controls(apply_float_gradient(v));
         }
-        else if (m_channel_mode == CHANNEL_MODE_FLOAT_TO_RGB)
+        else
         {
             float v = 0.0f;
             if (!AiVolumeSampleFlt(channel, interpolation, &v))
@@ -346,16 +368,6 @@ public:
                 v = (input.r + input.g + input.b) / 3.0f;
             }
             return apply_rgb_controls(apply_rgb_gradient(v));
-        }
-        else
-        {
-            AtRGB input = AI_RGB_BLACK;
-            if (!AiVolumeSampleRGB(channel, interpolation, &input))
-            {
-                AiVolumeSampleFlt(channel, interpolation, &input.r);
-                input.g = input.b = input.r;
-            }
-            return apply_rgb_controls(input);
         }
     }
 };
