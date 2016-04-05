@@ -10,7 +10,7 @@ struct VDBGradientParams{
     void affect_output(MObject& out_object);
 
     MString gradient_name;
-    MObject type;
+    MObject mode;
 
     MObject contrast;
     MObject contrast_pivot;

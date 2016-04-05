@@ -398,9 +398,13 @@ MStatus VDBVisualizerShape::initialize()
 
     s_scattering_intensity = nAttr.create("scatteringIntensity", "scattering_intensity", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(1.0f);
 
     s_anisotropy = nAttr.create("anisotropy", "anisotropy", MFnNumericData::kFloat);
     nAttr.setDefault(0.0f);
+    nAttr.setMin(-1.0f);
+    nAttr.setMax(1.0f);
 
     s_attenuation_source = eAttr.create("attenuationSource", "attenuation_source");
     eAttr.addField("parameter", 0);
@@ -417,6 +421,8 @@ MStatus VDBVisualizerShape::initialize()
 
     s_attenuation_intensity = nAttr.create("attenuationIntensity", "attenuation_intensity", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(1.0f);
 
     s_attenuation_mode = eAttr.create("attenuationMode", "attenuation_mode");
     eAttr.addField("absorption", 0);
@@ -436,6 +442,8 @@ MStatus VDBVisualizerShape::initialize()
 
     s_emission_intensity = nAttr.create("emissionIntensity", "emission_intensity", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(1.0f);
 
     s_position_offset = nAttr.createPoint("positionOffset", "position_offset");
     nAttr.setDefault(0.0, 0.0, 0.0);

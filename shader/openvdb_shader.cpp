@@ -66,9 +66,9 @@ namespace {
         Gradient attenuation_gradient;
         Gradient emission_gradient;
 
-        std::string scattering_channel;
-        std::string attenuation_channel;
-        std::string emission_channel;
+        AtString scattering_channel;
+        AtString attenuation_channel;
+        AtString emission_channel;
         AtRGB scattering;
         AtRGB scattering_color;
         AtRGB attenuation;
@@ -151,21 +151,21 @@ namespace {
 
             scattering_source = AiNodeGetInt(node, "scattering_source");
             scattering = AiNodeGetRGB(node, "scattering");
-            scattering_channel = AiNodeGetStr(node, "scattering_channel");
+            scattering_channel = AtString(AiNodeGetStr(node, "scattering_channel"));
             scattering_color = AiNodeGetRGB(node, "scattering_color");
             scattering_intensity = AiNodeGetFlt(node, "scattering_intensity");
             anisotropy = AiNodeGetFlt(node, "anisotropy");
 
             attenuation_source = AiNodeGetInt(node, "attenuation_source");
             attenuation = AiNodeGetRGB(node, "attenuation");
-            attenuation_channel = AiNodeGetStr(node, "attenuation_channel");
+            attenuation_channel = AtString(AiNodeGetStr(node, "attenuation_channel"));
             attenuation_color = AiNodeGetRGB(node, "attenuation_color");
             attenuation_intensity = AiNodeGetFlt(node, "attenuation_intensity");
             attenuation_mode = AiNodeGetInt(node, "attenuation_mode");
 
             emission_source = AiNodeGetInt(node, "emission_source");
             emission = AiNodeGetRGB(node, "emission");
-            emission_channel = AiNodeGetStr(node, "emission_channel");
+            emission_channel = AtString(AiNodeGetStr(node, "emission_channel"));
             emission_color = AiNodeGetRGB(node, "emission_color");
             emission_intensity = AiNodeGetFlt(node, "emission_intensity");
 
@@ -253,7 +253,7 @@ node_parameters
     AiParameterStr("scattering_channel", "");
     AiParameterRGB("scattering_color", 1.0f, 1.0f, 1.0f);
     AiParameterFlt("scattering_intensity", 1.0f);
-    AiParameterFlt("anisotropy", 0);
+    AiParameterFlt("anisotropy", 0.0f);
     AiParameterEnum("attenuation_source", INPUT_SOURCE_PARAMETER, attenuation_source_labels);
     AiParameterRGB("attenuation", 1.0f, 1.0f, 1.0f);
     AiParameterStr("attenuation_channel", "");
@@ -265,7 +265,7 @@ node_parameters
     AiParameterStr("emission_channel", "");
     AiParameterRGB("emission_color", 1.0f, 1.0f, 1.0f);
     AiParameterFlt("emission_intensity", 1.0f);
-    AiParameterVec("position_offset", 0, 0, 0);
+    AiParameterVec("position_offset", 0.0f, 0.0f, 0.0f);
     AiParameterEnum("interpolation", AI_VOLUME_INTERP_TRILINEAR, interpolation_labels);
     AiParameterBool("compensate_scaling", true);
 
@@ -331,7 +331,7 @@ shader_evaluate
         switch (data->scattering_from)
         {
             case INPUT_FROM_CHANNEL:
-                AiVolumeSampleRGB(data->scattering_channel.c_str(), data->interpolation, &scattering);
+                scattering = data->scattering_gradient.evaluate(sg, data->scattering_channel, data->interpolation);
                 break;
             case INPUT_FROM_EVALUATE:
                 scattering = AiShaderEvalParamRGB(p_scattering);
@@ -363,7 +363,7 @@ shader_evaluate
     switch (data->attenuation_from)
     {
         case INPUT_FROM_CHANNEL:
-            AiVolumeSampleRGB(data->attenuation_channel.c_str(), data->interpolation, &attenuation);
+            attenuation = data->attenuation_gradient.evaluate(sg, data->attenuation_channel, data->interpolation);
             break;
         case INPUT_FROM_EVALUATE:
             attenuation = AiShaderEvalParamRGB(p_attenuation);
@@ -378,7 +378,7 @@ shader_evaluate
     }
 
     // color, intensity and clipping
-    const AtRGB attenuation_color     = data->attenuation_color_is_linked     ? AiShaderEvalParamRGB(p_attenuation_color)     : data->attenuation_color;
+    const AtRGB attenuation_color = data->attenuation_color_is_linked ? AiShaderEvalParamRGB(p_attenuation_color) : data->attenuation_color;
     const float attenuation_intensity = data->attenuation_intensity_is_linked ? AiShaderEvalParamFlt(p_attenuation_intensity) : data->attenuation_intensity;
     attenuation *= attenuation_color * attenuation_intensity;
     AiColorClipToZero(attenuation);
@@ -403,7 +403,7 @@ shader_evaluate
         switch (data->emission_from)
         {
             case INPUT_FROM_CHANNEL:
-                AiVolumeSampleRGB(data->emission_channel.c_str(), data->interpolation, &emission);
+                data->emission_gradient.evaluate(sg, data->emission_channel, data->interpolation);
                 break;
             case INPUT_FROM_EVALUATE:
                 emission = AiShaderEvalParamRGB(p_emission);
@@ -415,7 +415,7 @@ shader_evaluate
         }
 
         // color, intensity and clipping
-        const AtRGB emission_color = data->emission_color_is_linked     ? AiShaderEvalParamRGB(p_emission_color)     : data->emission_color;
+        const AtRGB emission_color = data->emission_color_is_linked ? AiShaderEvalParamRGB(p_emission_color) : data->emission_color;
         const float emission_intensity = data->emission_intensity_is_linked ? AiShaderEvalParamFlt(p_emission_intensity) : data->emission_intensity;
         emission *= emission_color * emission_intensity;
         AiColorClipToZero(emission);

@@ -175,15 +175,15 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
         pm.attrControlGrp(self.additional_channel_export, edit=True, attribute=param_name)
         self.setup_additional_channel_popup(param_name)
 
-    def create_gradient_type(self, param_name):
+    def create_gradient(self, param_name):
         param_name_splits = param_name.split('.')
         #node_name = param_name_splits[0]
-        channel_name = param_name_splits[1].replace('_gradient_type', '')
+        channel_name = param_name_splits[1].replace('_channel_mode', '')
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        setattr(self, '%s_gradient_type' % channel_name, pm.attrControlGrp(attribute=param_name))
+        setattr(self, '%s_channel_mode' % channel_name, pm.attrControlGrp(attribute=param_name))
         pm.setUITemplate(popTemplate=True)
 
-    def update_gradient_type(self, param_name):
+    def update_gradient(self, param_name):
         pass
 
     def __init__(self, node_name):
@@ -231,7 +231,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
         self.addControl('scattering_color')
         self.addControl('scattering_intensity')
         self.addControl('anisotropy')
-        self.callCustom(self.create_gradient_type, self.update_gradient_type, 'scattering_gradient_type')
+        self.callCustom(self.create_gradient, self.update_gradient, 'scattering_channel_mode')
         self.endLayout()
 
         self.beginLayout('Attenuation', collapse=False)
@@ -241,7 +241,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
         self.addControl('attenuation_color')
         self.addControl('attenuation_intensity')
         self.addControl('attenuation_mode', label='Attenuation Mode')
-        self.callCustom(self.create_gradient_type, self.update_gradient_type, 'attenuation_gradient_type')
+        self.callCustom(self.create_gradient, self.update_gradient, 'attenuation_channel_mode')
         self.endLayout()
 
         self.beginLayout('Emission', collapse=False)
@@ -250,7 +250,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
         self.callCustom(self.create_emission_channel, self.update_emission_channel, 'emission_channel')
         self.addControl('emission_color')
         self.addControl('emission_intensity')
-        self.callCustom(self.create_gradient_type, self.update_gradient_type, 'emission_gradient_type')
+        self.callCustom(self.create_gradient, self.update_gradient, 'emission_channel_mode')
         self.endLayout()
 
         self.beginLayout('Sampling', collapse=False)

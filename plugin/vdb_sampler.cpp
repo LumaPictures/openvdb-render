@@ -16,85 +16,116 @@ void VDBGradientParams::create_params()
     MFnNumericAttribute nAttr;
     MRampAttribute rAttr;
 
-    type = eAttr.create(gradient_name + "GradientType", gradient_name + "_gradient_type");
-    eAttr.addField("None", 0);
-    eAttr.addField("Float", 1);
-    eAttr.addField("RGB", 2);
+    mode = eAttr.create(gradient_name + "ChannelMode", gradient_name + "_channel_mode");
+    eAttr.addField("Raw", 0);
+    eAttr.addField("Float to Float", 1);
+    eAttr.addField("Float to RGB", 2);
+    eAttr.addField("RGB", 3);
     eAttr.setDefault(0);
-    MPxNode::addAttribute(type);
+    MPxNode::addAttribute(mode);
 
     contrast = nAttr.create(gradient_name + "Contrast", gradient_name + "_contrast", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(contrast);
 
     contrast_pivot = nAttr.create(gradient_name + "ContrastPivot", gradient_name + "_contrast_pivot", MFnNumericData::kFloat);
     nAttr.setDefault(0.5f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(contrast_pivot);
 
     input_min = nAttr.create(gradient_name + "InputMin", gradient_name + "_input_min", MFnNumericData::kFloat);
     nAttr.setDefault(0.0f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(input_min);
 
     input_max = nAttr.create(gradient_name + "InputMax", gradient_name + "_input_max", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(input_max);
 
     bias = nAttr.create(gradient_name + "Bias", gradient_name + "_bias", MFnNumericData::kFloat);
     nAttr.setDefault(0.5f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(bias);
 
     gain = nAttr.create(gradient_name + "Gain", gradient_name + "_gain", MFnNumericData::kFloat);
     nAttr.setDefault(0.5f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(gain);
 
     output_min = nAttr.create(gradient_name + "OutputMin", gradient_name + "_output_min", MFnNumericData::kFloat);
     nAttr.setDefault(0.0f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(output_min);
 
     output_max = nAttr.create(gradient_name + "OutputMax", gradient_name + "_output_max", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(output_max);
 
     clamp_min = nAttr.create(gradient_name + "ClampMin", gradient_name + "_clamp_min", MFnNumericData::kBoolean);
     nAttr.setDefault(false);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(clamp_min);
 
     clamp_max = nAttr.create(gradient_name + "ClampMax", gradient_name + "_clamp_max", MFnNumericData::kBoolean);
     nAttr.setDefault(false);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(clamp_max);
 
     gamma = nAttr.create(gradient_name + "Gamma", gradient_name + "_gamma", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
     nAttr.setMin(0.0f);
     nAttr.setSoftMax(5.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(gamma);
 
     hue_shift = nAttr.create(gradient_name + "HueShift", gradient_name + "_hue_shift", MFnNumericData::kFloat);
     nAttr.setDefault(0.0f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(hue_shift);
 
     saturation = nAttr.create(gradient_name + "Saturation", gradient_name + "_saturation", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
     nAttr.setMin(0.0f);
     nAttr.setMax(1.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(saturation);
 
     exposure = nAttr.create(gradient_name + "Exposure", gradient_name + "_exposure", MFnNumericData::kFloat);
     nAttr.setDefault(0.0f);
     nAttr.setSoftMin(-5.0f);
     nAttr.setSoftMax(5.0f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(exposure);
 
     multiply = nAttr.create(gradient_name + "Multiply", gradient_name + "_multiply", MFnNumericData::kFloat);
     nAttr.setDefault(1.0f);
     nAttr.setSoftMin(0.0f);
     nAttr.setSoftMax(10.f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(multiply);
 
     add = nAttr.create(gradient_name + "Add", gradient_name + "_add", MFnNumericData::kFloat);
     nAttr.setDefault(0.0f);
     nAttr.setSoftMin(0.0f);
     nAttr.setSoftMax(10.f);
+    nAttr.setConnectable(false);
     MPxNode::addAttribute(add);
 
     float_ramp = rAttr.createCurveRamp(gradient_name + "FloatRamp", gradient_name + "_float_ramp");
@@ -106,7 +137,7 @@ void VDBGradientParams::create_params()
 
 void VDBGradientParams::affect_output(MObject& output_object)
 {
-    MPxNode::attributeAffects(type, output_object);
+    MPxNode::attributeAffects(mode, output_object);
 
     MPxNode::attributeAffects(contrast, output_object);
     MPxNode::attributeAffects(contrast_pivot, output_object);
