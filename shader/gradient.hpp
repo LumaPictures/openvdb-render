@@ -192,8 +192,8 @@ public:
         AiParameterFlt((base + "_exposure").c_str(), 0.0f);
         AiParameterFlt((base + "_multiply").c_str(), 1.0f);
         AiParameterFlt((base + "_add").c_str(), 0.0f);
-        AiParameterArray((base + "_float_ramp").c_str(), AiArray(1, 1, AI_TYPE_FLOAT, 0.0f));
-        AiParameterArray((base + "_rgb_ramp").c_str(), AiArray(1, 1, AI_TYPE_RGB, AI_RGB_BLACK));
+        AiParameterArray((base + "_float_ramp").c_str(), AiArray(1, 1, AI_TYPE_FLOAT, 1.0f));
+        AiParameterArray((base + "_rgb_ramp").c_str(), AiArray(1, 1, AI_TYPE_RGB, AI_RGB_WHITE));
     }
 
     void update(const std::string& base, AtNode* node, AtParamValue*)
@@ -235,7 +235,7 @@ public:
         else
             std::vector<float>().swap(m_float_ramp);
 
-        arr = AiNodeGetArray(node, (base + "_float_ramp").c_str());
+        arr = AiNodeGetArray(node, (base + "_rgb_ramp").c_str());
         if (arr != nullptr)
         {
             const unsigned nelements = arr->nelements;
