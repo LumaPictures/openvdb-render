@@ -132,7 +132,7 @@ void VDBGradientParams::create_params()
     float_ramp = rAttr.createCurveRamp(gradient_name + "FloatRamp", gradient_name + "_float_ramp");
     MPxNode::addAttribute(float_ramp);
 
-    rgb_ramp = rAttr.createCurveRamp(gradient_name + "RgbRamp", gradient_name + "_rgb_ramp");
+    rgb_ramp = rAttr.createColorRamp(gradient_name + "RgbRamp", gradient_name + "_rgb_ramp");
     MPxNode::addAttribute(rgb_ramp);
 }
 

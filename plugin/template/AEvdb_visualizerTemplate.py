@@ -1,7 +1,9 @@
 import pymel.core as pm
 import re, os
 
-class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
+from channelController import channelController
+
+class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
     def scattering_source(self, node_name):
         if pm.getAttr('%s.scattering_source' % node_name) == 0:
             pm.editorTemplate(dimControl=(node_name, 'scattering', False))
@@ -175,22 +177,12 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate):
         pm.attrControlGrp(self.additional_channel_export, edit=True, attribute=param_name)
         self.setup_additional_channel_popup(param_name)
 
-    def create_gradient(self, param_name):
-        param_name_splits = param_name.split('.')
-        #node_name = param_name_splits[0]
-        channel_name = param_name_splits[1].replace('_channel_mode', '')
-        pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        setattr(self, '%s_channel_mode' % channel_name, pm.attrControlGrp(attribute=param_name))
-        pm.setUITemplate(popTemplate=True)
-
-    def update_gradient(self, param_name):
-        pass
-
     def __init__(self, node_name):
         for each in ['scattering', 'attenuation', 'emission']:
             setattr(self, '%s_channel_grp' % each, '')
             setattr(self, '%s_channel_popup' % each, '')
             setattr(self, '%s_gradient_type' % each, '')
+            self.init_gradient_params(each)
 
         self.vdb_path_grp = ''
         self.channel_stats = ''
