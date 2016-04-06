@@ -1,9 +1,8 @@
 #include <extension/Extension.h>
 #include <extension/ExtensionsManager.h>
 
-#include <maya/MFnPlugin.h>
-
 #include "openvdb_translator.h"
+#include "sampler_translator.h"
 
 extern "C"
 {
@@ -14,6 +13,10 @@ extern "C"
         extension.RegisterTranslator("vdb_visualizer",
                                      "",
                                      OpenvdbTranslator::creator);
+
+        extension.RegisterTranslator("vdb_sampler",
+                                     "",
+                                     SamplerTranslator::creator);
     }
 
     DLLEXPORT void deinitializeExtension(CExtension&)
