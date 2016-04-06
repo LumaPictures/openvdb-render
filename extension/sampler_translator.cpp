@@ -1,5 +1,9 @@
 #include "sampler_translator.h"
 
+namespace {
+    const unsigned int num_ramp_samples = 256;
+}
+
 void* SamplerTranslator::creator()
 {
     return new SamplerTranslator();
