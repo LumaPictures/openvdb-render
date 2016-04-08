@@ -35,6 +35,21 @@ struct VDBVisualizerData{
     void clear();
 };
 
+class VDBVisualizerShapeUI : public MPxSurfaceShapeUI {
+public:
+    VDBVisualizerShapeUI();
+    ~VDBVisualizerShapeUI();
+
+    static void* creator();
+
+    virtual bool select(
+            MSelectInfo& selectInfo,
+            MSelectionList& selectionList,
+            MPointArray& worldSpaceSelectPts) const;
+
+    virtual bool canDrawUV() const;
+};
+
 class VDBVisualizerShape : public MPxSurfaceShape {
 public:
     VDBVisualizerShape();
@@ -102,19 +117,4 @@ public:
     VDBVisualizerData* get_update();
 private:
     VDBVisualizerData m_vdb_data;
-};
-
-class VDBVisualizerShapeUI : public MPxSurfaceShapeUI {
-public:
-    VDBVisualizerShapeUI();
-    ~VDBVisualizerShapeUI();
-
-    static void* creator();
-
-    virtual bool select(
-            MSelectInfo& selectInfo,
-            MSelectionList& selectionList,
-            MPointArray& worldSpaceSelectPts) const;
-
-    virtual bool canDrawUV() const;
 };

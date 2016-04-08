@@ -20,6 +20,7 @@
 #include <maya/MTime.h>
 #include <maya/MPointArray.h>
 #include <maya/MSelectionList.h>
+#include <maya/MDagPath.h>
 
 #include <boost/regex.hpp>
 
@@ -536,34 +537,52 @@ bool VDBVisualizerShapeUI::select(MSelectInfo& selectInfo, MSelectionList& selec
 {
     if (!selectInfo.isRay())
     {
-        MPxSurfaceShape* surface_shape = surfaceShape();
-        MBoundingBox bbox = surface_shape->boundingBox();
+        const MBoundingBox bbox = surfaceShape()->boundingBox();
 
         const MPoint min = bbox.min();
         const MPoint max = bbox.max();
 
-        MSelectionList item;
-        item.add(surface_shape->thisMObject());
+        M3dView view = selectInfo.view();
 
-        selectInfo.addSelection(item, min, selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
+        unsigned int orig_x_u = 0;
+        unsigned int orig_y_u = 0;
+        unsigned int size_x_u = 0;
+        unsigned int size_y_u = 0;
+        selectInfo.selectRect(orig_x_u, orig_y_u, size_x_u, size_y_u);
+        const MDagPath object_path = selectInfo.selectPath();
+        const MMatrix object_matrix = object_path.inclusiveMatrix();
 
-        selectInfo.addSelection(item, MPoint(max.y, min.y, min.z, 1.0), selectionList, worldSpaceSelectPts,
-                                MSelectionMask::kSelectMeshes, false);
-        selectInfo.addSelection(item, MPoint(min.y, max.y, min.z, 1.0), selectionList, worldSpaceSelectPts,
-                                MSelectionMask::kSelectMeshes, false);
-        selectInfo.addSelection(item, MPoint(min.y, min.y, max.z, 1.0), selectionList, worldSpaceSelectPts,
-                                MSelectionMask::kSelectMeshes, false);
+        const short orig_x = static_cast<short>(orig_x_u);
+        const short orig_y = static_cast<short>(orig_y_u);
+        const short size_x = static_cast<short>(size_x_u);
+        const short size_y = static_cast<short>(size_y_u);
 
-        selectInfo.addSelection(item, MPoint(max.y, max.y, min.z, 1.0), selectionList, worldSpaceSelectPts,
-                                MSelectionMask::kSelectMeshes, false);
-        selectInfo.addSelection(item, MPoint(max.y, min.y, max.z, 1.0), selectionList, worldSpaceSelectPts,
-                                MSelectionMask::kSelectMeshes, false);
-        selectInfo.addSelection(item, MPoint(min.y, max.y, max.z, 1.0), selectionList, worldSpaceSelectPts,
-                                MSelectionMask::kSelectMeshes, false);
+        auto check_point_in_selection = [&] (MPoint point) -> bool {
+            point *= object_matrix;
+            short x_pos = 0; short y_pos = 0;
+            view.worldToView(point, x_pos, y_pos);
 
-        selectInfo.addSelection(item, max, selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
+            const short t_x = x_pos - orig_x;
+            const short t_y = y_pos - orig_y;
 
-        return true;
+            if (t_x >= 0 && t_x < size_x &&
+                t_y >= 0 && t_y < size_y)
+            {
+                MSelectionList item;
+                item.add(object_path);
+                selectInfo.addSelection(item, point, selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
+                return true;
+            }
+            else return false;
+        };
+
+        return check_point_in_selection(min) || check_point_in_selection(max) ||
+               check_point_in_selection(MPoint(max.x, min.y, min.z)) ||
+               check_point_in_selection(MPoint(min.x, max.y, min.z)) ||
+               check_point_in_selection(MPoint(min.x, min.y, max.z)) ||
+               check_point_in_selection(MPoint(max.x, max.y, min.z)) ||
+               check_point_in_selection(MPoint(max.x, min.y, max.z)) ||
+               check_point_in_selection(MPoint(min.x, max.y, max.z));
     }
     else return false;
 }
