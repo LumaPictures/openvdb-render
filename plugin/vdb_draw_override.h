@@ -28,6 +28,10 @@ namespace MHWRender {
                 const MDagPath& objPath,
                 const MDagPath& cameraPath) const;
 
+        virtual MBoundingBox boundingBox(
+                const MDagPath& objPath,
+                const MDagPath& cameraPath) const;
+
         static bool init_shaders();
 
     private:

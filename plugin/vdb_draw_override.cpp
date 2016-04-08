@@ -225,6 +225,13 @@ namespace MHWRender {
         return false;
     }
 
+    MBoundingBox VDBDrawOverride::boundingBox(
+            const MDagPath&,
+            const MDagPath&) const
+    {
+        return p_vdb_visualizer->boundingBox();
+    }
+
     bool VDBDrawOverride::init_shaders()
     {
         return true;

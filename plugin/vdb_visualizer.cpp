@@ -18,10 +18,13 @@
 #include <maya/MFnUnitAttribute.h>
 #include <maya/MRampAttribute.h>
 #include <maya/MTime.h>
+#include <maya/MPointArray.h>
+#include <maya/MSelectionList.h>
 
 #include <boost/regex.hpp>
 
 #include <sstream>
+#include <maya/MFnDependencyNode.h>
 
 #include "../util/maya_utils.hpp"
 
@@ -502,6 +505,17 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
         return 0;
 }
 
+bool VDBVisualizerShape::isBounded() const
+{
+    return true;
+}
+
+MBoundingBox VDBVisualizerShape::boundingBox() const
+{
+    MPlug(thisMObject(), s_out_vdb_path).asString();
+    return m_vdb_data.bbox;
+}
+
 VDBVisualizerShapeUI::VDBVisualizerShapeUI()
 {
 
@@ -516,4 +530,45 @@ VDBVisualizerShapeUI::~VDBVisualizerShapeUI()
 void* VDBVisualizerShapeUI::creator()
 {
     return new VDBVisualizerShapeUI();
+}
+
+bool VDBVisualizerShapeUI::select(MSelectInfo& selectInfo, MSelectionList& selectionList, MPointArray& worldSpaceSelectPts) const
+{
+    if (!selectInfo.isRay())
+    {
+        MPxSurfaceShape* surface_shape = surfaceShape();
+        MBoundingBox bbox = surface_shape->boundingBox();
+
+        const MPoint min = bbox.min();
+        const MPoint max = bbox.max();
+
+        MSelectionList item;
+        item.add(surface_shape->thisMObject());
+
+        selectInfo.addSelection(item, min, selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
+
+        selectInfo.addSelection(item, MPoint(max.y, min.y, min.z, 1.0), selectionList, worldSpaceSelectPts,
+                                MSelectionMask::kSelectMeshes, false);
+        selectInfo.addSelection(item, MPoint(min.y, max.y, min.z, 1.0), selectionList, worldSpaceSelectPts,
+                                MSelectionMask::kSelectMeshes, false);
+        selectInfo.addSelection(item, MPoint(min.y, min.y, max.z, 1.0), selectionList, worldSpaceSelectPts,
+                                MSelectionMask::kSelectMeshes, false);
+
+        selectInfo.addSelection(item, MPoint(max.y, max.y, min.z, 1.0), selectionList, worldSpaceSelectPts,
+                                MSelectionMask::kSelectMeshes, false);
+        selectInfo.addSelection(item, MPoint(max.y, min.y, max.z, 1.0), selectionList, worldSpaceSelectPts,
+                                MSelectionMask::kSelectMeshes, false);
+        selectInfo.addSelection(item, MPoint(min.y, max.y, max.z, 1.0), selectionList, worldSpaceSelectPts,
+                                MSelectionMask::kSelectMeshes, false);
+
+        selectInfo.addSelection(item, max, selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
+
+        return true;
+    }
+    else return false;
+}
+
+bool VDBVisualizerShapeUI::canDrawUV() const
+{
+    return false;
 }

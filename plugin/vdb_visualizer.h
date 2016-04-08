@@ -42,6 +42,9 @@ public:
 
     static void* creator();
 
+    virtual bool isBounded() const;
+    virtual MBoundingBox boundingBox() const;
+
     MStatus compute(const MPlug& plug, MDataBlock& dataBlock);
     static MStatus initialize();
 
@@ -107,4 +110,11 @@ public:
     ~VDBVisualizerShapeUI();
 
     static void* creator();
+
+    virtual bool select(
+            MSelectInfo& selectInfo,
+            MSelectionList& selectionList,
+            MPointArray& worldSpaceSelectPts) const;
+
+    virtual bool canDrawUV() const;
 };
