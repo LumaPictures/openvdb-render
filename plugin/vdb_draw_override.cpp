@@ -164,12 +164,21 @@ namespace MHWRender {
                 if (status && !frustum_box.intersects(m_bbox))
                     return;
 
+                float world_view_mat[4][4];
+                context.getMatrix(MHWRender::MDrawContext::kWorldViewMtx).get(world_view_mat);
+
+                glMatrixMode(GL_MODELVIEW);
+                glPushMatrix();
+                glLoadMatrixf(&world_view_mat[0][0]);
+
                 glBegin(GL_LINES);
 
                 for (const auto& vertex : m_wireframe)
                     glVertex3f(vertex.x, vertex.y, vertex.z);
 
                 glEnd();
+
+                glPopMatrix();
             }
         };
 
