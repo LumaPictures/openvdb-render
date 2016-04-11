@@ -198,6 +198,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl('cachePlaybackEnd', label='Cache End')
         self.addControl('cacheBeforeMode', label='Before')
         self.addControl('cacheAfterMode', label='After')
+        self.addControl('cacheTime', label='Cache Time')
         self.addControl('cachePlaybackOffset', label='Cache Offset')
 
         self.beginLayout('Statistics', collapse=True)
