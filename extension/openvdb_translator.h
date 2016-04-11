@@ -8,4 +8,5 @@ public:
 
     virtual AtNode* CreateArnoldNodes();
     virtual void Export(AtNode* volume);
+    virtual void ExportMotion(AtNode* volume, unsigned int step);
 };

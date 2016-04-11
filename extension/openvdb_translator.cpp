@@ -60,6 +60,8 @@ void OpenvdbTranslator::Export(AtNode* volume)
 {
     AiNodeSetStr(volume, "dso", (std::string(getenv("MTOA_PATH")) + std::string("procedurals/volume_openvdb.so")).c_str());
 
+    ExportMatrix(volume, 0);
+
     AiNodeDeclare(volume, "filename", "constant STRING");
     AiNodeSetStr(volume, "filename", FindMayaPlug("outVdbPath").asString().asChar());
 
@@ -197,4 +199,9 @@ void OpenvdbTranslator::Export(AtNode* volume)
             }
         }
     }
+}
+
+void OpenvdbTranslator::ExportMotion(AtNode* volume, unsigned int step)
+{
+    ExportMatrix(volume, step);
 }
