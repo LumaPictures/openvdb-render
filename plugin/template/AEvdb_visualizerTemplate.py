@@ -217,6 +217,13 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
 
         self.beginLayout('Render Parameters', collapse=False)
 
+        self.beginLayout('Sampling', collapse=False)
+        self.addControl('position_offset')
+        self.addControl('interpolation')
+        self.addControl('compensate_scaling', label='Compensate for Scaling')
+        self.addControl('sampling_quality', label='Sampling Quality')
+        self.endLayout()
+
         self.beginLayout('Scattering', collapse=False)
         self.addControl('scattering_source', changeCommand=self.scattering_source)
         self.addControl('scattering', label='Scattering')
@@ -244,13 +251,6 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.callCustom(self.create_gradient, self.update_gradient, 'emission_channel_mode')
         self.addControl('emission_color')
         self.addControl('emission_intensity')
-        self.endLayout()
-
-        self.beginLayout('Sampling', collapse=False)
-        self.addControl('position_offset')
-        self.addControl('interpolation')
-        self.addControl('compensate_scaling', label='Compensate for Scaling')
-        self.addControl('sampling_quality', label='Sampling Quality (%)')
         self.endLayout()
 
         self.beginLayout('Overrides', collapse=True)
