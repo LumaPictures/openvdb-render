@@ -6,6 +6,8 @@
  * so we can completely separate reading the data from the main node, all it does it's just loading
  * a vdb dataset and reading information about the contained channels, but not loading actual voxel data.
  *
+ * TODO
+ * * Check if the metadata reads are cached by the file or not, if not then cache it manually
  */
 
 #include "vdb_visualizer.h"
@@ -47,6 +49,7 @@ MObject VDBVisualizerShape::s_grid_names;
 MObject VDBVisualizerShape::s_bbox_min;
 MObject VDBVisualizerShape::s_bbox_max;
 MObject VDBVisualizerShape::s_channel_stats;
+MObject VDBVisualizerShape::s_voxel_size;
 
 MObject VDBVisualizerShape::s_scattering_source;
 MObject VDBVisualizerShape::s_scattering;
@@ -69,6 +72,7 @@ MObject VDBVisualizerShape::s_position_offset;
 MObject VDBVisualizerShape::s_interpolation;
 MObject VDBVisualizerShape::s_compensate_scaling;
 MObject VDBVisualizerShape::s_additional_channel_export;
+MObject VDBVisualizerShape::s_sampling_quality;
 
 VDBGradientParams VDBVisualizerShape::s_scattering_gradient("scattering");
 VDBGradientParams VDBVisualizerShape::s_attenuation_gradient("attenuation");
@@ -273,8 +277,31 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                         ss << " - " << grid->getName() << " (" << grid->valueType() << ")" << std::endl;
                 }
             }
-
             dataBlock.outputValue(s_channel_stats).setString(ss.str().c_str());
+        }
+        else if (plug == s_voxel_size)
+        {
+            float voxel_size = std::numeric_limits<float>::max();
+            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen())
+            {
+                openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
+                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
+                {
+                    if (openvdb::GridBase::ConstPtr grid = *it)
+                    {
+                        openvdb::Vec3d vs = grid->voxelSize();
+                        if (vs.x() > 0.0)
+                            voxel_size = std::min(static_cast<float>(vs.x()), voxel_size);
+                        if (vs.y() > 0.0)
+                            voxel_size = std::min(static_cast<float>(vs.y()), voxel_size);
+                        if (vs.z() > 0.0)
+                            voxel_size = std::min(static_cast<float>(vs.z()), voxel_size);
+                    }
+                }
+            }
+            else
+                voxel_size = 1.0f;
+            dataBlock.outputValue(s_voxel_size).setFloat(voxel_size);
         }
         else
             return MStatus::kUnknownParameter;
@@ -366,13 +393,18 @@ MStatus VDBVisualizerShape::initialize()
     tAttr.setWritable(false);
     tAttr.setReadable(true);
 
+    s_voxel_size = nAttr.create("voxelSize", "voxel_size", MFnNumericData::kFloat);
+    nAttr.setStorable(false);
+    nAttr.setWritable(false);
+    nAttr.setReadable(true);
+
     MObject input_params[] = {
         s_vdb_path, s_cache_time, s_cache_playback_start, s_cache_playback_end,
         s_cache_playback_offset, s_cache_before_mode, s_cache_after_mode
     };
 
     MObject output_params[] = {
-        s_update_trigger, s_grid_names, s_out_vdb_path, s_bbox_min, s_bbox_max, s_channel_stats
+        s_update_trigger, s_grid_names, s_out_vdb_path, s_bbox_min, s_bbox_max, s_channel_stats, s_voxel_size
     };
 
     for (auto output_param : output_params)
@@ -459,6 +491,12 @@ MStatus VDBVisualizerShape::initialize()
 
     s_compensate_scaling = nAttr.create("compensateScaling", "compensate_scaling", MFnNumericData::kBoolean);
     nAttr.setDefault(true);
+
+    s_sampling_quality = nAttr.create("samplingQuality", "sampling_quality", MFnNumericData::kFloat);
+    nAttr.setDefault(100.0f);
+    nAttr.setMin(1.0f);
+    nAttr.setSoftMax(300.0f);
+    addAttribute(s_sampling_quality);
 
     s_additional_channel_export = tAttr.create("additionalChannelExport", "additional_channel_export", MFnData::kString);
     addAttribute(s_additional_channel_export);

@@ -250,6 +250,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl('position_offset')
         self.addControl('interpolation')
         self.addControl('compensate_scaling', label='Compensate for Scaling')
+        self.addControl('sampling_quality', label='Sampling Quality (%)')
         self.endLayout()
 
         self.beginLayout('Overrides', collapse=True)

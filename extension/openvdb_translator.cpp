@@ -199,6 +199,10 @@ void OpenvdbTranslator::Export(AtNode* volume)
             }
         }
     }
+
+    const float sampling_quality = FindMayaPlug("samplingQuality").asFloat();
+    const float voxel_size = FindMayaPlug("voxelSize").asFloat();
+    AiNodeSetFlt(volume, "step_size", voxel_size / (sampling_quality / 100.0f));
 }
 
 void OpenvdbTranslator::ExportMotion(AtNode* volume, unsigned int step)

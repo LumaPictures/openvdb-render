@@ -82,6 +82,7 @@ public:
     static MObject s_bbox_min;
     static MObject s_bbox_max;
     static MObject s_channel_stats;
+    static MObject s_voxel_size;
 
     // shader parameters
     static MObject s_scattering_source;
@@ -104,6 +105,7 @@ public:
     static MObject s_position_offset;
     static MObject s_interpolation;
     static MObject s_compensate_scaling;
+    static MObject s_sampling_quality;
 
     static VDBGradientParams s_scattering_gradient;
     static VDBGradientParams s_attenuation_gradient;
