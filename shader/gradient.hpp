@@ -4,11 +4,12 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
 
 class Gradient {
 private:
     enum {
-        CHANNEL_MODE_RAW,
+        CHANNEL_MODE_RAW = 0,
         CHANNEL_MODE_RGB,
         CHANNEL_MODE_FLOAT,
         CHANNEL_MODE_FLOAT_TO_FLOAT,
@@ -54,12 +55,17 @@ private:
             return bias(value * 2.0f - 1.0f) * 0.5f + 0.5f;
     }
 
+    inline float apply_float_range(float value) const
+    {
+        return (value - m_input_min) * m_inv_input_range;
+    }
+
     inline float apply_float_gradient(float value) const
     {
-        value = (value - m_input_min) * m_inv_input_range;
+        value = apply_float_range(value);
         if (value < AI_EPSILON)
             return m_float_ramp.front();
-        else if (value > 1.0f - AI_EPSILON)
+        else if (value > (1.0f - AI_EPSILON))
             return m_float_ramp.back();
         else
         {
@@ -91,7 +97,7 @@ private:
 
     inline AtRGB apply_rgb_gradient(float value) const
     {
-        value = (value - m_input_min) * m_inv_input_range;
+        value = apply_float_range(value);
         if (value < AI_EPSILON)
             return m_rgb_ramp.front();
         else if (value > 1.0f - AI_EPSILON)
@@ -244,6 +250,8 @@ public:
         m_input_min = AiNodeGetFlt(node, (base + "_input_min").c_str());
         m_input_max = AiNodeGetFlt(node, (base + "_input_max").c_str());
         m_bias = AiNodeGetFlt(node, (base + "_bias").c_str());
+        if (m_bias < AI_EPSILON)
+            m_bias = 0.5f;
         m_gain = AiNodeGetFlt(node, (base + "_gain").c_str());
         m_output_min = AiNodeGetFlt(node, (base + "_output_min").c_str());
         m_output_max = AiNodeGetFlt(node, (base + "_output_max").c_str());
@@ -335,7 +343,7 @@ public:
                 AiVolumeSampleRGB(channel, interpolation, &input);
                 v = (input.r + input.g + input.b) / 3.0f;
             }
-            return AI_RGB_WHITE * apply_float_controls(v);
+            return AI_RGB_WHITE * apply_float_controls(apply_float_range(v));
         }
         else if (m_channel_mode == CHANNEL_MODE_RGB)
         {
