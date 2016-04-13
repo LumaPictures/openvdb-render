@@ -51,6 +51,9 @@ MObject VDBVisualizerShape::s_bbox_max;
 MObject VDBVisualizerShape::s_channel_stats;
 MObject VDBVisualizerShape::s_voxel_size;
 
+MObject VDBVisualizerShape::s_point_size;
+MObject VDBVisualizerShape::s_point_jitter;
+
 MObject VDBVisualizerShape::s_scattering_source;
 MObject VDBVisualizerShape::s_scattering;
 MObject VDBVisualizerShape::s_scattering_channel;
@@ -190,7 +193,8 @@ namespace {
 }
 
 VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)),
-                                         vdb_path(""), vdb_file(nullptr), update_trigger(0)
+                                         vdb_path(""), vdb_file(nullptr), point_size(2.0f), point_jitter(0.15f),
+                                         update_trigger(0)
 {
 }
 
@@ -514,6 +518,16 @@ MStatus VDBVisualizerShape::initialize()
 
     attributeAffects(s_display_mode, s_update_trigger);
 
+    s_point_size = nAttr.create("pointSize", "point_size", MFnNumericData::kFloat);
+    nAttr.setMin(1.0f);
+    nAttr.setSoftMax(10.0f);
+    nAttr.setDefault(2.0f);
+
+    s_point_jitter = nAttr.create("pointJitter", "point_jitter", MFnNumericData::kFloat);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(0.5f);
+    nAttr.setDefault(0.15f);
+
     s_scattering_source = eAttr.create("scatteringSource", "scattering_source");
     eAttr.addField("parameter", 0);
     eAttr.addField("channel", 1);
@@ -599,7 +613,8 @@ MStatus VDBVisualizerShape::initialize()
     s_scattering_gradient.create_params();
     s_scattering_gradient.create_params();
 
-    MObject shader_params[] = {
+    MObject display_params[] = {
+            s_point_size, s_point_jitter,
             s_scattering_source, s_scattering, s_scattering_channel, s_scattering_color,
             s_scattering_intensity, s_anisotropy, s_attenuation_source, s_attenuation,
             s_attenuation_channel, s_attenuation_color, s_attenuation_intensity, s_attenuation_mode,
@@ -607,7 +622,7 @@ MStatus VDBVisualizerShape::initialize()
             s_emission_intensity, s_position_offset, s_interpolation, s_compensate_scaling
     };
 
-    for (auto shader_param : shader_params)
+    for (auto shader_param : display_params)
     {
         addAttribute(shader_param);
         attributeAffects(shader_param, s_update_trigger);
@@ -630,7 +645,10 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
 
     if (update_trigger != m_vdb_data.update_trigger)
     {
-        m_vdb_data.display_mode = static_cast<VDBDisplayMode>(MPlug(thisMObject(), s_display_mode).asShort());
+        MObject tmo = thisMObject();
+        m_vdb_data.display_mode = static_cast<VDBDisplayMode>(MPlug(tmo, s_display_mode).asShort());
+        m_vdb_data.point_size = MPlug(tmo, s_point_size).asFloat();
+        m_vdb_data.point_jitter = MPlug(tmo, s_point_jitter).asFloat();
         m_vdb_data.update_trigger = update_trigger;
         return &m_vdb_data;
     }

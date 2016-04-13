@@ -211,7 +211,9 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
 
         self.beginLayout('Display Parameters', collapse=False)
 
-        self.addControl('displayMode')
+        self.addControl('displayMode', label='Display Mode')
+        self.addControl('pointSize', label='Point Size')
+        self.addControl('pointJitter', label='Point Jitter')
 
         self.endLayout()
 

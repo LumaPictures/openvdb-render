@@ -26,6 +26,9 @@ struct VDBVisualizerData{
 
     openvdb::io::File* vdb_file;
 
+    float point_size;
+    float point_jitter;
+
     int update_trigger;
     VDBDisplayMode display_mode;
 
@@ -83,6 +86,10 @@ public:
     static MObject s_bbox_max;
     static MObject s_channel_stats;
     static MObject s_voxel_size;
+
+    // display parameters
+    static MObject s_point_size;
+    static MObject s_point_jitter;
 
     // shader parameters
     static MObject s_scattering_source;
