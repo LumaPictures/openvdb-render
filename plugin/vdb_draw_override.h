@@ -19,9 +19,9 @@ namespace MHWRender {
         virtual MHWRender::DrawAPI supportedDrawAPIs() const;
 
         virtual MUserData* prepareForDraw(
-                const MDagPath& objPath,
-                const MDagPath& cameraPath,
-                const MFrameContext& frameContext,
+                const MDagPath& obj_path,
+                const MDagPath& camera_path,
+                const MFrameContext& frame_context,
                 MUserData* oldData);
 
         virtual bool isBounded(

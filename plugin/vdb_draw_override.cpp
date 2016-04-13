@@ -1,7 +1,14 @@
+/*
+ * TODO
+ * * Replace the stipple call with a shader that can do the stippling or whatever
+ *   in world space.
+ */
+
 #include "vdb_draw_override.h"
 
 #include <maya/MFnDependencyNode.h>
 #include <maya/MDrawContext.h>
+#include <maya/MHWGeometryUtilities.h>
 
 #include <vector>
 
@@ -14,9 +21,11 @@ namespace MHWRender {
         class DrawData : public MUserData {
         private:
             MBoundingBox m_bbox;
+            float m_wireframe_color[4];
             std::vector<MFloatVector> m_wireframe;
+            bool m_is_empty;
         public:
-            DrawData() : MUserData(false)
+            DrawData() : MUserData(false), m_is_empty(false)
             {
 
             }
@@ -75,30 +84,34 @@ namespace MHWRender {
                 m_wireframe.push_back(MFloatVector(mx.x, mx.y, mx.z));
             }
 
-            void update(VDBVisualizerData* vdb_data)
+            void update(const MDagPath& obj_path, VDBVisualizerData* vdb_data)
             {
+                MColor color = MHWRender::MGeometryUtilities::wireframeColor(obj_path);
+                m_wireframe_color[0] = color.r;
+                m_wireframe_color[1] = color.g;
+                m_wireframe_color[2] = color.b;
+                m_wireframe_color[3] = color.a;
+
                 if (vdb_data == 0)
                     return;
                 m_bbox = vdb_data->bbox;
-                if (vdb_data->display_mode == DISPLAY_AXIS_ALIGNED_BBOX)
+                m_is_empty = vdb_data->vdb_file == nullptr || !vdb_data->vdb_file->isOpen();
+
+                if (m_is_empty || vdb_data->display_mode == DISPLAY_AXIS_ALIGNED_BBOX)
                 {
                     quick_reserve(24);
-
                     add_wire_bounding_box(m_bbox.min(), m_bbox.max());
                 }
                 else if (vdb_data->display_mode == DISPLAY_GRID_BBOX)
                 {
-                    if (vdb_data->vdb_file == nullptr || !vdb_data->vdb_file->isOpen())
-                    {
-                        clear();
-                        return;
-                    }
-
                     openvdb::GridPtrVecPtr grids = vdb_data->vdb_file->readAllGridMetadata();
                     const size_t num_vertices = grids->size() * 24;
                     if (num_vertices == 0)
                     {
-                        clear();
+                        m_is_empty = true;
+                        m_bbox = MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0));
+                        quick_reserve(24);
+                        add_wire_bounding_box(m_bbox.min(), m_bbox.max());
                         return;
                     }
 
@@ -171,6 +184,18 @@ namespace MHWRender {
                 glPushMatrix();
                 glLoadMatrixf(&world_view_mat[0][0]);
 
+                glPushAttrib(GL_CURRENT_BIT);
+
+                if (m_is_empty)
+                {
+                    glPushAttrib(GL_ENABLE_BIT);
+                    glLineStipple(4, 0xAAAA);
+                    glEnable(GL_LINE_STIPPLE);
+                    glColor4f(0.5f, 0.5f, 0.5f, 1.0f);
+                }
+                else
+                    glColor4fv(m_wireframe_color);
+
                 glBegin(GL_LINES);
 
                 for (const auto& vertex : m_wireframe)
@@ -178,10 +203,14 @@ namespace MHWRender {
 
                 glEnd();
 
+                if (m_is_empty)
+                    glPopAttrib();
+
+                glPopAttrib();
+
                 glPopMatrix();
             }
         };
-
     }
 
     VDBDrawOverride::VDBDrawOverride(const MObject& obj) : MPxDrawOverride(obj, draw_callback)
@@ -215,14 +244,14 @@ namespace MHWRender {
     }
 
     MUserData* VDBDrawOverride::prepareForDraw(
-            const MDagPath&,
+            const MDagPath& obj_path,
             const MDagPath&,
             const MFrameContext&,
             MUserData* oldData)
     {
         DrawData* data = oldData == 0 ? new DrawData() : reinterpret_cast<DrawData*>(oldData);
 
-        data->update(p_vdb_visualizer->get_update());
+        data->update(obj_path, p_vdb_visualizer->get_update());
 
         return data;
     }

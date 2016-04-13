@@ -32,7 +32,7 @@ struct VDBVisualizerData{
     VDBVisualizerData();
     ~VDBVisualizerData();
 
-    void clear();
+    void clear(const MBoundingBox& _bbox = MBoundingBox());
 };
 
 class VDBVisualizerShapeUI : public MPxSurfaceShapeUI {

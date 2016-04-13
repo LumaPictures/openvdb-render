@@ -89,7 +89,8 @@ namespace {
     };
 }
 
-VDBVisualizerData::VDBVisualizerData() : vdb_path(""), vdb_file(nullptr), update_trigger(0)
+VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)),
+                                         vdb_path(""), vdb_file(nullptr), update_trigger(0)
 {
 }
 
@@ -98,7 +99,7 @@ VDBVisualizerData::~VDBVisualizerData()
     clear();
 }
 
-void VDBVisualizerData::clear()
+void VDBVisualizerData::clear(const MBoundingBox& _bbox)
 {
     if (vdb_file)
     {
@@ -107,7 +108,7 @@ void VDBVisualizerData::clear()
         delete vdb_file;
     }
     vdb_file = nullptr;
-    bbox = MBoundingBox();
+    bbox = _bbox;
 }
 
 VDBVisualizerShape::VDBVisualizerShape()
@@ -132,7 +133,6 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
     if (plug == s_out_vdb_path)
     {
         std::string vdb_path = dataBlock.inputValue(s_vdb_path).asString().asChar();
-
 
         if (boost::regex_match(vdb_path, s_frame_expr))
         {
@@ -206,10 +206,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 }
             }
             else
-            {
-                std::cerr << "[openvdb] Error opening file at : " << vdb_path << std::endl;
-                m_vdb_data.clear();
-            }
+                m_vdb_data.clear(MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)));
         }
         MDataHandle out_vdb_path_handle = dataBlock.outputValue(s_out_vdb_path);
         out_vdb_path_handle.setString(vdb_path.c_str());
@@ -237,11 +234,8 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
         }
         else if (plug == s_update_trigger)
         {
-            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen())
-            {
-                MDataHandle update_trigger_handle = dataBlock.outputValue(s_update_trigger);
-                update_trigger_handle.setInt(m_vdb_data.update_trigger + 1);
-            }
+            MDataHandle update_trigger_handle = dataBlock.outputValue(s_update_trigger);
+            update_trigger_handle.setInt(m_vdb_data.update_trigger + 1);
         }
         else if (plug == s_bbox_min)
         {
