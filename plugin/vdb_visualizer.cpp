@@ -87,6 +87,106 @@ namespace {
         CACHE_OUT_OF_RANGE_MODE_HOLD,
         CACHE_OUT_OF_RANGE_MODE_REPEAT
     };
+
+    // we have to do lots of line, rectangle intersection, so using the Cohen-Sutherland algorithm
+    // https://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
+    class SelectionRectangle {
+    private:
+        float xmin, ymin;
+        float xmax, ymax;
+
+        enum {
+            OUTCODE_INSIDE = 0, // 0000
+            OUTCODE_LEFT = 1,   // 0001
+            OUTCODE_RIGHT = 2,  // 0010
+            OUTCODE_BOTTOM = 4, // 0100
+            OUTCODE_TOP = 8,    // 1000
+        };
+
+        int compute_out_code(float x, float y) const
+        {
+            int code = OUTCODE_INSIDE;          // initialised as being inside of clip window
+
+            if (x < xmin)           // to the left of clip window
+                code |= OUTCODE_LEFT;
+            else if (x > xmax)      // to the right of clip window
+                code |= OUTCODE_RIGHT;
+            if (y < ymin)           // below the clip window
+                code |= OUTCODE_BOTTOM;
+            else if (y > ymax)      // above the clip window
+                code |= OUTCODE_TOP;
+
+            return code;
+        }
+    public:
+        SelectionRectangle(MSelectInfo& selectInfo)
+        {
+            unsigned int orig_x = 0;
+            unsigned int orig_y = 0;
+            unsigned int size_x = 0;
+            unsigned int size_y = 0;
+            selectInfo.selectRect(orig_x, orig_y, size_x, size_y);
+
+            xmin = static_cast<float>(orig_x);
+            ymin = static_cast<float>(orig_y);
+            xmax = static_cast<float>(orig_x + size_x);
+            ymax = static_cast<float>(orig_y + size_y);
+        }
+
+        bool clip_line(float x0, float y0, float x1, float y1) const
+        {
+            // compute outcodes for P0, P1, and whatever point lies outside the clip rectangle
+            int outcode0 = compute_out_code(x0, y0);
+            int outcode1 = compute_out_code(x1, y1);
+
+            while (true)
+            {
+                if (!(outcode0 | outcode1)) // Bitwise OR is 0. Trivially accept and get out of loop
+                    return true;
+                else if (outcode0 & outcode1) // Bitwise AND is not 0. Trivially reject and get out of loop
+                    return false;
+                else
+                {
+                    float x = 0.0f;
+                    float y = 0.0f;
+                    const int outcode_out = outcode0 ? outcode0 : outcode1;
+                    if (outcode_out & OUTCODE_TOP)
+                    {
+                        x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0);
+                        y = ymax;
+                    }
+                    else if (outcode_out & OUTCODE_BOTTOM)
+                    {
+                        x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0);
+                        y = ymin;
+                    }
+                    else if (outcode_out & OUTCODE_RIGHT)
+                    {
+                        y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0);
+                        x = xmax;
+                    }
+                    else if (outcode_out & OUTCODE_LEFT)
+                    {
+                        y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0);
+                        x = xmin;
+                    }
+
+                    if (outcode_out == outcode0)
+                    {
+                        x0 = x;
+                        y0 = y;
+                        outcode0 = compute_out_code(x0, y0);
+                    }
+                    else
+                    {
+                        x1 = x;
+                        y1 = y;
+                        outcode1 = compute_out_code(x1, y1);
+                    }
+                }
+            }
+        }
+    };
 }
 
 VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)),
@@ -575,46 +675,55 @@ bool VDBVisualizerShapeUI::select(MSelectInfo& selectInfo, MSelectionList& selec
         const MPoint max = bbox.max();
 
         M3dView view = selectInfo.view();
-
-        unsigned int orig_x_u = 0;
-        unsigned int orig_y_u = 0;
-        unsigned int size_x_u = 0;
-        unsigned int size_y_u = 0;
-        selectInfo.selectRect(orig_x_u, orig_y_u, size_x_u, size_y_u);
         const MDagPath object_path = selectInfo.selectPath();
         const MMatrix object_matrix = object_path.inclusiveMatrix();
 
-        const short orig_x = static_cast<short>(orig_x_u);
-        const short orig_y = static_cast<short>(orig_y_u);
-        const short size_x = static_cast<short>(size_x_u);
-        const short size_y = static_cast<short>(size_y_u);
+        SelectionRectangle rect(selectInfo);
 
-        auto check_point_in_selection = [&] (MPoint point) -> bool {
+        auto convert_world_to_screen = [&] (MPoint point) -> std::pair<float, float> {
             point *= object_matrix;
             short x_pos = 0; short y_pos = 0;
             view.worldToView(point, x_pos, y_pos);
+            return std::make_pair(static_cast<float>(x_pos), static_cast<float>(y_pos));
+        };
 
-            const short t_x = x_pos - orig_x;
-            const short t_y = y_pos - orig_y;
+        const std::array<MPoint, 8> world_points = {
+                min,
+                MPoint(min.x, max.y, min.z),
+                MPoint(min.x, max.y, max.z),
+                MPoint(min.x, min.y, max.z),
+                MPoint(max.x, min.y, min.z),
+                MPoint(max.x, max.y, min.z),
+                max,
+                MPoint(max.x, min.y, max.z)
+        };
 
-            if (t_x >= 0 && t_x < size_x &&
-                t_y >= 0 && t_y < size_y)
+        std::pair<float, float> points[8];
+
+        for (int i = 0; i < 8; ++i)
+            points[i] = convert_world_to_screen(world_points[i]);
+
+
+        static const std::array<std::pair<int, int>, 12> line_array = {
+                std::make_pair(0, 1), std::make_pair(1, 2), std::make_pair(2, 3), std::make_pair(3, 0),
+                std::make_pair(4, 5), std::make_pair(5, 6), std::make_pair(6, 7), std::make_pair(7, 4),
+                std::make_pair(0, 4), std::make_pair(1, 5), std::make_pair(2, 6), std::make_pair(3, 7)
+        };
+
+        for (auto line : line_array)
+        {
+            const auto& p0 = points[line.first];
+            const auto& p1 = points[line.second];
+            if (rect.clip_line(p0.first, p0.second, p1.first, p1.second))
             {
                 MSelectionList item;
                 item.add(object_path);
-                selectInfo.addSelection(item, point, selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
+                selectInfo.addSelection(item, (world_points[line.first] + world_points[line.second]) * 0.5, selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
                 return true;
             }
-            else return false;
-        };
+        }
 
-        return check_point_in_selection(min) || check_point_in_selection(max) ||
-               check_point_in_selection(MPoint(max.x, min.y, min.z)) ||
-               check_point_in_selection(MPoint(min.x, max.y, min.z)) ||
-               check_point_in_selection(MPoint(min.x, min.y, max.z)) ||
-               check_point_in_selection(MPoint(max.x, max.y, min.z)) ||
-               check_point_in_selection(MPoint(max.x, min.y, max.z)) ||
-               check_point_in_selection(MPoint(min.x, max.y, max.z));
+        return false;
     }
     else return false;
 }
