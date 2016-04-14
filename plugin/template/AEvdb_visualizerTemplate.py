@@ -86,11 +86,11 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.update_channel('emission', param_name)
 
     @staticmethod
-    def change_vdb_path(grp, param_name):
-        pm.setAttr(param_name, pm.textFieldButtonGrp(grp, query=True, text=True), type='string')
+    def change_vdb_path(param_name):
+        pm.setAttr(param_name, pm.textFieldButtonGrp('OpenVDBPathGrp', query=True, text=True), type='string')
 
     @staticmethod
-    def press_vdb_path(grp, param_name):
+    def press_vdb_path(param_name):
         basic_filter = 'OpenVDB File(*.vdb)'
         project_dir = pm.workspace(query=True, directory=True)
         vdb_path = pm.fileDialog2(fileFilter=basic_filter, cap='Select OpenVDB File', okc='Load', fm=1, startingDirectory=project_dir)
@@ -122,24 +122,24 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
                 print '[openvdb] Error while trying to figure out padding, and frame range!'
                 import sys, traceback
                 traceback.print_exc(file=sys.stdout)
-            pm.textFieldButtonGrp(grp, edit=True, text=vdb_path)
+            pm.textFieldButtonGrp('OpenVDBPathGrp', edit=True, text=vdb_path)
             pm.setAttr(param_name, vdb_path, type='string')
 
     def create_vdb_path(self, param_name):
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        pm.textFieldButtonGrp('OpenVDBPathField', label='VDB Path', buttonLabel='...')
+        pm.textFieldButtonGrp('OpenVDBPathGrp', label='VDB Path', buttonLabel='...')
         self.update_vdb_path(param_name)
         pm.setUITemplate(popTemplate=True)
 
     def update_vdb_path(self, param_name):
-        pm.textFieldButtonGrp('OpenVDBPathField', edit=True, text=pm.getAttr(param_name),
-                              changeCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.change_vdb_path("%s", "%s")' % (self.vdb_path_grp, param_name), buttonCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.press_vdb_path("%s", "%s")' % (self.vdb_path_grp, param_name))
+        pm.textFieldButtonGrp('OpenVDBPathGrp', edit=True, text=pm.getAttr(param_name),
+                              changeCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.change_vdb_path("%s")' % param_name, buttonCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.press_vdb_path("%s")' % param_name)
 
     def create_channel_stats(self, param_name):
-        self.channel_stats = pm.text(label=pm.getAttr(param_name), align='left')
+        pm.text('OpenVDBChannelStats', label=pm.getAttr(param_name), align='left')
 
     def update_channel_stats(self, param_name):
-         pm.text(self.channel_stats, edit=True, label=pm.getAttr(param_name))
+         pm.text('OpenVDBChannelStats', edit=True, label=pm.getAttr(param_name))
 
     @staticmethod
     def add_additional_channel(param_name, grid_name):
@@ -155,26 +155,29 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
             pm.setAttr(param_name, grid_name)
 
     @staticmethod
-    def setup_additional_channel_menus(param_name, pup):
-        pm.popupMenu(pup, edit=True, deleteAllItems=True)
+    def setup_additional_channel_menus(param_name):
+        pm.popupMenu('OpenVDBAdditionalChannelPopup', edit=True, deleteAllItems=True)
         grids = pm.getAttr('%s.gridNames' % param_name.split('.')[0]).split(' ')
         if grids is not None and len(grids) > 0:
             for grid in grids:
-                pm.menuItem(label=grid, parent=pup, command='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.add_additional_channel("%s", "%s")' % (param_name, grid))
+                pm.menuItem(label=grid, parent='OpenVDBAdditionalChannelPopup', command='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.add_additional_channel("%s", "%s")' % (param_name, grid))
 
     def setup_additional_channel_popup(self, param_name):
-        if self.additional_channel_export_popup == '':
-            self.additional_channel_export_popup = pm.popupMenu(parent=self.additional_channel_export)
-        pm.popupMenu(self.additional_channel_export_popup, edit=True, postMenuCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.setup_additional_channel_menus("%s", "%s")' % (param_name, self.additional_channel_export_popup))
+        try:
+            pm.deleteUI('OpenVDBAdditionalChannelPopup')
+        except:
+            pass
+        pm.popupMenu('OpenVDBAdditionalChannelPopup', parent='OpenVDBAdditionalChannel')
+        pm.popupMenu('OpenVDBAdditionalChannelPopup', edit=True, postMenuCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.setup_additional_channel_menus("%s")' % param_name)
 
     def create_additional_channel_export(self, param_name):
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        self.additional_channel_export = pm.attrControlGrp(annotation='Channel Export', attribute=param_name)
+        pm.attrControlGrp('OpenVDBAdditionalChannel', annotation='Channel Export', attribute=param_name)
         pm.setUITemplate(popTemplate=True)
         self.update_additional_channel_export(param_name)
 
     def update_additional_channel_export(self, param_name):
-        pm.attrControlGrp(self.additional_channel_export, edit=True, attribute=param_name)
+        pm.attrControlGrp('OpenVDBAdditionalChannel', edit=True, attribute=param_name)
         self.setup_additional_channel_popup(param_name)
 
     def __init__(self, node_name):
@@ -182,10 +185,6 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
             setattr(self, '%s_channel_grp' % each, '')
             setattr(self, '%s_channel_popup' % each, '')
             setattr(self, '%s_gradient_type' % each, '')
-
-        self.channel_stats = ''
-        self.additional_channel_export = ''
-        self.additional_channel_export_popup = ''
 
         self.beginScrollLayout()
 
