@@ -10,7 +10,7 @@ class AEvdb_samplerTemplate(pm.uitypes.AETemplate, channelController):
 
         self.beginLayout('Channel Parameters', collapse=False)
         self.addControl('channel', label='Channel')
-        self.callCustom(self.create_gradient, self.update_gradient, 'base_channel_mode')
+        self.create_gradient_params('base', node_name)
         self.endLayout()
 
         self.beginLayout('Sampling Parameters', collapse=False)

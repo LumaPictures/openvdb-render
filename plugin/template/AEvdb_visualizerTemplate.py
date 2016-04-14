@@ -127,12 +127,12 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
 
     def create_vdb_path(self, param_name):
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        self.vdb_path_grp = pm.textFieldButtonGrp(label='VDB Path', buttonLabel='...')
+        pm.textFieldButtonGrp('OpenVDBPathField', label='VDB Path', buttonLabel='...')
         self.update_vdb_path(param_name)
         pm.setUITemplate(popTemplate=True)
 
     def update_vdb_path(self, param_name):
-        pm.textFieldButtonGrp(self.vdb_path_grp, edit=True, text=pm.getAttr(param_name),
+        pm.textFieldButtonGrp('OpenVDBPathField', edit=True, text=pm.getAttr(param_name),
                               changeCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.change_vdb_path("%s", "%s")' % (self.vdb_path_grp, param_name), buttonCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.press_vdb_path("%s", "%s")' % (self.vdb_path_grp, param_name))
 
     def create_channel_stats(self, param_name):
@@ -182,9 +182,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
             setattr(self, '%s_channel_grp' % each, '')
             setattr(self, '%s_channel_popup' % each, '')
             setattr(self, '%s_gradient_type' % each, '')
-            self.init_gradient_params(each)
 
-        self.vdb_path_grp = ''
         self.channel_stats = ''
         self.additional_channel_export = ''
         self.additional_channel_export_popup = ''
@@ -230,7 +228,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl('scattering_source', changeCommand=self.scattering_source)
         self.addControl('scattering', label='Scattering')
         self.callCustom(self.create_scattering_channel, self.update_scattering_channel, 'scattering_channel')
-        self.callCustom(self.create_gradient, self.update_gradient, 'scattering_channel_mode')
+        self.create_gradient_params('scattering', node_name)
         self.addControl('scattering_color')
         self.addControl('scattering_intensity')
         self.addControl('anisotropy')
@@ -240,7 +238,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl('attenuation_source', changeCommand=self.attenuation_source)
         self.addControl('attenuation', label='Attenuation')
         self.callCustom(self.create_attenuation_channel, self.update_attenuation_channel, 'attenuation_channel')
-        self.callCustom(self.create_gradient, self.update_gradient, 'attenuation_channel_mode')
+        self.create_gradient_params('attenuation', node_name)
         self.addControl('attenuation_color')
         self.addControl('attenuation_intensity')
         self.addControl('attenuation_mode', label='Attenuation Mode')
@@ -250,7 +248,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl('emission_source', changeCommand=self.emission_source)
         self.addControl('emission', label='Emission')
         self.callCustom(self.create_emission_channel, self.update_emission_channel, 'emission_channel')
-        self.callCustom(self.create_gradient, self.update_gradient, 'emission_channel_mode')
+        self.create_gradient_params('emission', node_name)
         self.addControl('emission_color')
         self.addControl('emission_intensity')
         self.endLayout()
