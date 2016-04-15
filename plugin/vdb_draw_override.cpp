@@ -5,6 +5,8 @@
  * * Use proper opengl functions, avoid the old pipe
  */
 
+#include <GL/glew.h>
+
 #include "vdb_draw_override.h"
 
 #include <maya/MFnDependencyNode.h>
@@ -14,7 +16,159 @@
 #include <vector>
 #include <random>
 
+#include <openvdb/tools/Interpolation.h>
+
 #include "../util/maya_utils.hpp"
+
+namespace {
+    class RGBSampler {
+    public:
+        RGBSampler()
+        { }
+
+        virtual ~RGBSampler()
+        { }
+
+        virtual MColor get_rgb(const openvdb::Vec3d&) const
+        {
+            return MColor(1.0f, 1.0f, 1.0f, 1.0f);
+        }
+    };
+
+    class FloatToRGBSampler : public RGBSampler {
+    private:
+        typedef openvdb::tools::GridSampler<openvdb::FloatGrid, openvdb::tools::BoxSampler> sampler_type;
+        sampler_type* p_sampler;
+    public:
+        FloatToRGBSampler(openvdb::FloatGrid::ConstPtr grid)
+        {
+            p_sampler = new sampler_type(*grid);
+        }
+
+        ~FloatToRGBSampler()
+        {
+            delete p_sampler;
+        }
+
+        MColor get_rgb(const openvdb::Vec3d& wpos) const
+        {
+            const float value = p_sampler->wsSample(wpos);
+            return MColor(value, value, value, 1.0f);
+        }
+    };
+
+    class Vec3SToRGBSampler : public RGBSampler {
+    private:
+        typedef openvdb::tools::GridSampler<openvdb::Vec3SGrid, openvdb::tools::BoxSampler> sampler_type;
+        sampler_type* p_sampler;
+    public:
+        Vec3SToRGBSampler(openvdb::Vec3SGrid::ConstPtr grid)
+        {
+            p_sampler = new sampler_type(*grid);
+        }
+
+        ~Vec3SToRGBSampler()
+        {
+            delete p_sampler;
+        }
+
+        MColor get_rgb(const openvdb::Vec3d& wpos) const
+        {
+            const openvdb::Vec3s value = p_sampler->wsSample(wpos);
+            return MColor(value.x(), value.y(), value.z(), 1.0f);
+        }
+    };
+
+    class FloatVoxelIterator {
+    public:
+        FloatVoxelIterator()
+        { }
+
+        virtual ~FloatVoxelIterator()
+        { }
+
+        virtual bool is_valid() const
+        {
+            return false;
+        }
+
+        virtual void get_next()
+        { }
+
+        virtual float get_value() const
+        {
+            return 0.0f;
+        }
+
+        virtual openvdb::Coord get_coord() const
+        {
+            return openvdb::Coord(0, 0, 0);
+        }
+    };
+
+    class FloatToFloatVoxelIterator : public FloatVoxelIterator {
+        typedef openvdb::FloatGrid grid_type;
+        grid_type::ValueOnCIter iter;
+    public:
+        FloatToFloatVoxelIterator(grid_type::ConstPtr grid) : iter(grid->beginValueOn())
+        { }
+
+        ~FloatToFloatVoxelIterator()
+        { }
+
+        bool is_valid() const
+        {
+            return iter.test();
+        }
+
+        void get_next()
+        {
+            ++iter;
+        }
+
+        float get_value() const
+        {
+            return iter.getValue();
+        }
+
+        openvdb::Coord get_coord() const
+        {
+            return iter.getCoord();
+        }
+    };
+
+    class Vec3SToFloatVoxelIterator : public FloatVoxelIterator {
+        typedef openvdb::Vec3SGrid grid_type;
+        grid_type::ValueOnCIter iter;
+    public:
+        Vec3SToFloatVoxelIterator(grid_type::ConstPtr grid) : iter(grid->cbeginValueOn())
+        { }
+
+        ~Vec3SToFloatVoxelIterator()
+        { }
+
+        bool is_valid() const
+        {
+            return iter.test();
+        }
+
+        void get_next()
+        {
+            ++iter;
+        }
+
+        float get_value() const
+        {
+            openvdb::Vec3s value = iter.getValue();
+            return (value.x() + value.y() + value.z()) / 3.0f;
+        }
+
+        openvdb::Coord get_coord() const
+        {
+            return iter.getCoord();
+        }
+    };
+}
 
 namespace MHWRender {
 
@@ -27,6 +181,7 @@ namespace MHWRender {
 
             std::vector<MFloatVector> m_wireframe;
             std::vector<MFloatVector> m_points;
+            std::vector<MColor> m_point_colors;
 
             float m_point_size;
 
@@ -46,6 +201,7 @@ namespace MHWRender {
             void clear_points()
             {
                 std::vector<MFloatVector>().swap(m_points);
+                std::vector<MColor>().swap(m_point_colors);
             }
 
             void quick_reserve(size_t num_vertices)
@@ -105,6 +261,48 @@ namespace MHWRender {
                 m_wireframe_color[2] = color.b;
                 m_wireframe_color[3] = color.a;
 
+                auto push_back_wireframe = [&] (openvdb::GridBase::ConstPtr grid) {
+                    static std::array<MFloatVector, 8> vertices;
+                    if (read_grid_transformed_bbox_wire(grid, vertices))
+                    {
+                        m_wireframe.push_back(vertices[0]);
+                        m_wireframe.push_back(vertices[4]);
+
+                        m_wireframe.push_back(vertices[1]);
+                        m_wireframe.push_back(vertices[5]);
+
+                        m_wireframe.push_back(vertices[2]);
+                        m_wireframe.push_back(vertices[6]);
+
+                        m_wireframe.push_back(vertices[3]);
+                        m_wireframe.push_back(vertices[7]);
+
+                        m_wireframe.push_back(vertices[0]);
+                        m_wireframe.push_back(vertices[1]);
+
+                        m_wireframe.push_back(vertices[1]);
+                        m_wireframe.push_back(vertices[2]);
+
+                        m_wireframe.push_back(vertices[2]);
+                        m_wireframe.push_back(vertices[3]);
+
+                        m_wireframe.push_back(vertices[3]);
+                        m_wireframe.push_back(vertices[0]);
+
+                        m_wireframe.push_back(vertices[4]);
+                        m_wireframe.push_back(vertices[5]);
+
+                        m_wireframe.push_back(vertices[5]);
+                        m_wireframe.push_back(vertices[6]);
+
+                        m_wireframe.push_back(vertices[6]);
+                        m_wireframe.push_back(vertices[7]);
+
+                        m_wireframe.push_back(vertices[7]);
+                        m_wireframe.push_back(vertices[4]);
+                    }
+                };
+
                 if (vdb_data == 0)
                     return;
                 m_bbox = vdb_data->bbox;
@@ -138,115 +336,123 @@ namespace MHWRender {
                     for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
                     {
                         if (openvdb::GridBase::ConstPtr grid = *it)
-                        {
-                            // TODO : do things properly
-                            static std::array<MFloatVector, 8> vertices;
-                            if (read_grid_transformed_bbox_wire(grid, vertices))
-                            {
-                                m_wireframe.push_back(vertices[0]);
-                                m_wireframe.push_back(vertices[4]);
-
-                                m_wireframe.push_back(vertices[1]);
-                                m_wireframe.push_back(vertices[5]);
-
-                                m_wireframe.push_back(vertices[2]);
-                                m_wireframe.push_back(vertices[6]);
-
-                                m_wireframe.push_back(vertices[3]);
-                                m_wireframe.push_back(vertices[7]);
-
-                                m_wireframe.push_back(vertices[0]);
-                                m_wireframe.push_back(vertices[1]);
-
-                                m_wireframe.push_back(vertices[1]);
-                                m_wireframe.push_back(vertices[2]);
-
-                                m_wireframe.push_back(vertices[2]);
-                                m_wireframe.push_back(vertices[3]);
-
-                                m_wireframe.push_back(vertices[3]);
-                                m_wireframe.push_back(vertices[0]);
-
-                                m_wireframe.push_back(vertices[4]);
-                                m_wireframe.push_back(vertices[5]);
-
-                                m_wireframe.push_back(vertices[5]);
-                                m_wireframe.push_back(vertices[6]);
-
-                                m_wireframe.push_back(vertices[6]);
-                                m_wireframe.push_back(vertices[7]);
-
-                                m_wireframe.push_back(vertices[7]);
-                                m_wireframe.push_back(vertices[4]);
-                            }
-                        }
+                            push_back_wireframe(grid);
                     }
                 }
                 else if (vdb_data->display_mode == DISPLAY_POINT_CLOUD)
                 {
-                    openvdb::GridPtrVecPtr grids = vdb_data->vdb_file->readAllGridMetadata();
-                    if (grids->size() == 0)
+                    m_points.clear();
+                    m_point_colors.clear();
+
+                    openvdb::GridBase::ConstPtr attenuation_grid = 0;
+                    try
+                    {
+                        attenuation_grid = vdb_data->vdb_file->readGrid(vdb_data->attenuation_channel);
+                    }
+                    catch(...)
+                    {
+                        attenuation_grid = 0;
+                    }
+
+                    if (attenuation_grid == 0)
                     {
                         clear_points();
+                        quick_reserve(24);
+                        add_wire_bounding_box(m_bbox.min(), m_bbox.max());
                         return;
+                    }
+
+                    quick_reserve(24);
+                    push_back_wireframe(attenuation_grid);
+
+                    openvdb::GridBase::ConstPtr scattering_grid = 0;
+
+                    if (vdb_data->scattering_channel == vdb_data->attenuation_channel)
+                        scattering_grid = attenuation_grid;
+                    else
+                    {
+                        try
+                        {
+                            scattering_grid = vdb_data->vdb_file->readGrid(vdb_data->scattering_channel);
+                        }
+                        catch(...)
+                        {
+                            scattering_grid = 0;
+                        }
                     }
 
                     m_point_size = vdb_data->point_size;
 
-                    openvdb::GridBase::ConstPtr grid = *grids->begin();
+                    size_t active_voxel_count = attenuation_grid->activeVoxelCount() / (vdb_data->point_skip + 1);
+                    m_points.reserve(active_voxel_count);
+                    m_point_colors.reserve(active_voxel_count);
 
-                    for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
-                    {
-                        if (openvdb::GridBase::ConstPtr g = *it)
-                        {
-                            if (g->getName() == "density")
-                            {
-                                grid = g;
-                                break;
-                            }
-                        }
-                    }
-
-                    // we don't know the number points beforehand, and later on calculating the
-                    // required number of points precisely (ie executing a shader) could prove to be really costly
-                    // so doing that twice is not an option, we are going to rely on the vector tricks, but we are loosing perf
-                    // at the first run
-                    m_points.clear();
                     const float point_jitter = vdb_data->point_jitter;
                     const float do_jitter = point_jitter > 0.001f;
 
-                    openvdb::Vec3d voxel_size = grid->voxelSize();
+                    openvdb::Vec3d voxel_size = attenuation_grid->voxelSize();
 
                     std::minstd_rand generator; // LCG
                     std::uniform_real_distribution<float> distributionX(-point_jitter * static_cast<float>(voxel_size.x()), point_jitter * static_cast<float>(voxel_size.x()));
                     std::uniform_real_distribution<float> distributionY(-point_jitter * static_cast<float>(voxel_size.y()), point_jitter * static_cast<float>(voxel_size.y()));
                     std::uniform_real_distribution<float> distributionZ(-point_jitter * static_cast<float>(voxel_size.z()), point_jitter * static_cast<float>(voxel_size.z()));
 
-                    if (grid->valueType() == "float")
-                    {
-                        openvdb::FloatGrid::ConstPtr grid_data = openvdb::gridConstPtrCast<openvdb::FloatGrid>(
-                                vdb_data->vdb_file->readGrid(grid->getName()));
-                        openvdb::math::Transform transform = grid_data->transform();
+                    MColor point_color(vdb_data->scattering_color.r, vdb_data->scattering_color.g, vdb_data->scattering_color.b,
+                                       (vdb_data->attenuation_color.r + vdb_data->attenuation_color.g + vdb_data->attenuation_color.b) / 3.0f);
 
-                        for (auto iter = grid_data->beginValueOn(); iter; ++iter)
+                    openvdb::math::Transform attenuation_transform = attenuation_grid->transform();
+
+                    RGBSampler* scattering_sampler = 0;
+
+                    if (scattering_grid == 0)
+                        scattering_sampler = new RGBSampler();
+                    else
+                    {
+                        if (scattering_grid->valueType() == "float")
+                            scattering_sampler = new FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(scattering_grid));
+                        else if (scattering_grid->valueType() == "vec3s")
+                            scattering_sampler = new Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(scattering_grid));
+                        else
+                            scattering_sampler = new RGBSampler();
+                    }
+
+                    FloatVoxelIterator* iter = 0;
+
+                    if (attenuation_grid->valueType() == "float")
+                        iter = new FloatToFloatVoxelIterator(openvdb::gridConstPtrCast<openvdb::FloatGrid>(attenuation_grid));
+                    else if (attenuation_grid->valueType() == "vec3s")
+                        iter = new Vec3SToFloatVoxelIterator(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(attenuation_grid));
+                    else
+                        iter = new FloatVoxelIterator();
+
+                    int point_id = 0;
+                    for (; iter->is_valid(); iter->get_next())
+                    {
+                        if ((point_id++ % vdb_data->point_skip) != 0)
+                            continue;
+                        const float value = iter->get_value() * point_color.a;
+                        if (value > 0.0f)
                         {
-                            const double value = static_cast<double>(iter.getValue());
-                            if (value > 0.0f)
+                            openvdb::Vec3d vdb_pos = attenuation_transform.indexToWorld(iter->get_coord());
+                            MFloatVector pos(static_cast<float>(vdb_pos.x()), static_cast<float>(vdb_pos.y()),
+                                             static_cast<float>(vdb_pos.z()));
+                            if (do_jitter)
                             {
-                                openvdb::Vec3d vdb_pos = transform.indexToWorld(iter.getCoord());
-                                MFloatVector pos(static_cast<float>(vdb_pos.x()), static_cast<float>(vdb_pos.y()),
-                                                 static_cast<float>(vdb_pos.z()));
-                                if (do_jitter)
-                                {
-                                    pos.x += distributionX(generator);
-                                    pos.y += distributionY(generator);
-                                    pos.z += distributionZ(generator);
-                                }
-                                m_points.push_back(pos);
+                                pos.x += distributionX(generator);
+                                pos.y += distributionY(generator);
+                                pos.z += distributionZ(generator);
                             }
+                            m_points.push_back(pos);
+                            MColor sample_color(point_color.r, point_color.g, point_color.b, value);
+                            sample_color *= scattering_sampler->get_rgb(vdb_pos);
+                            m_point_colors.push_back(sample_color);
                         }
                     }
+
+                    delete scattering_sampler;
+
                     m_points.shrink_to_fit();
+                    m_point_colors.shrink_to_fit();
                 }
                 else if (m_wireframe.size())
                     clear_wireframe();
@@ -279,34 +485,45 @@ namespace MHWRender {
                 else
                     glColor4fv(m_wireframe_color);
 
-                if (m_display_mode == DISPLAY_AXIS_ALIGNED_BBOX || m_display_mode == DISPLAY_GRID_BBOX)
+
+                glBegin(GL_LINES);
+
+                for (const auto& vertex : m_wireframe)
+                    glVertex3f(vertex.x, vertex.y, vertex.z);
+
+                glEnd();
+
+                if (m_display_mode == DISPLAY_POINT_CLOUD && m_points.size() > 0)
                 {
-                    glBegin(GL_LINES);
-
-                    for (const auto& vertex : m_wireframe)
-                        glVertex3f(vertex.x, vertex.y, vertex.z);
-
-                    glEnd();
-                }
-                else if (m_display_mode == DISPLAY_POINT_CLOUD && m_points.size() > 0)
-                {
-                    // TODO: what did I fuck up with the vertex pointer???
-                    /*glEnableClientState(GL_VERTEX_ARRAY_POINTER);
-
-                    glVertexPointer(3, GL_FLOAT, 0, &m_points[0]);
-
-                    glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(m_points.size()));
-
-                    glDisableClientState(GL_VERTEX_ARRAY_POINTER);*/
-
+                    // TODO: something is wrong with the vertex array pointers, some shared gl state is fucked up
+                    // this will be avoided once I move to shaders and direct state access
+                    glColor3f(1.0f, 1.0f, 1.0f);
                     glPointSize(m_point_size);
+                    glEnable(GL_POINT_SMOOTH);
+
+                    glDepthMask(GL_FALSE);
+                    glEnable(GL_DEPTH_TEST);
+                    glEnable(GL_BLEND);
+                    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
                     glBegin(GL_POINTS);
 
-                    for (const auto& vertex : m_points)
+                    const size_t point_count = m_points.size();
+
+                    for (size_t i = 0; i < point_count; ++i)
+                    {
+                        const MFloatVector& vertex = m_points[i];
+                        const MColor& color = m_point_colors[i];
+                        glColor4f(color.r, color.g, color.b, color.a);
                         glVertex3f(vertex.x, vertex.y, vertex.z);
+                    }
 
                     glEnd();
+
+                    glDisable(GL_DEPTH_TEST);
+                    glDisable(GL_BLEND);
+                    glDisable(GL_POINT_SMOOTH);
+                    glDepthMask(GL_TRUE);
                 }
 
                 if (m_is_empty)

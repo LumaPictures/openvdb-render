@@ -211,6 +211,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl('displayMode', label='Display Mode')
         self.addControl('pointSize', label='Point Size')
         self.addControl('pointJitter', label='Point Jitter')
+        self.addControl('pointSkip', label='Point Skip')
 
         self.endLayout()
 

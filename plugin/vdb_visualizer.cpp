@@ -53,6 +53,7 @@ MObject VDBVisualizerShape::s_voxel_size;
 
 MObject VDBVisualizerShape::s_point_size;
 MObject VDBVisualizerShape::s_point_jitter;
+MObject VDBVisualizerShape::s_point_skip;
 
 MObject VDBVisualizerShape::s_scattering_source;
 MObject VDBVisualizerShape::s_scattering;
@@ -192,9 +193,9 @@ namespace {
     };
 }
 
-VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)),
-                                         vdb_path(""), vdb_file(nullptr), point_size(2.0f), point_jitter(0.15f),
-                                         update_trigger(0)
+VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)), scattering_color(1.0f, 1.0f, 1.0f, 1.0f),
+                                         vdb_file(nullptr), point_size(2.0f), point_jitter(0.15f),
+                                         point_skip(1), update_trigger(0)
 {
 }
 
@@ -528,6 +529,11 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setSoftMax(0.5f);
     nAttr.setDefault(0.15f);
 
+    s_point_skip = nAttr.create("pointSkip", "point_skip", MFnNumericData::kInt);
+    nAttr.setMin(1);
+    nAttr.setSoftMax(5);
+    nAttr.setDefault(1);
+
     s_scattering_source = eAttr.create("scatteringSource", "scattering_source");
     eAttr.addField("parameter", 0);
     eAttr.addField("channel", 1);
@@ -614,7 +620,7 @@ MStatus VDBVisualizerShape::initialize()
     s_scattering_gradient.create_params();
 
     MObject display_params[] = {
-            s_point_size, s_point_jitter,
+            s_point_size, s_point_jitter, s_point_skip,
             s_scattering_source, s_scattering, s_scattering_channel, s_scattering_color,
             s_scattering_intensity, s_anisotropy, s_attenuation_source, s_attenuation,
             s_attenuation_channel, s_attenuation_color, s_attenuation_intensity, s_attenuation_mode,
@@ -649,7 +655,55 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
         m_vdb_data.display_mode = static_cast<VDBDisplayMode>(MPlug(tmo, s_display_mode).asShort());
         m_vdb_data.point_size = MPlug(tmo, s_point_size).asFloat();
         m_vdb_data.point_jitter = MPlug(tmo, s_point_jitter).asFloat();
+        m_vdb_data.point_skip = MPlug(tmo, s_point_skip).asInt();
         m_vdb_data.update_trigger = update_trigger;
+
+        const short scattering_mode = MPlug(tmo, s_scattering_source).asShort();
+        MPlug scattering_plug(tmo, s_scattering);
+        MPlug scattering_color_plug(tmo, s_scattering_color);
+        const float scattering_intensity = MPlug(tmo, s_scattering_intensity).asFloat();
+        m_vdb_data.scattering_color.r = scattering_color_plug.child(0).asFloat() * scattering_intensity;
+        m_vdb_data.scattering_color.g = scattering_color_plug.child(1).asFloat() * scattering_intensity;
+        m_vdb_data.scattering_color.b = scattering_color_plug.child(2).asFloat() * scattering_intensity;
+
+        if (scattering_mode == 1)
+            m_vdb_data.scattering_channel = MPlug(tmo, s_scattering_channel).asString().asChar();
+        else
+        {
+            if (!scattering_plug.isConnected()) // TODO: handle this
+            {
+                m_vdb_data.scattering_color.r *= scattering_plug.child(0).asFloat();
+                m_vdb_data.scattering_color.g *= scattering_plug.child(1).asFloat();
+                m_vdb_data.scattering_color.b *= scattering_plug.child(2).asFloat();
+            }
+
+            m_vdb_data.scattering_channel = "";
+        }
+
+        const short attenuation_mode = MPlug(tmo, s_attenuation_source).asShort();
+        MPlug attenuation_plug(tmo, s_attenuation);
+        MPlug attenuation_color_plug(tmo, s_attenuation_color);
+        const float attenuation_intensity = MPlug(tmo, s_attenuation_intensity).asFloat();
+        m_vdb_data.attenuation_color.r = attenuation_color_plug.child(0).asFloat() * attenuation_intensity;
+        m_vdb_data.attenuation_color.g = attenuation_color_plug.child(1).asFloat() * attenuation_intensity;
+        m_vdb_data.attenuation_color.b = attenuation_color_plug.child(2).asFloat() * attenuation_intensity;
+
+        if (attenuation_mode == 1)
+            m_vdb_data.attenuation_channel = MPlug(tmo, s_attenuation_channel).asString().asChar();
+        else if (attenuation_mode == 0)
+        {
+            if (!attenuation_plug.isConnected()) // TODO: handle this
+            {
+                m_vdb_data.attenuation_color.r *= attenuation_plug.child(0).asFloat();
+                m_vdb_data.attenuation_color.g *= attenuation_plug.child(1).asFloat();
+                m_vdb_data.attenuation_color.b *= attenuation_plug.child(2).asFloat();
+            }
+
+            m_vdb_data.attenuation_channel = "";
+        }
+        else
+            m_vdb_data.attenuation_channel = m_vdb_data.scattering_channel;
+
         return &m_vdb_data;
     }
     else

@@ -22,13 +22,19 @@ enum VDBDisplayMode{
 struct VDBVisualizerData{
     MBoundingBox bbox;
 
+    MColor scattering_color;
+    MColor attenuation_color;
+
     std::string vdb_path;
+    std::string attenuation_channel;
+    std::string scattering_channel;
 
     openvdb::io::File* vdb_file;
 
     float point_size;
     float point_jitter;
 
+    int point_skip;
     int update_trigger;
     VDBDisplayMode display_mode;
 
@@ -90,6 +96,7 @@ public:
     // display parameters
     static MObject s_point_size;
     static MObject s_point_jitter;
+    static MObject s_point_skip;
 
     // shader parameters
     static MObject s_scattering_source;
