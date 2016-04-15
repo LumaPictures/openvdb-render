@@ -16,11 +16,19 @@
 #include <vector>
 #include <random>
 
+#include <tbb/parallel_sort.h>
+#include <tbb/task_scheduler_init.h>
+
 #include <openvdb/tools/Interpolation.h>
 
 #include "../util/maya_utils.hpp"
 
 namespace {
+    struct Point{
+        MFloatVector position;
+        MColor color;
+    };
+
     class RGBSampler {
     public:
         RGBSampler()
@@ -180,8 +188,7 @@ namespace MHWRender {
             float m_wireframe_color[4];
 
             std::vector<MFloatVector> m_wireframe;
-            std::vector<MFloatVector> m_points;
-            std::vector<MColor> m_point_colors;
+            std::vector<Point> m_points;
 
             float m_point_size;
 
@@ -200,8 +207,7 @@ namespace MHWRender {
 
             void clear_points()
             {
-                std::vector<MFloatVector>().swap(m_points);
-                std::vector<MColor>().swap(m_point_colors);
+                std::vector<Point>().swap(m_points);
             }
 
             void quick_reserve(size_t num_vertices)
@@ -342,7 +348,6 @@ namespace MHWRender {
                 else if (vdb_data->display_mode == DISPLAY_POINT_CLOUD)
                 {
                     m_points.clear();
-                    m_point_colors.clear();
 
                     openvdb::GridBase::ConstPtr attenuation_grid = 0;
                     try
@@ -385,7 +390,6 @@ namespace MHWRender {
 
                     size_t active_voxel_count = attenuation_grid->activeVoxelCount() / (vdb_data->point_skip + 1);
                     m_points.reserve(active_voxel_count);
-                    m_point_colors.reserve(active_voxel_count);
 
                     const float point_jitter = vdb_data->point_jitter;
                     const float do_jitter = point_jitter > 0.001f;
@@ -442,17 +446,20 @@ namespace MHWRender {
                                 pos.y += distributionY(generator);
                                 pos.z += distributionZ(generator);
                             }
-                            m_points.push_back(pos);
-                            MColor sample_color(point_color.r, point_color.g, point_color.b, value);
-                            sample_color *= scattering_sampler->get_rgb(vdb_pos);
-                            m_point_colors.push_back(sample_color);
+                            Point point;
+                            point.position = pos;
+                            point.color.r = point_color.r;
+                            point.color.g = point_color.g;
+                            point.color.b = point_color.b;
+                            point.color.a = value;
+                            point.color *= scattering_sampler->get_rgb(vdb_pos);
+                            m_points.push_back(point);
                         }
                     }
 
                     delete scattering_sampler;
 
                     m_points.shrink_to_fit();
-                    m_point_colors.shrink_to_fit();
                 }
                 else if (m_wireframe.size())
                     clear_wireframe();
@@ -508,14 +515,10 @@ namespace MHWRender {
 
                     glBegin(GL_POINTS);
 
-                    const size_t point_count = m_points.size();
-
-                    for (size_t i = 0; i < point_count; ++i)
+                    for (auto point : m_points)
                     {
-                        const MFloatVector& vertex = m_points[i];
-                        const MColor& color = m_point_colors[i];
-                        glColor4f(color.r, color.g, color.b, color.a);
-                        glVertex3f(vertex.x, vertex.y, vertex.z);
+                        glColor4fv(&point.color.r);
+                        glVertex3fv(&point.position.x);
                     }
 
                     glEnd();
@@ -532,6 +535,22 @@ namespace MHWRender {
                 glPopAttrib();
 
                 glPopMatrix();
+            }
+
+            void sort(const MDagPath& camera_path, const MDagPath& object_path)
+            {
+                if (m_display_mode == DISPLAY_POINT_CLOUD && m_points.size())
+                {
+                    // test sorting if that helps
+                    MPoint camera_pos(0.0, 0.0, 0.0, 1.0);
+                    camera_pos *= camera_path.inclusiveMatrix();
+                    camera_pos *= object_path.inclusiveMatrixInverse();
+
+                    tbb::task_scheduler_init init;
+                    tbb::parallel_sort(m_points.begin(), m_points.end(), [&](const Point& a, const Point& b) -> bool {
+                        return camera_pos.distanceTo(a.position) > camera_pos.distanceTo(b.position);
+                    });
+                }
             }
         };
     }
@@ -568,13 +587,16 @@ namespace MHWRender {
 
     MUserData* VDBDrawOverride::prepareForDraw(
             const MDagPath& obj_path,
-            const MDagPath&,
+            const MDagPath& camera_path,
             const MFrameContext&,
             MUserData* oldData)
     {
         DrawData* data = oldData == 0 ? new DrawData() : reinterpret_cast<DrawData*>(oldData);
 
         data->update(obj_path, p_vdb_visualizer->get_update());
+        // sadly we need sorting to avoid glitches in the viewport...
+        // TODO: move this to the gpu!
+        data->sort(camera_path, obj_path);
 
         return data;
     }
