@@ -5,7 +5,7 @@
 
 template <typename Color>
 class GradientBase {
-private:
+protected:
     enum {
         CHANNEL_MODE_RAW = 0,
         CHANNEL_MODE_RGB,
@@ -204,7 +204,7 @@ private:
         return make_color(hue, saturation, lightness);
     }
 
-    inline Color make_color(float r, float g, float b)
+    inline Color make_color(float r, float g, float b) const
     {
         return Color(r, g, b);
     }
@@ -244,12 +244,12 @@ public:
         if (m_channel_mode == CHANNEL_MODE_RAW)
             return v;
         else if (m_channel_mode == CHANNEL_MODE_FLOAT)
-            return apply_float_controls(apply_float_range((v.r + v.g + v.b) / 3.0f));
+            return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_range((v.r + v.g + v.b) / 3.0f));
         else if (m_channel_mode == CHANNEL_MODE_RGB)
-            return apply_rgb_control(v);
+            return apply_rgb_controls(v);
         else if (m_channel_mode == CHANNEL_MODE_FLOAT_TO_FLOAT)
             return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_gradient((v.r + v.g + v.b) / 3.0f));
         else
-            return apply_rgb_controls(apply_rgb_gradient(v));
+            return apply_rgb_controls(apply_rgb_gradient((v.r + v.g + v.b) / 3.0f));
     }
 };

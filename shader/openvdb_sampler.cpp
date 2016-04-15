@@ -62,5 +62,5 @@ node_finish
 shader_evaluate
 {
     const ShaderData* data = reinterpret_cast<const ShaderData*>(AiNodeGetLocalData(node));
-    sg->out.RGB = data->gradient.evaluate(sg, data->channel, data->interpolation);
+    sg->out.RGB = data->gradient.evaluate_arnold(sg, data->channel, data->interpolation);
 }

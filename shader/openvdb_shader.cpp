@@ -331,7 +331,7 @@ shader_evaluate
         switch (data->scattering_from)
         {
             case INPUT_FROM_CHANNEL:
-                scattering = data->scattering_gradient.evaluate(sg, data->scattering_channel, data->interpolation);
+                scattering = data->scattering_gradient.evaluate_arnold(sg, data->scattering_channel, data->interpolation);
                 break;
             case INPUT_FROM_EVALUATE:
                 scattering = AiShaderEvalParamRGB(p_scattering);
@@ -363,7 +363,7 @@ shader_evaluate
     switch (data->attenuation_from)
     {
         case INPUT_FROM_CHANNEL:
-            attenuation = data->attenuation_gradient.evaluate(sg, data->attenuation_channel, data->interpolation);
+            attenuation = data->attenuation_gradient.evaluate_arnold(sg, data->attenuation_channel, data->interpolation);
             break;
         case INPUT_FROM_EVALUATE:
             attenuation = AiShaderEvalParamRGB(p_attenuation);
@@ -403,7 +403,7 @@ shader_evaluate
         switch (data->emission_from)
         {
             case INPUT_FROM_CHANNEL:
-                data->emission_gradient.evaluate(sg, data->emission_channel, data->interpolation);
+                data->emission_gradient.evaluate_arnold(sg, data->emission_channel, data->interpolation);
                 break;
             case INPUT_FROM_EVALUATE:
                 emission = AiShaderEvalParamRGB(p_emission);
