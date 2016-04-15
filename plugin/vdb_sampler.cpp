@@ -20,8 +20,8 @@ void VDBGradientParams::create_params()
     eAttr.addField("Raw", 0);
     eAttr.addField("Float", 1);
     eAttr.addField("RGB", 2);
-    eAttr.addField("Float to Float", 3);
-    eAttr.addField("Float to RGB", 4);
+    eAttr.addField("Float Ramp", 3);
+    eAttr.addField("RGB Ramp", 4);
     eAttr.setDefault(0);
     MPxNode::addAttribute(mode);
 

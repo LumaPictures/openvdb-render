@@ -10,8 +10,8 @@ protected:
         CHANNEL_MODE_RAW = 0,
         CHANNEL_MODE_RGB,
         CHANNEL_MODE_FLOAT,
-        CHANNEL_MODE_FLOAT_TO_FLOAT,
-        CHANNEL_MODE_FLOAT_TO_RGB
+        CHANNEL_MODE_FLOAT_RAMP,
+        CHANNEL_MODE_RGB_RAMP
     };
 
     std::vector<float> m_float_ramp;
@@ -74,7 +74,7 @@ protected:
             if (id >= elem_count - 1)
                 return m_float_ramp.back();
             const float factor = sample_f - sample_f_floor;
-            return LERP(factor, m_float_ramp[id], m_float_ramp[id + 1]);
+            return (1.0f - factor) * m_float_ramp[id] + factor * m_float_ramp[id + 1];
         }
     }
 
@@ -137,7 +137,7 @@ protected:
         if (m_contrast != 1.0f)
             color = (color - m_contrast_pivot) * m_contrast + m_contrast_pivot;
 
-        if (m_exposure > AI_EPSILON)
+        if (m_exposure > 0.0001f)
             color *= powf(2.0f, m_exposure);
 
         if (m_multiply != 1.0f)
@@ -157,32 +157,42 @@ protected:
         if (hue6 > 4.0f) hue2 -= 4.0f;
         else if (hue6 > 2.0f) hue2 -= 2.0f;
 
-        const float sat = CLAMP(color.g, 0.0f, 1.0f);
+        const float sat = std::max(std::min(color.g, 1.0f), 0.0f);
         const float chroma = (1.0f - fabsf(2.0f * color.b - 1.0f)) * sat;
         const float component = chroma * (1.0f - fabsf(hue2 - 1.0f));
 
-        AtColor rgb = AI_RGB_BLACK;
+        Color rgb = make_color(0.0f, 0.0f, 0.0f);
         if (hue6 < 1)
-            AiColorCreate(rgb, chroma, component, 0.0f);
+            rgb = make_color(chroma, component, 0.0f);
         else if (hue6 < 2)
-            AiColorCreate(rgb, component, chroma, 0.0f);
+            rgb = make_color(component, chroma, 0.0f);
         else if (hue6 < 3)
-            AiColorCreate(rgb, 0.0f, chroma, component);
+            rgb = make_color(0.0f, chroma, component);
         else if (hue6 < 4)
-            AiColorCreate(rgb, 0.0f, component, chroma);
+            rgb =  make_color(0.0f, component, chroma);
         else if (hue6 < 5)
-            AiColorCreate(rgb, component, 0.0f, chroma);
+            rgb =  make_color(component, 0.0f, chroma);
         else
-            AiColorCreate(rgb, chroma, 0.0f, component);
+            rgb = make_color(chroma, 0.0f, component);
 
         rgb += color.b - chroma * 0.5f;
         return rgb;
     }
 
+    inline float color_max(const Color& color) const
+    {
+        return std::max(color.r, std::max(color.g, color.b));
+    }
+
+    inline float color_min(const Color& color) const
+    {
+        return std::min(color.r, std::min(color.g, color.b));
+    }
+
     inline Color convertFromRGB(const Color& color) const
     {
-        const float cmax = AiColorMaxRGB(color);
-        const float cmin = std::min(std::min(color.r, color.g), color.b);
+        const float cmax = color_max(color);
+        const float cmin = color_min(color);
         const float chroma = cmax - cmin;
 
         float hue = 0.0f;
@@ -209,6 +219,32 @@ protected:
         return Color(r, g, b);
     }
 
+    inline void update()
+    {
+        if (m_float_ramp.size() < 2)
+        {
+            m_float_ramp.resize(2);
+            m_float_ramp[0] = 0.0f;
+            m_float_ramp[1] = 1.0f;
+        }
+
+        if (m_rgb_ramp.size() < 2)
+        {
+            m_rgb_ramp.resize(2);
+            m_rgb_ramp[0] = make_color(0.0f, 0.0f, 0.0f);
+            m_rgb_ramp[1] = make_color(1.0f, 1.0f, 1.0f);
+        }
+
+        if (m_bias < 0.0001f)
+            m_bias = 0.5f;
+
+        m_inv_input_range = 1.0f / (m_input_max - m_input_min);
+        m_output_range = m_output_max - m_output_min;
+        m_inv_bias = 1.0f / m_bias;
+        m_inv_gain = 1.0f / m_gain;
+        m_inv_one_minus_gain = 1.0f / (1.0f - m_gain);
+    }
+
 public:
     GradientBase() : m_contrast(1.0f), m_contrast_pivot(0.5f), m_input_min(0.0f), m_input_max(1.0f),
                  m_bias(0.5f), m_gain(0.5f), m_output_min(0.0f), m_output_max(1.0f),
@@ -228,15 +264,15 @@ public:
     inline Color evaluate(float v) const
     {
         if (m_channel_mode == CHANNEL_MODE_RAW)
-            return v;
+            return make_color(v, v, v);
         else if (m_channel_mode == CHANNEL_MODE_FLOAT)
-            return apply_float_controls(apply_float_range(v));
+            return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_range(v));
         else if (m_channel_mode == CHANNEL_MODE_RGB)
-            return apply_rgb_control(make_color(v, v, v));
-        else if (m_channel_mode == CHANNEL_MODE_FLOAT_TO_FLOAT)
+            return apply_rgb_controls(make_color(v, v, v));
+        else if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP)
             return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_gradient(v));
         else
-            return apply_rgb_controls(apply_rgb_gradient(make_color(v, v, v)));
+            return apply_rgb_controls(apply_rgb_gradient(v));
     }
 
     inline Color evaluate(const Color& v) const
@@ -247,7 +283,7 @@ public:
             return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_range((v.r + v.g + v.b) / 3.0f));
         else if (m_channel_mode == CHANNEL_MODE_RGB)
             return apply_rgb_controls(v);
-        else if (m_channel_mode == CHANNEL_MODE_FLOAT_TO_FLOAT)
+        else if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP)
             return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_gradient((v.r + v.g + v.b) / 3.0f));
         else
             return apply_rgb_controls(apply_rgb_gradient((v.r + v.g + v.b) / 3.0f));

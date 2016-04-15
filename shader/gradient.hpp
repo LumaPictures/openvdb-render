@@ -20,7 +20,7 @@ public:
 
     static void parameters(const std::string& base, AtList* params, AtMetaDataStore*)
     {
-        static const char* gradient_types[] = {"Raw", "Float", "RGB", "Float to Float", "Float to RGB", nullptr};
+        static const char* gradient_types[] = {"Raw", "Float", "RGB", "Float Ramp", "RGB Ramp", nullptr};
 
         AiParameterEnum((base + "_channel_mode").c_str(), CHANNEL_MODE_RAW, gradient_types);
         AiParameterFlt((base + "_contrast").c_str(), 1.0f);
@@ -65,61 +65,48 @@ public:
         m_clamp_min = AiNodeGetBool(node, (base + "_clamp_min").c_str());
         m_clamp_max = AiNodeGetBool(node, (base + "_clamp_max").c_str());
 
-        AtArray* arr = AiNodeGetArray(node, (base + "_float_ramp").c_str());
-        if (arr != nullptr)
+        if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP)
         {
-            const unsigned int nelements = arr->nelements;
-            if (m_float_ramp.size() != nelements)
+            AtArray* arr = AiNodeGetArray(node, (base + "_float_ramp").c_str());
+            if (arr != nullptr)
+            {
+                const unsigned int nelements = arr->nelements;
+                if (m_float_ramp.size() != nelements)
+                    std::vector<float>().swap(m_float_ramp);
+                else
+                    m_float_ramp.clear();
+                if (nelements > 0)
+                {
+                    m_float_ramp.reserve(nelements);
+                    for (unsigned int i = 0; i < nelements; ++i)
+                        m_float_ramp.push_back(AiArrayGetFlt(arr, i));
+                }
+            }
+            else
                 std::vector<float>().swap(m_float_ramp);
-            else
-                m_float_ramp.clear();
-            if (nelements > 0)
+        }
+        else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP)
+        {
+            AtArray* arr = AiNodeGetArray(node, (base + "_rgb_ramp").c_str());
+            if (arr != nullptr)
             {
-                m_float_ramp.reserve(nelements);
-                for (unsigned int i = 0; i < nelements; ++i)
-                    m_float_ramp.push_back(AiArrayGetFlt(arr, i));
+                const unsigned nelements = arr->nelements;
+                if (m_rgb_ramp.size() != nelements)
+                    std::vector<AtRGB>().swap(m_rgb_ramp);
+                else
+                    m_rgb_ramp.clear();
+                if (nelements > 0)
+                {
+                    m_rgb_ramp.reserve(nelements);
+                    for (unsigned int i = 0; i < nelements; ++i)
+                        m_rgb_ramp.push_back(AiArrayGetRGB(arr, i));
+                }
             }
-        }
-        else
-            std::vector<float>().swap(m_float_ramp);
-
-        if (m_float_ramp.size() < 2)
-        {
-            m_float_ramp.resize(2);
-            m_float_ramp[0] = 0.0f;
-            m_float_ramp[1] = 1.0f;
-        }
-
-        arr = AiNodeGetArray(node, (base + "_rgb_ramp").c_str());
-        if (arr != nullptr)
-        {
-            const unsigned nelements = arr->nelements;
-            if (m_rgb_ramp.size() != nelements)
+            else
                 std::vector<AtRGB>().swap(m_rgb_ramp);
-            else
-                m_rgb_ramp.clear();
-            if (nelements > 0)
-            {
-                m_rgb_ramp.reserve(nelements);
-                for (unsigned int i = 0; i < nelements; ++i)
-                    m_rgb_ramp.push_back(AiArrayGetRGB(arr, i));
-            }
-        }
-        else
-            std::vector<AtRGB>().swap(m_rgb_ramp);
-
-        if (m_rgb_ramp.size() < 2)
-        {
-            m_rgb_ramp.resize(2);
-            m_rgb_ramp[0] = AI_RGB_BLACK;
-            m_rgb_ramp[1] = AI_RGB_WHITE;
         }
 
-        m_inv_input_range = 1.0f / (m_input_max - m_input_min);
-        m_output_range = m_output_max - m_output_min;
-        m_inv_bias = 1.0f / m_bias;
-        m_inv_gain = 1.0f / m_gain;
-        m_inv_one_minus_gain = 1.0f / (1.0f - m_gain);
+        GradientBase<AtRGB>::update();
     }
 
     inline AtRGB evaluate_arnold(AtShaderGlobals* sg, const AtString& channel, int interpolation) const

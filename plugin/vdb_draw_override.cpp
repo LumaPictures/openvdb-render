@@ -434,7 +434,8 @@ namespace MHWRender {
                     {
                         if ((point_id++ % vdb_data->point_skip) != 0)
                             continue;
-                        const float value = iter->get_value() * point_color.a;
+                        const MColor attenuation = vdb_data->attenuation_gradient.evaluate(iter->get_value() * point_color.a);
+                        const float value = (attenuation.r + attenuation.g + attenuation.b) / 3.0f;
                         if (value > 0.0f)
                         {
                             openvdb::Vec3d vdb_pos = attenuation_transform.indexToWorld(iter->get_coord());
@@ -452,7 +453,7 @@ namespace MHWRender {
                             point.color.g = point_color.g;
                             point.color.b = point_color.b;
                             point.color.a = value;
-                            point.color *= scattering_sampler->get_rgb(vdb_pos);
+                            point.color *= vdb_data->scattering_gradient.evaluate(scattering_sampler->get_rgb(vdb_pos));
                             m_points.push_back(point);
                         }
                     }

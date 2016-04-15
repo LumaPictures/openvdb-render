@@ -9,6 +9,7 @@
 #include <boost/regex.hpp>
 
 #include "vdb_sampler.h"
+#include "gradient.hpp"
 
 enum VDBDisplayMode{
     DISPLAY_AXIS_ALIGNED_BBOX = 0,
@@ -28,6 +29,9 @@ struct VDBVisualizerData{
     std::string vdb_path;
     std::string attenuation_channel;
     std::string scattering_channel;
+
+    Gradient scattering_gradient;
+    Gradient attenuation_gradient;
 
     openvdb::io::File* vdb_file;
 
