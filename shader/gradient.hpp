@@ -6,6 +6,8 @@
 #include <vector>
 #include <iostream>
 
+#include "../util/gradient_base.hpp"
+
 class Gradient {
 private:
     enum {
