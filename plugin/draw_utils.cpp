@@ -4,115 +4,153 @@
 #include <cstring>
 #include <vector>
 
+#include <stdarg.h>
+
+#define THROW_PROGRAM_CREATE(mess) throw GLProgram::CreateException(mess, __FILE__, __LINE__)
+#define THROW_PIPELINE_VALIDATE(mess) throw GLPipeline::ValidateException(mess, __FILE__, __LINE__)
+
 namespace {
     const GLuint INVALID_GL_OBJECT = static_cast<GLuint>(-1);
 
-    template <GLint shader_type>
-    bool create_shader(GLuint& shader, const char* shader_code)
-    {
-        shader = glCreateShader(shader_type);
+}
 
-        GLint code_size = static_cast<GLint>(strlen(shader_code));
-        glShaderSource(shader, 1, &shader_code, &code_size);
+GLProgram::GLProgram(GLuint program, GLuint stage) : m_program(program), m_stage(stage)
+{
+
+}
+GLProgram::~GLProgram()
+{
+}
+
+std::shared_ptr<GLProgram> GLProgram::create_program(GLenum stage, GLsizei count, ...)
+{
+    class ScopedShader {
+    private:
+        GLuint shader;
+    public:
+        ScopedShader(GLenum stage) : shader(glCreateShader(stage))
+        { }
+
+        ~ScopedShader() { glDeleteShader(shader); }
+
+        inline operator GLuint() { return shader; }
+    };
+
+    GLuint program = INVALID_GL_OBJECT;
+    std::vector<const char*> sources;
+    sources.reserve(count);
+    va_list va;
+    va_start(va, count);
+    for (GLsizei i = 0; i < count; ++i)
+        sources.push_back(va_arg(va, const char*));
+    va_end(va);
+    // we don't use the builtin function to be able to print proper errors
+    // per creation step
+    ScopedShader shader(stage);
+    if (shader)
+    {
+        glShaderSource(shader, count, sources.data(), 0);
         glCompileShader(shader);
-        GLint success = 0;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-        if (success == GL_FALSE)
+        GLint status = GL_FALSE;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+        if (status == GL_TRUE)
         {
-            std::cerr << "[openvdb_render] Error building shader : " << std::endl;
-            std::cerr << shader_code << std::endl;
-            GLint max_length = 0;
-            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &max_length);
-            std::vector<GLchar> info_log(max_length);
-            glGetShaderInfoLog(shader, max_length, &max_length, &info_log[0]);
-            std::cerr << &info_log[0] << std::endl;
-            return false;
+            program = glCreateProgram();
+            if (program)
+            {
+                glProgramParameteri(program, GL_PROGRAM_SEPARABLE, GL_TRUE);
+                glAttachShader(program, shader);
+                glLinkProgram(program);
+                glDetachShader(program, shader);
+            }
+            else
+                THROW_PROGRAM_CREATE("Error calling glCreatProgram!");
         }
         else
-            return true;
+        {
+            GLsizei log_length = 0;
+            glGetShaderInfoLog(shader, 0, &log_length, 0);
+            if (log_length > 0)
+            {
+                std::vector<GLchar> log(log_length, '\0');
+                glGetShaderInfoLog(shader, log_length, 0, log.data());
+                THROW_PROGRAM_CREATE(log.data());
+            }
+            else
+                THROW_PROGRAM_CREATE("Unkown error while compiling the shader!");
+        }
     }
+    else
+        THROW_PROGRAM_CREATE("Error calling glCreateShader!");
+
+    return std::shared_ptr<GLProgram>(new GLProgram(program, stage));
 }
 
-ShaderProgram::ShaderProgram() : program(INVALID_GL_OBJECT), vertex_shader(INVALID_GL_OBJECT), fragment_shader(INVALID_GL_OBJECT)
+GLPipeline::GLPipeline()
 {
-
 }
 
-ShaderProgram::~ShaderProgram()
+GLPipeline::~GLPipeline()
 {
-    release();
 }
 
-void ShaderProgram::release()
+std::shared_ptr<GLPipeline> GLPipeline::create_pipeline()
 {
-    if (program != INVALID_GL_OBJECT)
-        glDeleteProgram(program);
-    program = INVALID_GL_OBJECT;
-    if (vertex_shader != INVALID_GL_OBJECT)
-        glDeleteShader(vertex_shader);
-    vertex_shader = INVALID_GL_OBJECT;
-    if (fragment_shader != INVALID_GL_OBJECT)
-        glDeleteShader(fragment_shader);
-    fragment_shader = INVALID_GL_OBJECT;
+    return std::shared_ptr<GLPipeline>(new GLPipeline());
 }
 
-void ShaderProgram::create(const char* vertex_code, const char* fragment_code)
+GLPipeline& GLPipeline::add_program(std::shared_ptr<GLProgram>& program)
 {
-    if (!create_shader<GL_VERTEX_SHADER>(vertex_shader, vertex_code))
+    m_programs.push_back(program);
+    return *this;
+}
+
+void GLPipeline::validate()
+{
+    glGenProgramPipelines(1, &m_pipeline);
+    for (const auto& program : m_programs)
+        glUseProgramStages(m_pipeline, program->get_stage(), program->get_program());
+    glValidateProgramPipeline(m_pipeline);
+    GLint status = GL_FALSE;
+    glGetProgramPipelineiv(m_pipeline, GL_VALIDATE_STATUS, &status);
+    if (status != GL_TRUE)
     {
-        release();
-        return;
+        GLsizei log_length = 0;
+        glGetProgramPipelineInfoLog(m_pipeline, 0, &log_length, 0);
+        if (log_length > 0)
+        {
+            std::vector<GLchar> log(log_length, '\0');
+            glGetProgramPipelineInfoLog(m_pipeline, log_length, 0, log.data());
+            THROW_PIPELINE_VALIDATE(log.data());
+        }
+        THROW_PIPELINE_VALIDATE("Unknown error when validating the pipeline!");
     }
-    if (!create_shader<GL_FRAGMENT_SHADER>(fragment_shader, fragment_code))
+}
+
+GLuint GLPipeline::get_filled_stages() const
+{
+    GLuint stages = 0;
+    for (const auto& program : m_programs)
+        stages = stages | program->get_stage();
+    return stages;
+}
+
+std::shared_ptr<GLProgram> GLPipeline::get_program(GLuint stage) const
+{
+    for (const auto& program : m_programs)
     {
-        release();
-        return;
+        if (program->get_stage() | stage)
+            return program;
     }
-
-    program = glCreateProgram();
-
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-
-    GLint success = 0;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (success == GL_FALSE)
-    {
-        std::cerr << "[openvdb_render] Error linking shader." << std::endl;
-
-        GLint max_length = 0;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &max_length);
-        std::vector<GLchar> info_log(max_length);
-        glGetProgramInfoLog(program, max_length, &max_length, &info_log[0]);
-
-        std::cerr << &info_log[0] << std::endl;
-
-        release();
-        return;
-    }
-
-    glDetachShader(program, vertex_shader);
-    glDetachShader(program, fragment_shader);
-    return;
+    return m_programs.front();
 }
 
-bool ShaderProgram::is_valid() const
+GLPipeline::ScopedSet::ScopedSet(const GLPipeline& pipeline)
 {
-    return program != INVALID_GL_OBJECT;
+    glBindProgramPipeline(pipeline.m_pipeline);
 }
 
-GLuint ShaderProgram::get_program() const
+GLPipeline::ScopedSet::~ScopedSet()
 {
-    return program;
-}
-
-ShaderProgram::ScopedSet::ScopedSet(const ShaderProgram& _program) : program(_program.program)
-{
-    glUseProgram(program);
-}
-
-ShaderProgram::ScopedSet::~ScopedSet()
-{
-    glUseProgram(0);
+    glBindProgramPipeline(0);
 }
