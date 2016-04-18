@@ -403,7 +403,7 @@ shader_evaluate
         switch (data->emission_from)
         {
             case INPUT_FROM_CHANNEL:
-                data->emission_gradient.evaluate_arnold(sg, data->emission_channel, data->interpolation);
+                emission = data->emission_gradient.evaluate_arnold(sg, data->emission_channel, data->interpolation);
                 break;
             case INPUT_FROM_EVALUATE:
                 emission = AiShaderEvalParamRGB(p_emission);
