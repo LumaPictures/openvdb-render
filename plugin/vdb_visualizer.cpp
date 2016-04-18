@@ -530,8 +530,8 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setDefault(0.15f);
 
     s_point_skip = nAttr.create("pointSkip", "point_skip", MFnNumericData::kInt);
-    nAttr.setMin(1);
-    nAttr.setSoftMax(5);
+    nAttr.setMin(10);
+    nAttr.setSoftMax(20);
     nAttr.setDefault(1);
 
     s_scattering_source = eAttr.create("scatteringSource", "scattering_source");

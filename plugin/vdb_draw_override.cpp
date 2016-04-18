@@ -26,7 +26,18 @@
 namespace {
     struct Point{
         MFloatVector position;
-        MColor color;
+        unsigned char color[4];
+
+        void set_color(const MColor& c) // apply gamma?
+        {
+            auto convert_channel = [] (float channel) -> unsigned char {
+                return static_cast<unsigned char>(std::max(0, std::min(static_cast<int>(channel * 255.0), 255)));
+            };
+            color[0] = convert_channel(c.r);
+            color[1] = convert_channel(c.g);
+            color[2] = convert_channel(c.b);
+            color[3] = convert_channel(c.a);
+        }
     };
 
     class RGBSampler {
@@ -449,11 +460,10 @@ namespace MHWRender {
                             }
                             Point point;
                             point.position = pos;
-                            point.color.r = point_color.r;
-                            point.color.g = point_color.g;
-                            point.color.b = point_color.b;
-                            point.color.a = value;
-                            point.color *= vdb_data->scattering_gradient.evaluate(scattering_sampler->get_rgb(vdb_pos));
+                            MColor pc = point_color;
+                            pc.a = value;
+                            pc *= vdb_data->scattering_gradient.evaluate(scattering_sampler->get_rgb(vdb_pos));
+                            point.set_color(pc);
                             m_points.push_back(point);
                         }
                     }
@@ -518,7 +528,7 @@ namespace MHWRender {
 
                     for (auto point : m_points)
                     {
-                        glColor4fv(&point.color.r);
+                        glColor4ubv(point.color);
                         glVertex3fv(&point.position.x);
                     }
 
