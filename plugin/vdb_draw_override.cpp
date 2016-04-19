@@ -328,10 +328,11 @@ namespace MHWRender {
                 m_is_empty = vdb_data->vdb_file == nullptr || !vdb_data->vdb_file->isOpen();
                 m_display_mode = vdb_data->display_mode;
 
-                if (m_is_empty || vdb_data->display_mode == DISPLAY_AXIS_ALIGNED_BBOX)
+                if (m_is_empty)
                 {
                     clear_points();
                     m_display_mode = DISPLAY_AXIS_ALIGNED_BBOX; // to set when it's empty
+                    m_bbox = MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0));
                     quick_reserve(24);
                     add_wire_bounding_box(m_bbox.min(), m_bbox.max());
                 }
@@ -362,17 +363,17 @@ namespace MHWRender {
                 {
                     m_points.clear();
 
-                    openvdb::GridBase::ConstPtr attenuation_grid = 0;
+                    openvdb::GridBase::ConstPtr attenuation_grid = nullptr;
                     try
                     {
                         attenuation_grid = vdb_data->vdb_file->readGrid(vdb_data->attenuation_channel);
                     }
                     catch(...)
                     {
-                        attenuation_grid = 0;
+                        attenuation_grid = nullptr;
                     }
 
-                    if (attenuation_grid == 0)
+                    if (attenuation_grid == nullptr)
                     {
                         clear_points();
                         quick_reserve(24);
@@ -383,7 +384,7 @@ namespace MHWRender {
                     quick_reserve(24);
                     push_back_wireframe(attenuation_grid);
 
-                    openvdb::GridBase::ConstPtr scattering_grid = 0;
+                    openvdb::GridBase::ConstPtr scattering_grid = nullptr;
 
                     if (vdb_data->scattering_channel == vdb_data->attenuation_channel)
                         scattering_grid = attenuation_grid;
@@ -395,7 +396,7 @@ namespace MHWRender {
                         }
                         catch(...)
                         {
-                            scattering_grid = 0;
+                            scattering_grid = nullptr;
                         }
                     }
 
@@ -413,7 +414,7 @@ namespace MHWRender {
                         }
                         catch(...)
                         {
-                            emission_grid = 0;
+                            emission_grid = nullptr;
                         }
                     }
 
@@ -436,9 +437,9 @@ namespace MHWRender {
 
                     openvdb::math::Transform attenuation_transform = attenuation_grid->transform();
 
-                    RGBSampler* scattering_sampler = 0;
+                    RGBSampler* scattering_sampler = nullptr;
 
-                    if (scattering_grid == 0)
+                    if (scattering_grid == nullptr)
                         scattering_sampler = new RGBSampler();
                     else
                     {
@@ -450,9 +451,9 @@ namespace MHWRender {
                             scattering_sampler = new RGBSampler();
                     }
 
-                    RGBSampler* emission_sampler = 0;
+                    RGBSampler* emission_sampler = nullptr;
 
-                    if (emission_grid == 0)
+                    if (emission_grid == nullptr)
                         emission_sampler = new RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
                     else
                     {
@@ -464,7 +465,7 @@ namespace MHWRender {
                             emission_sampler = new RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
                     }
 
-                    FloatVoxelIterator* iter = 0;
+                    FloatVoxelIterator* iter = nullptr;
 
                     if (attenuation_grid->valueType() == "float")
                         iter = new FloatToFloatVoxelIterator(openvdb::gridConstPtrCast<openvdb::FloatGrid>(attenuation_grid));

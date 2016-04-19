@@ -205,7 +205,7 @@ VDBVisualizerData::~VDBVisualizerData()
     clear();
 }
 
-void VDBVisualizerData::clear(const MBoundingBox& _bbox)
+void VDBVisualizerData::clear(const MBoundingBox& bb)
 {
     if (vdb_file)
     {
@@ -214,7 +214,7 @@ void VDBVisualizerData::clear(const MBoundingBox& _bbox)
         delete vdb_file;
     }
     vdb_file = nullptr;
-    bbox = _bbox;
+    bbox = bb;
 }
 
 VDBVisualizerShape::VDBVisualizerShape()
@@ -296,23 +296,30 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
 
         if (vdb_path != m_vdb_data.vdb_path)
         {
+
             m_vdb_data.clear();
             m_vdb_data.vdb_path = vdb_path;
             if (m_vdb_data.vdb_file != nullptr)
                 delete m_vdb_data.vdb_file;
-            m_vdb_data.vdb_file = new openvdb::io::File(vdb_path.c_str());
-            m_vdb_data.vdb_file->open(false);
-            if (m_vdb_data.vdb_file->isOpen())
-            {
-                openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
-                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
+            try{
+                m_vdb_data.vdb_file = new openvdb::io::File(vdb_path.c_str());
+                m_vdb_data.vdb_file->open(false);
+                if (m_vdb_data.vdb_file->isOpen())
                 {
-                    if (openvdb::GridBase::ConstPtr grid = *it)
-                        read_transformed_bounding_box(grid, m_vdb_data.bbox);
+                    openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
+                    for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
+                    {
+                        if (openvdb::GridBase::ConstPtr grid = *it)
+                            read_transformed_bounding_box(grid, m_vdb_data.bbox);
+                    }
                 }
+                else
+                    m_vdb_data.clear(MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)));
             }
-            else
+            catch(...)
+            {
                 m_vdb_data.clear(MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)));
+            }
         }
         MDataHandle out_vdb_path_handle = dataBlock.outputValue(s_out_vdb_path);
         out_vdb_path_handle.setString(vdb_path.c_str());
