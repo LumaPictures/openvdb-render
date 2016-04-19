@@ -63,10 +63,6 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.update_channel('emission', param_name)
 
     @staticmethod
-    def change_vdb_path(param_name):
-        pm.setAttr(param_name, pm.textFieldButtonGrp('OpenVDBPathGrp', query=True, text=True), type='string')
-
-    @staticmethod
     def press_vdb_path(param_name):
         basic_filter = 'OpenVDB File(*.vdb)'
         project_dir = pm.workspace(query=True, directory=True)
@@ -111,7 +107,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
     def update_vdb_path(self, param_name):
         vdb_path = pm.getAttr(param_name)
         pm.textFieldButtonGrp('OpenVDBPathGrp', edit=True, text="" if vdb_path is None else vdb_path,
-                              changeCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.change_vdb_path("%s")' % param_name, buttonCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.press_vdb_path("%s")' % param_name)
+                              changeCommand=lambda val: pm.setAttr(param_name, val), buttonCommand=lambda: AEvdb_visualizerTemplate.press_vdb_path(param_name))
 
     def create_channel_stats(self, param_name):
         pm.text('OpenVDBChannelStats', label=pm.getAttr(param_name), align='left')
