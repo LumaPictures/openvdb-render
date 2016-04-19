@@ -26,10 +26,8 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
 
     def create_channel(self, annotation, channel_name, param_name):
         grp = 'OpenVDB%sChannelGrp' % channel_name
-        pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        pm.textFieldGrp(grp, annotation=annotation)
+        pm.textFieldGrp(grp, label=annotation, useTemplate='attributeEditorPresetsTemplate')
         self.update_channel(channel_name, param_name)
-        pm.setUITemplate(popTemplate=True)
 
     def update_channel(self, channel_name, param_name):
         grp = 'OpenVDB%sChannelGrp' % channel_name
@@ -146,20 +144,29 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
             for grid in grids:
                 pm.menuItem(label=grid, parent=popup, command='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.add_additional_channel("%s", "%s", "%s")' % (param_name, group, grid))
 
-    def setup_additional_channel_popup(self, param_name):
-        grp = 'OpenVDBAdditionalChannel'
+    def setup_additional_channel_popup(self, grp, param_name):
         self.clear_popups(grp)
         pm.popupMenu(parent=grp, postMenuCommand=lambda popup, popup_parent: AEvdb_visualizerTemplate.setup_additional_channel_menus(popup, popup_parent, param_name))
 
     def create_additional_channel_export(self, param_name):
+        grp = 'OpenVDBAdditionalChannel'
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        pm.attrControlGrp('OpenVDBAdditionalChannel', annotation='Channel Export', attribute=param_name)
-        pm.setUITemplate(popTemplate=True)
+        pm.textFieldGrp(grp, label='Channel Export')
         self.update_additional_channel_export(param_name)
+        pm.setUITemplate(popTemplate=True)
 
     def update_additional_channel_export(self, param_name):
-        pm.attrControlGrp('OpenVDBAdditionalChannel', edit=True, attribute=param_name)
-        self.setup_additional_channel_popup(param_name)
+        grp = 'OpenVDBAdditionalChannel'
+        attr_value = pm.getAttr(param_name)
+        pm.textFieldGrp(grp, edit=True,
+                        text="" if attr_value is None else attr_value,
+                        changeCommand=lambda val: pm.setAttr(param_name, val))
+        pm.scriptJob(parent=grp,
+                     replacePrevious=True,
+                     attributeChange=[param_name,
+                                      lambda: pm.textFieldGrp(grp, edit=True,
+                                                               text=pm.getAttr(param_name))])
+        self.setup_additional_channel_popup(grp, param_name)
 
     def __init__(self, node_name):
         self.beginScrollLayout()
