@@ -23,9 +23,9 @@ enum VDBDisplayMode{
 struct VDBVisualizerData{
     MBoundingBox bbox;
 
-    MColor scattering_color;
-    MColor attenuation_color;
-    MColor emission_color;
+    MFloatVector scattering_color;
+    MFloatVector attenuation_color;
+    MFloatVector emission_color;
 
     std::string vdb_path;
     std::string attenuation_channel;

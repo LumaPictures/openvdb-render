@@ -3,13 +3,13 @@
 #include "../util/gradient_base.hpp"
 #include "vdb_sampler.h"
 
-#include <maya/MColor.h>
+#include <maya/MFloatVector.h>
 #include <maya/MFnDependencyNode.h>
 #include <maya/MRampAttribute.h>
 
-class Gradient : public GradientBase<MColor> {
+class Gradient : public GradientBase<MFloatVector> {
 public:
-    Gradient () : GradientBase<MColor>()
+    Gradient () : GradientBase<MFloatVector>()
     { }
 
     ~Gradient()
@@ -65,11 +65,51 @@ public:
                 {
                     m_rgb_ramp.resize(RAMP_SAMPLE_COUNT);
                     for (unsigned int i = 0; i < RAMP_SAMPLE_COUNT; ++i)
-                        m_rgb_ramp[i] = color_array[i];
+                    {
+                        MColor color = color_array[i];
+                        m_rgb_ramp[i] = MFloatVector(color.r, color.g, color.b);
+                    }
+
                 }
             }
 
-            GradientBase<MColor>::update();
+            GradientBase<MFloatVector>::update();
         }
     }
 };
+
+template <>
+inline float& GradientBase<MFloatVector>::color_r(MFloatVector& color) const
+{
+    return color.x;
+}
+
+template <>
+inline float& GradientBase<MFloatVector>::color_g(MFloatVector& color) const
+{
+    return color.y;
+}
+
+template <>
+inline float& GradientBase<MFloatVector>::color_b(MFloatVector& color) const
+{
+    return color.z;
+}
+
+template <>
+inline const float& GradientBase<MFloatVector>::color_r(const MFloatVector& color) const
+{
+    return color.x;
+}
+
+template <>
+inline const float& GradientBase<MFloatVector>::color_g(const MFloatVector& color) const
+{
+    return color.y;
+}
+
+template <>
+inline const float& GradientBase<MFloatVector>::color_b(const MFloatVector& color) const
+{
+    return color.z;
+}

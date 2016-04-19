@@ -28,29 +28,29 @@ namespace {
         MFloatVector position;
         unsigned char color[4];
 
-        void set_color(const MColor& c) // apply gamma?
+        void set_color(float r, float g, float b, float a) // apply gamma?
         {
             auto convert_channel = [] (float channel) -> unsigned char {
                 return static_cast<unsigned char>(std::max(0, std::min(static_cast<int>(channel * 255.0), 255)));
             };
-            color[0] = convert_channel(c.r);
-            color[1] = convert_channel(c.g);
-            color[2] = convert_channel(c.b);
-            color[3] = convert_channel(c.a);
+            color[0] = convert_channel(r);
+            color[1] = convert_channel(g);
+            color[2] = convert_channel(b);
+            color[3] = convert_channel(a);
         }
     };
 
     class RGBSampler {
     private:
-        MColor default_color;
+        MFloatVector default_color;
     public:
-        RGBSampler(const MColor& dc = MColor(1.0f, 1.0f, 1.0f, 1.0f)) : default_color(dc)
+        RGBSampler(const MFloatVector& dc = MFloatVector(1.0f, 1.0f, 1.0f)) : default_color(dc)
         { }
 
         virtual ~RGBSampler()
         { }
 
-        virtual MColor get_rgb(const openvdb::Vec3d&) const
+        virtual MFloatVector get_rgb(const openvdb::Vec3d&) const
         {
             return default_color;
         }
@@ -60,12 +60,10 @@ namespace {
     private:
         typedef openvdb::tools::GridSampler<openvdb::FloatGrid, openvdb::tools::BoxSampler> sampler_type;
         sampler_type* p_sampler;
-        float default_alpha;
     public:
-        FloatToRGBSampler(openvdb::FloatGrid::ConstPtr grid, float alpha = 1.0f)
+        FloatToRGBSampler(openvdb::FloatGrid::ConstPtr grid)
         {
             p_sampler = new sampler_type(*grid);
-            default_alpha = alpha;
         }
 
         ~FloatToRGBSampler()
@@ -73,10 +71,10 @@ namespace {
             delete p_sampler;
         }
 
-        MColor get_rgb(const openvdb::Vec3d& wpos) const
+        MFloatVector get_rgb(const openvdb::Vec3d& wpos) const
         {
             const float value = p_sampler->wsSample(wpos);
-            return MColor(value, value, value, default_alpha);
+            return MFloatVector(value, value, value);
         }
     };
 
@@ -84,12 +82,10 @@ namespace {
     private:
         typedef openvdb::tools::GridSampler<openvdb::Vec3SGrid, openvdb::tools::BoxSampler> sampler_type;
         sampler_type* p_sampler;
-        float default_alpha;
     public:
-        Vec3SToRGBSampler(openvdb::Vec3SGrid::ConstPtr grid, float alpha = 1.0f)
+        Vec3SToRGBSampler(openvdb::Vec3SGrid::ConstPtr grid)
         {
             p_sampler = new sampler_type(*grid);
-            default_alpha = alpha;
         }
 
         ~Vec3SToRGBSampler()
@@ -97,10 +93,10 @@ namespace {
             delete p_sampler;
         }
 
-        MColor get_rgb(const openvdb::Vec3d& wpos) const
+        MFloatVector get_rgb(const openvdb::Vec3d& wpos) const
         {
             const openvdb::Vec3s value = p_sampler->wsSample(wpos);
-            return MColor(value.x(), value.y(), value.z(), default_alpha);
+            return MFloatVector(value.x(), value.y(), value.z());
         }
     };
 
@@ -436,8 +432,7 @@ namespace MHWRender {
                     std::uniform_real_distribution<float> distributionY(-point_jitter * static_cast<float>(voxel_size.y()), point_jitter * static_cast<float>(voxel_size.y()));
                     std::uniform_real_distribution<float> distributionZ(-point_jitter * static_cast<float>(voxel_size.z()), point_jitter * static_cast<float>(voxel_size.z()));
 
-                    MColor point_color(vdb_data->scattering_color.r, vdb_data->scattering_color.g, vdb_data->scattering_color.b,
-                                       (vdb_data->attenuation_color.r + vdb_data->attenuation_color.g + vdb_data->attenuation_color.b) / 3.0f);
+                    const float default_alpha = (vdb_data->attenuation_color.x + vdb_data->attenuation_color.y + vdb_data->attenuation_color.z) / 3.0f;
 
                     openvdb::math::Transform attenuation_transform = attenuation_grid->transform();
 
@@ -458,15 +453,15 @@ namespace MHWRender {
                     RGBSampler* emission_sampler = 0;
 
                     if (emission_grid == 0)
-                        emission_sampler = new RGBSampler(MColor(0.0f, 0.0f, 0.0f, 0.0f));
+                        emission_sampler = new RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
                     else
                     {
                         if (emission_grid->valueType() == "float")
-                        emission_sampler = new FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(emission_grid), 0.0f);
+                        emission_sampler = new FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(emission_grid));
                         else if (emission_grid->valueType() == "vec3s")
-                            emission_sampler = new Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(emission_grid), 0.0f);
+                            emission_sampler = new Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(emission_grid));
                         else
-                            emission_sampler = new RGBSampler(MColor(0.0f, 0.0f, 0.0f, 0.0f));
+                            emission_sampler = new RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
                     }
 
                     FloatVoxelIterator* iter = 0;
@@ -483,8 +478,8 @@ namespace MHWRender {
                     {
                         if ((point_id++ % vdb_data->point_skip) != 0)
                             continue;
-                        const MColor attenuation = vdb_data->attenuation_gradient.evaluate(iter->get_value() * point_color.a);
-                        const float value = (attenuation.r + attenuation.g + attenuation.b) / 3.0f;
+                        const MFloatVector attenuation = vdb_data->attenuation_gradient.evaluate(iter->get_value()) * default_alpha;
+                        const float value = (attenuation.x + attenuation.y + attenuation.z) / 3.0f;
                         if (value > 0.0f)
                         {
                             openvdb::Vec3d vdb_pos = attenuation_transform.indexToWorld(iter->get_coord());
@@ -498,17 +493,12 @@ namespace MHWRender {
                             }
                             Point point;
                             point.position = pos;
-                            MColor pc = point_color;
-                            pc.a = value;
-                            const MColor scattering_color = vdb_data->scattering_gradient.evaluate(scattering_sampler->get_rgb(vdb_pos));
-                            const MColor emission_color = vdb_data->emission_gradient.evaluate(emission_sampler->get_rgb(vdb_pos));
-                            pc.r *= scattering_color.r;
-                            pc.g *= scattering_color.g;
-                            pc.b *= scattering_color.b;
-                            pc.r += emission_color.r * vdb_data->emission_color.r;
-                            pc.g += emission_color.g * vdb_data->emission_color.g;
-                            pc.b += emission_color.b * vdb_data->emission_color.b;
-                            point.set_color(pc);
+                            const MFloatVector scattering_color = vdb_data->scattering_gradient.evaluate(scattering_sampler->get_rgb(vdb_pos));
+                            const MFloatVector emission_color = vdb_data->emission_gradient.evaluate(emission_sampler->get_rgb(vdb_pos));
+                            point.set_color(scattering_color.x * vdb_data->scattering_color.x + emission_color.x * vdb_data->emission_color.x,
+                                            scattering_color.y * vdb_data->scattering_color.y + emission_color.y * vdb_data->emission_color.y,
+                                            scattering_color.z * vdb_data->scattering_color.z + emission_color.z * vdb_data->emission_color.z,
+                                            value);
                             m_points.push_back(point);
                         }
                     }

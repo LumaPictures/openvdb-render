@@ -40,6 +40,36 @@ protected:
     bool m_clamp_min;
     bool m_clamp_max;
 
+    inline float& color_r(Color& color) const
+    {
+        return color.r;
+    }
+
+    inline float& color_g(Color& color) const
+    {
+        return color.g;
+    }
+
+    inline float& color_b(Color& color) const
+    {
+        return color.b;
+    }
+
+    inline const float& color_r(const Color& color) const
+    {
+        return color.r;
+    }
+
+    inline const float& color_g(const Color& color) const
+    {
+        return color.g;
+    }
+
+    inline const float& color_b(const Color& color) const
+    {
+        return color.b;
+    }
+
     inline float bias(float value) const
     {
         return value / (((m_inv_bias - 2.0f) * (1.0f - value)) + 1.0f);
@@ -118,24 +148,24 @@ protected:
     {
         if (m_gamma != 1.0f)
         {
-            color.r = powf(color.r, 1.0f / m_gamma);
-            color.g = powf(color.g, 1.0f / m_gamma);
-            color.b = powf(color.b, 1.0f / m_gamma);
+            color_r(color) = powf(color_r(color), 1.0f / m_gamma);
+            color_g(color) = powf(color_g(color), 1.0f / m_gamma);
+            color_b(color) = powf(color_b(color), 1.0f / m_gamma);
         }
 
         if (m_hue_shift != 0.0f || m_saturation != 1.0f)
         {
             color = convertFromRGB(color);
 
-            color.r += m_hue_shift;
-            color.r = color.r - floorf(color.r); // keep hue in [0, 1]
+            color_r(color) += m_hue_shift;
+            color_r(color) = color_r(color) - floorf(color_r(color)); // keep hue in [0, 1]
 
-            color.g *= m_saturation;
+            color_g(color) *= m_saturation;
             color = convertToRGB(color);
         }
 
         if (m_contrast != 1.0f)
-            color = (color - m_contrast_pivot) * m_contrast + m_contrast_pivot;
+            color = (color - make_color(m_contrast_pivot, m_contrast_pivot, m_contrast_pivot)) * m_contrast + make_color(m_contrast_pivot, m_contrast_pivot, m_contrast_pivot);
 
         if (m_exposure > 0.0001f)
             color *= powf(2.0f, m_exposure);
@@ -144,21 +174,21 @@ protected:
             color *= m_multiply;
 
         if (m_add != 0.0f)
-            color += m_add;
+            color = make_color(m_add, m_add, m_add);
 
         return color;
     }
 
     inline Color convertToRGB(const Color& color) const
     {
-        const float hue6 = fmod(color.r, 1.0f) * 6.0f;
+        const float hue6 = fmod(color_r(color), 1.0f) * 6.0f;
         float hue2 = hue6;
 
         if (hue6 > 4.0f) hue2 -= 4.0f;
         else if (hue6 > 2.0f) hue2 -= 2.0f;
 
-        const float sat = std::max(std::min(color.g, 1.0f), 0.0f);
-        const float chroma = (1.0f - fabsf(2.0f * color.b - 1.0f)) * sat;
+        const float sat = std::max(std::min(color_g(color), 1.0f), 0.0f);
+        const float chroma = (1.0f - fabsf(2.0f * color_b(color) - 1.0f)) * sat;
         const float component = chroma * (1.0f - fabsf(hue2 - 1.0f));
 
         Color rgb = make_color(0.0f, 0.0f, 0.0f);
@@ -175,18 +205,19 @@ protected:
         else
             rgb = make_color(chroma, 0.0f, component);
 
-        rgb += color.b - chroma * 0.5f;
+        const float ca = color_b(color) - chroma * 0.5f;
+        rgb += make_color(ca, ca, ca);
         return rgb;
     }
 
     inline float color_max(const Color& color) const
     {
-        return std::max(color.r, std::max(color.g, color.b));
+        return std::max(color_r(color), std::max(color_g(color), color_b(color)));
     }
 
     inline float color_min(const Color& color) const
     {
-        return std::min(color.r, std::min(color.g, color.b));
+        return std::min(color_r(color), std::min(color_g(color), color_b(color)));
     }
 
     inline Color convertFromRGB(const Color& color) const
@@ -198,12 +229,12 @@ protected:
         float hue = 0.0f;
         if (chroma == 0.0f)
             hue = 0.0f;
-        else if (cmax == color.r)
-            hue = (color.g - color.b) / chroma;
-        else if (cmax == color.g)
-            hue = (color.b - color.r) / chroma + 2.0f;
+        else if (cmax == color_r(color))
+            hue = (color_g(color) - color_b(color)) / chroma;
+        else if (cmax == color_g(color))
+            hue = (color_b(color) - color_r(color)) / chroma + 2.0f;
         else
-            hue = (color.r - color.g) / chroma + 4.0f;
+            hue = (color_r(color) - color_g(color)) / chroma + 4.0f;
 
         hue *= 1.0f / 6.0f;
         if (hue < 0.0f)
@@ -280,12 +311,12 @@ public:
         if (m_channel_mode == CHANNEL_MODE_RAW)
             return v;
         else if (m_channel_mode == CHANNEL_MODE_FLOAT)
-            return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_range((v.r + v.g + v.b) / 3.0f));
+            return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_range((color_r(v) + color_g(v) + color_b(v)) / 3.0f));
         else if (m_channel_mode == CHANNEL_MODE_RGB)
             return apply_rgb_controls(v);
         else if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP)
-            return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_gradient((v.r + v.g + v.b) / 3.0f));
+            return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_gradient((color_r(v) + color_g(v) + color_b(v)) / 3.0f));
         else
-            return apply_rgb_controls(apply_rgb_gradient((v.r + v.g + v.b) / 3.0f));
+            return apply_rgb_controls(apply_rgb_gradient((color_r(v) + color_g(v) + color_b(v)) / 3.0f));
     }
 };
