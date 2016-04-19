@@ -4,67 +4,33 @@ import re, os
 from channelController import channelController
 
 class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
-    def scattering_source(self, node_name):
-        if pm.getAttr('%s.scattering_source' % node_name) == 0:
-            pm.editorTemplate(dimControl=(node_name, 'scattering', False))
-            if self.scattering_channel_grp != '':
-                pm.attrControlGrp(self.scattering_channel_grp, edit=True, enable=False)
-        else:
-            pm.editorTemplate(dimControl=(node_name, 'scattering', True))
-            if self.scattering_channel_grp != '':
-                pm.attrControlGrp(self.scattering_channel_grp, edit=True, enable=True)
-
-    def attenuation_source(self, node_name):
-        source_val = pm.getAttr('%s.attenuation_source' % node_name)
-        if source_val == 0:
-            pm.editorTemplate(dimControl=(node_name, 'attenuation', False))
-            if self.attenuation_channel_grp != '':
-                pm.attrControlGrp(self.attenuation_channel_grp, edit=True, enable=False)
-        elif source_val == 1:
-            pm.editorTemplate(dimControl=(node_name, 'attenuation', True))
-            if self.attenuation_channel_grp != '':
-                pm.attrControlGrp(self.attenuation_channel_grp, edit=True, enable=True)
-        else:
-            pm.editorTemplate(dimControl=(node_name, 'attenuation', True))
-            if self.attenuation_channel_grp != '':
-                pm.attrControlGrp(self.attenuation_channel_grp, edit=True, enable=False)
-
-    def emission_source(self, node_name):
-        if pm.getAttr('%s.emission_source' % node_name) == 0:
-            pm.editorTemplate(dimControl=(node_name, 'emission', False))
-            if self.emission_channel_grp != '':
-                pm.attrControlGrp(self.emission_channel_grp, edit=True, enable=False)
-        else:
-            pm.editorTemplate(dimControl=(node_name, 'emission', True))
-            if self.emission_channel_grp != '':
-                pm.attrControlGrp(self.emission_channel_grp, edit=True, enable=True)
-
     @staticmethod
-    def setup_popup_menu_elems(parent_ui, param_name):
-        pm.popupMenu(parent_ui, edit=True, deleteAllItems=True)
+    def setup_popup_menu_elems(pup, param_name):
+        pm.popupMenu(pup, edit=True, deleteAllItems=True)
         grid_names_str = pm.getAttr('%s.gridNames' % param_name.split('.')[0])
         if grid_names_str is not None and len(grid_names_str) > 0:
             for each in grid_names_str.split(' '):
-                pm.menuItem(label=each, parent=parent_ui, command='pm.setAttr("%s", "%s", type="string")' % (param_name, each))
+                pm.menuItem(label=each, parent=pup, command='pm.setAttr("%s", "%s", type="string")' % (param_name, each))
 
-    def setup_popup_menu(self, parent_ui, param_name, pup):
-        if pup == '':
-            pup = pm.popupMenu(parent=parent_ui)
+    def setup_popup_menu(self, pup, param_name):
         pm.popupMenu(pup, edit=True, postMenuCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.setup_popup_menu_elems("%s", "%s")' % (pup, param_name))
-        return pup
 
     def create_channel(self, annotation, channel_name, param_name):
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        grp = pm.attrControlGrp(annotation=annotation, attribute=param_name)
-        setattr(self, '%s_channel_grp' % channel_name, grp)
+        pm.attrControlGrp('OpenVDB%sChannelGrp' % channel_name, annotation=annotation, attribute=param_name)
         self.update_channel(channel_name, param_name)
         pm.setUITemplate(popTemplate=True)
 
     def update_channel(self, channel_name, param_name):
-        grp = getattr(self, '%s_channel_grp' % channel_name)
+        grp = 'OpenVDB%sChannelGrp' % channel_name
         pm.attrControlGrp(grp, edit=True, attribute=param_name)
-        pup_name = '%s_channel_popup' % channel_name
-        setattr(self, pup_name, self.setup_popup_menu(grp, param_name, getattr(self, pup_name)))
+        pup = 'OpenVDB%sChannelPopup' % channel_name
+        try:
+            pm.deleteUI(pup)
+        except:
+            pass
+        pm.popupMenu(pup, parent=grp)
+        self.setup_popup_menu(pup, param_name)
 
     # TODO : maybe use something like templates in c++?
     def create_scattering_channel(self, param_name):
@@ -181,11 +147,6 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.setup_additional_channel_popup(param_name)
 
     def __init__(self, node_name):
-        for each in ['scattering', 'attenuation', 'emission']:
-            setattr(self, '%s_channel_grp' % each, '')
-            setattr(self, '%s_channel_popup' % each, '')
-            setattr(self, '%s_gradient_type' % each, '')
-
         self.beginScrollLayout()
 
         self.beginLayout('Cache Parameters', collapse=False)
@@ -225,7 +186,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.endLayout()
 
         self.beginLayout('Scattering', collapse=False)
-        self.addControl('scattering_source', changeCommand=self.scattering_source)
+        self.addControl('scattering_source')
         self.addControl('scattering', label='Scattering')
         self.callCustom(self.create_scattering_channel, self.update_scattering_channel, 'scattering_channel')
         self.create_gradient_params('scattering', node_name)
@@ -235,7 +196,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.endLayout()
 
         self.beginLayout('Attenuation', collapse=False)
-        self.addControl('attenuation_source', changeCommand=self.attenuation_source)
+        self.addControl('attenuation_source')
         self.addControl('attenuation', label='Attenuation')
         self.callCustom(self.create_attenuation_channel, self.update_attenuation_channel, 'attenuation_channel')
         self.create_gradient_params('attenuation', node_name)
@@ -245,7 +206,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.endLayout()
 
         self.beginLayout('Emission', collapse=False)
-        self.addControl('emission_source', changeCommand=self.emission_source)
+        self.addControl('emission_source')
         self.addControl('emission', label='Emission')
         self.callCustom(self.create_emission_channel, self.update_emission_channel, 'emission_channel')
         self.create_gradient_params('emission', node_name)
