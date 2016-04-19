@@ -41,8 +41,10 @@ namespace {
     };
 
     class RGBSampler {
+    private:
+        MColor default_color;
     public:
-        RGBSampler()
+        RGBSampler(const MColor& dc = MColor(1.0f, 1.0f, 1.0f, 1.0f)) : default_color(dc)
         { }
 
         virtual ~RGBSampler()
@@ -50,7 +52,7 @@ namespace {
 
         virtual MColor get_rgb(const openvdb::Vec3d&) const
         {
-            return MColor(1.0f, 1.0f, 1.0f, 1.0f);
+            return default_color;
         }
     };
 
@@ -58,10 +60,12 @@ namespace {
     private:
         typedef openvdb::tools::GridSampler<openvdb::FloatGrid, openvdb::tools::BoxSampler> sampler_type;
         sampler_type* p_sampler;
+        float default_alpha;
     public:
-        FloatToRGBSampler(openvdb::FloatGrid::ConstPtr grid)
+        FloatToRGBSampler(openvdb::FloatGrid::ConstPtr grid, float alpha = 1.0f)
         {
             p_sampler = new sampler_type(*grid);
+            default_alpha = alpha;
         }
 
         ~FloatToRGBSampler()
@@ -72,7 +76,7 @@ namespace {
         MColor get_rgb(const openvdb::Vec3d& wpos) const
         {
             const float value = p_sampler->wsSample(wpos);
-            return MColor(value, value, value, 1.0f);
+            return MColor(value, value, value, default_alpha);
         }
     };
 
@@ -80,10 +84,12 @@ namespace {
     private:
         typedef openvdb::tools::GridSampler<openvdb::Vec3SGrid, openvdb::tools::BoxSampler> sampler_type;
         sampler_type* p_sampler;
+        float default_alpha;
     public:
-        Vec3SToRGBSampler(openvdb::Vec3SGrid::ConstPtr grid)
+        Vec3SToRGBSampler(openvdb::Vec3SGrid::ConstPtr grid, float alpha = 1.0f)
         {
             p_sampler = new sampler_type(*grid);
+            default_alpha = alpha;
         }
 
         ~Vec3SToRGBSampler()
@@ -94,7 +100,7 @@ namespace {
         MColor get_rgb(const openvdb::Vec3d& wpos) const
         {
             const openvdb::Vec3s value = p_sampler->wsSample(wpos);
-            return MColor(value.x(), value.y(), value.z(), 1.0f);
+            return MColor(value.x(), value.y(), value.z(), default_alpha);
         }
     };
 
@@ -397,6 +403,24 @@ namespace MHWRender {
                         }
                     }
 
+                    openvdb::GridBase::ConstPtr emission_grid = 0;
+
+                    if (vdb_data->emission_channel == vdb_data->attenuation_channel)
+                        emission_grid = attenuation_grid;
+                    else if (vdb_data->emission_channel == vdb_data->scattering_channel)
+                        emission_grid = scattering_grid;
+                    else
+                    {
+                        try
+                        {
+                            emission_grid = vdb_data->vdb_file->readGrid(vdb_data->emission_channel);
+                        }
+                        catch(...)
+                        {
+                            emission_grid = 0;
+                        }
+                    }
+
                     m_point_size = vdb_data->point_size;
 
                     size_t active_voxel_count = attenuation_grid->activeVoxelCount() / (vdb_data->point_skip + 1);
@@ -431,6 +455,20 @@ namespace MHWRender {
                             scattering_sampler = new RGBSampler();
                     }
 
+                    RGBSampler* emission_sampler = 0;
+
+                    if (emission_grid == 0)
+                        emission_sampler = new RGBSampler(MColor(0.0f, 0.0f, 0.0f, 0.0f));
+                    else
+                    {
+                        if (emission_grid->valueType() == "float")
+                        emission_sampler = new FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(emission_grid), 0.0f);
+                        else if (emission_grid->valueType() == "vec3s")
+                            emission_sampler = new Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(emission_grid), 0.0f);
+                        else
+                            emission_sampler = new RGBSampler(MColor(0.0f, 0.0f, 0.0f, 0.0f));
+                    }
+
                     FloatVoxelIterator* iter = 0;
 
                     if (attenuation_grid->valueType() == "float")
@@ -462,13 +500,21 @@ namespace MHWRender {
                             point.position = pos;
                             MColor pc = point_color;
                             pc.a = value;
-                            pc *= vdb_data->scattering_gradient.evaluate(scattering_sampler->get_rgb(vdb_pos));
+                            const MColor scattering_color = vdb_data->scattering_gradient.evaluate(scattering_sampler->get_rgb(vdb_pos));
+                            const MColor emission_color = vdb_data->emission_gradient.evaluate(emission_sampler->get_rgb(vdb_pos));
+                            pc.r *= scattering_color.r;
+                            pc.g *= scattering_color.g;
+                            pc.b *= scattering_color.b;
+                            pc.r += emission_color.r * vdb_data->emission_color.r;
+                            pc.g += emission_color.g * vdb_data->emission_color.g;
+                            pc.b += emission_color.b * vdb_data->emission_color.b;
                             point.set_color(pc);
                             m_points.push_back(point);
                         }
                     }
 
                     delete scattering_sampler;
+                    delete emission_sampler;
 
                     m_points.shrink_to_fit();
                 }

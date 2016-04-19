@@ -25,13 +25,16 @@ struct VDBVisualizerData{
 
     MColor scattering_color;
     MColor attenuation_color;
+    MColor emission_color;
 
     std::string vdb_path;
     std::string attenuation_channel;
     std::string scattering_channel;
+    std::string emission_channel;
 
     Gradient scattering_gradient;
     Gradient attenuation_gradient;
+    Gradient emission_gradient;
 
     openvdb::io::File* vdb_file;
 
