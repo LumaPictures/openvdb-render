@@ -4,33 +4,46 @@ import re, os
 from channelController import channelController
 
 class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
+    def delete_ui(self, ui):
+        try:
+            pm.deleteUI(ui)
+        except:
+            pass
+
+    def clear_popups(self, grp):
+        popups = pm.textFieldGrp(grp, query=True, popupMenuArray=True)
+        if popups is not None and type(popups) is list and len(popups) > 0:
+            for popup in popups:
+                self.delete_ui(popup)
+
     @staticmethod
-    def setup_popup_menu_elems(pup, param_name):
-        pm.popupMenu(pup, edit=True, deleteAllItems=True)
+    def setup_popup_menu_elems(popup, group, param_name):
+        pm.popupMenu(popup, edit=True, deleteAllItems=True)
         grid_names_str = pm.getAttr('%s.gridNames' % param_name.split('.')[0])
         if grid_names_str is not None and len(grid_names_str) > 0:
             for each in grid_names_str.split(' '):
-                pm.menuItem(label=each, parent=pup, command='pm.setAttr("%s", "%s", type="string")' % (param_name, each))
-
-    def setup_popup_menu(self, pup, param_name):
-        pm.popupMenu(pup, edit=True, postMenuCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.setup_popup_menu_elems("%s", "%s")' % (pup, param_name))
+                pm.menuItem(label=each, parent=popup, command='pm.setAttr("%s", "%s", type="string"); pm.textFieldGrp("%s", edit=True, text="%s")' % (param_name, each, group, each))
 
     def create_channel(self, annotation, channel_name, param_name):
+        grp = 'OpenVDB%sChannelGrp' % channel_name
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
-        pm.attrControlGrp('OpenVDB%sChannelGrp' % channel_name, annotation=annotation, attribute=param_name)
+        pm.textFieldGrp(grp, annotation=annotation)
         self.update_channel(channel_name, param_name)
         pm.setUITemplate(popTemplate=True)
 
     def update_channel(self, channel_name, param_name):
         grp = 'OpenVDB%sChannelGrp' % channel_name
-        pm.attrControlGrp(grp, edit=True, attribute=param_name)
-        pup = 'OpenVDB%sChannelPopup' % channel_name
-        try:
-            pm.deleteUI(pup)
-        except:
-            pass
-        pm.popupMenu(pup, parent=grp)
-        self.setup_popup_menu(pup, param_name)
+        attr_value = pm.getAttr(param_name)
+        pm.textFieldGrp(grp, edit=True,
+                        text="" if attr_value is None else attr_value,
+                        changeCommand=lambda val: pm.setAttr(param_name, val))
+        pm.scriptJob(parent=grp,
+                     replacePrevious=True,
+                     attributeChange=[param_name,
+                                      lambda : pm.textFieldGrp(grp, edit=True,
+                                                              text=pm.getAttr(param_name))])
+        self.clear_popups(grp)
+        pm.popupMenu(parent=grp, postMenuCommand=lambda popup, popup_parent: AEvdb_visualizerTemplate.setup_popup_menu_elems(popup, popup_parent, param_name))
 
     # TODO : maybe use something like templates in c++?
     def create_scattering_channel(self, param_name):
@@ -98,7 +111,8 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         pm.setUITemplate(popTemplate=True)
 
     def update_vdb_path(self, param_name):
-        pm.textFieldButtonGrp('OpenVDBPathGrp', edit=True, text=pm.getAttr(param_name),
+        vdb_path = pm.getAttr(param_name)
+        pm.textFieldButtonGrp('OpenVDBPathGrp', edit=True, text="" if vdb_path is None else vdb_path,
                               changeCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.change_vdb_path("%s")' % param_name, buttonCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.press_vdb_path("%s")' % param_name)
 
     def create_channel_stats(self, param_name):
@@ -108,33 +122,34 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
          pm.text('OpenVDBChannelStats', edit=True, label=pm.getAttr(param_name))
 
     @staticmethod
-    def add_additional_channel(param_name, grid_name):
+    def add_additional_channel(param_name, group, grid_name):
         current_grids_str = pm.getAttr(param_name)
         current_grids = None if current_grids_str is None else current_grids_str.split(' ')
         if current_grids is not None:
             if grid_name not in current_grids:
                 if len(current_grids) > 0:
-                    pm.setAttr(param_name, '%s %s' % (current_grids_str, grid_name), type='string')
+                    grid = '%s %s' % (current_grids_str, grid_name)
+                    pm.setAttr(param_name, grid, type='string')
+                    pm.textFieldGrp(group, edit=True, text=grid)
                 else:
                     pm.setAttr(param_name, grid_name)
+                    pm.textFieldGrp(group, edit=True, text=grid_name)
         else:
             pm.setAttr(param_name, grid_name)
+            pm.textFieldGrp(group, edit=True, text=grid_name)
 
     @staticmethod
-    def setup_additional_channel_menus(param_name):
-        pm.popupMenu('OpenVDBAdditionalChannelPopup', edit=True, deleteAllItems=True)
+    def setup_additional_channel_menus(popup, group, param_name):
+        pm.popupMenu(popup, edit=True, deleteAllItems=True)
         grids = pm.getAttr('%s.gridNames' % param_name.split('.')[0]).split(' ')
         if grids is not None and len(grids) > 0:
             for grid in grids:
-                pm.menuItem(label=grid, parent='OpenVDBAdditionalChannelPopup', command='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.add_additional_channel("%s", "%s")' % (param_name, grid))
+                pm.menuItem(label=grid, parent=popup, command='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.add_additional_channel("%s", "%s", "%s")' % (param_name, group, grid))
 
     def setup_additional_channel_popup(self, param_name):
-        try:
-            pm.deleteUI('OpenVDBAdditionalChannelPopup')
-        except:
-            pass
-        pm.popupMenu('OpenVDBAdditionalChannelPopup', parent='OpenVDBAdditionalChannel')
-        pm.popupMenu('OpenVDBAdditionalChannelPopup', edit=True, postMenuCommand='import AEvdb_visualizerTemplate; AEvdb_visualizerTemplate.AEvdb_visualizerTemplate.setup_additional_channel_menus("%s")' % param_name)
+        grp = 'OpenVDBAdditionalChannel'
+        self.clear_popups(grp)
+        pm.popupMenu(parent=grp, postMenuCommand=lambda popup, popup_parent: AEvdb_visualizerTemplate.setup_additional_channel_menus(popup, popup_parent, param_name))
 
     def create_additional_channel_export(self, param_name):
         pm.setUITemplate('attributeEditorPresetsTemplate', pushTemplate=True)
