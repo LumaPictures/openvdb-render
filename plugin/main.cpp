@@ -80,7 +80,7 @@ MStatus initializePlugin(MObject obj)
     }
 
     if (is_interactive)
-        MGlobal::executePythonCommandOnIdle("import AEvdb_visualizerTemplate; import AEvdb_samplerTemplate");
+        MGlobal::executePythonCommand("import AEvdb_visualizerTemplate; import AEvdb_samplerTemplate");
 
     return status;
 }
