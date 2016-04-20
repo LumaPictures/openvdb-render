@@ -28,15 +28,12 @@ public:
 
     static std::shared_ptr<GLProgram> create_program(GLenum stage, GLsizei count, ...);
 
-    inline GLuint get_stage() const
-    {
-        return m_stage;
-    }
+    void set_uniform(GLenum type, int location, int count, ...);
+    int get_uniform_location(const char* name);
 
-    inline GLuint get_program() const
-    {
-        return m_program;
-    }
+    GLuint get_stage() const;
+    GLuint get_stage_bit() const;
+    GLuint get_program() const;
 private:
     GLuint m_program;
     GLuint m_stage;
@@ -64,10 +61,7 @@ public:
         }
     };
 
-    static std::shared_ptr<GLPipeline> create_pipeline();
-
-    GLPipeline& add_program(std::shared_ptr<GLProgram>& program);
-    void validate();
+    static std::shared_ptr<GLPipeline> create_pipeline(int count, ...);
 
     GLuint get_filled_stages() const;
     std::shared_ptr<GLProgram> get_program(GLuint stage) const;
@@ -80,4 +74,7 @@ public:
 private:
     GLuint m_pipeline;
     std::vector<std::shared_ptr<GLProgram>> m_programs;
+
+    void add_program(std::shared_ptr<GLProgram>& program);
+    void validate();
 };

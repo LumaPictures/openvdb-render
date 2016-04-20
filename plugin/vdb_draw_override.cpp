@@ -22,8 +22,14 @@
 #include <openvdb/tools/Interpolation.h>
 
 #include "../util/maya_utils.hpp"
+#include "draw_utils.h"
 
 namespace {
+    std::shared_ptr<GLPipeline> float_point_pipeline;
+    //std::shared_ptr<GLPipeline> bit16_point_pipeline = 0;
+    //std::shared_ptr<GLPipeline> bit12_point_pipeline = 0;
+
+#pragma pack(0)
     struct Point{
         MFloatVector position;
         unsigned char color[4];
@@ -39,6 +45,7 @@ namespace {
             color[3] = convert_channel(a);
         }
     };
+#pragma pack()
 
     class RGBSampler {
     private:
@@ -195,32 +202,48 @@ namespace MHWRender {
 
     namespace{
 
+        const GLuint INVALID_GL_OBJECT = static_cast<GLuint>(-1);
+
         class DrawData : public MUserData {
         private:
             MBoundingBox m_bbox;
             float m_wireframe_color[4];
 
             std::vector<MFloatVector> m_wireframe;
-            std::vector<Point> m_points;
+
+            GLuint m_vertex_buffer;
+            GLuint m_vertex_array;
+            GLsizei m_point_count;
 
             float m_point_size;
 
             VDBDisplayMode m_display_mode;
             bool m_is_empty;
         public:
-            DrawData() : MUserData(false), m_is_empty(false)
+            DrawData() : MUserData(false), m_vertex_buffer(INVALID_GL_OBJECT), m_vertex_array(INVALID_GL_OBJECT), m_point_count(0), m_is_empty(false)
             {
 
+            }
+
+            ~DrawData()
+            {
+                clear_gpu_buffers();
+            }
+
+            void clear_gpu_buffers()
+            {
+                if (m_vertex_buffer != INVALID_GL_OBJECT)
+                    glDeleteBuffers(1, &m_vertex_buffer);
+                m_vertex_buffer = INVALID_GL_OBJECT;
+                if (m_vertex_array != INVALID_GL_OBJECT)
+                    glDeleteVertexArrays(1, &m_vertex_array);
+                m_vertex_array = INVALID_GL_OBJECT;
+                m_point_count = 0;
             }
 
             void clear_wireframe()
             {
                 std::vector<MFloatVector>().swap(m_wireframe);
-            }
-
-            void clear_points()
-            {
-                std::vector<Point>().swap(m_points);
             }
 
             void quick_reserve(size_t num_vertices)
@@ -327,10 +350,10 @@ namespace MHWRender {
                 m_bbox = vdb_data->bbox;
                 m_is_empty = vdb_data->vdb_file == nullptr || !vdb_data->vdb_file->isOpen();
                 m_display_mode = vdb_data->display_mode;
+                clear_gpu_buffers();
 
                 if (m_is_empty)
                 {
-                    clear_points();
                     m_display_mode = DISPLAY_AXIS_ALIGNED_BBOX; // to set when it's empty
                     m_bbox = MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0));
                     quick_reserve(24);
@@ -338,7 +361,6 @@ namespace MHWRender {
                 }
                 else if (vdb_data->display_mode == DISPLAY_GRID_BBOX)
                 {
-                    clear_points();
                     openvdb::GridPtrVecPtr grids = vdb_data->vdb_file->readAllGridMetadata();
                     const size_t num_vertices = grids->size() * 24;
                     if (num_vertices == 0)
@@ -361,7 +383,6 @@ namespace MHWRender {
                 }
                 else if (vdb_data->display_mode == DISPLAY_POINT_CLOUD)
                 {
-                    m_points.clear();
 
                     openvdb::GridBase::ConstPtr attenuation_grid = nullptr;
                     try
@@ -375,7 +396,6 @@ namespace MHWRender {
 
                     if (attenuation_grid == nullptr)
                     {
-                        clear_points();
                         quick_reserve(24);
                         add_wire_bounding_box(m_bbox.min(), m_bbox.max());
                         return;
@@ -421,7 +441,8 @@ namespace MHWRender {
                     m_point_size = vdb_data->point_size;
 
                     size_t active_voxel_count = attenuation_grid->activeVoxelCount() / (vdb_data->point_skip + 1);
-                    m_points.reserve(active_voxel_count);
+                    std::vector<Point> points;
+                    points.reserve(active_voxel_count);
 
                     const float point_jitter = vdb_data->point_jitter;
                     const float do_jitter = point_jitter > 0.001f;
@@ -500,16 +521,36 @@ namespace MHWRender {
                                             scattering_color.y * vdb_data->scattering_color.y + emission_color.y * vdb_data->emission_color.y,
                                             scattering_color.z * vdb_data->scattering_color.z + emission_color.z * vdb_data->emission_color.z,
                                             value);
-                            m_points.push_back(point);
+                            points.push_back(point);
                         }
                     }
 
                     delete scattering_sampler;
                     delete emission_sampler;
 
-                    m_points.shrink_to_fit();
+                    points.shrink_to_fit();
+
+                    if (points.size() > 0)
+                    {
+                        glGenBuffers(1, &m_vertex_buffer);
+                        glBindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
+                        glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(Point), &points[0], GL_STATIC_DRAW);
+                        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+                        glGenVertexArrays(1, &m_vertex_array);
+                        glBindVertexArray(m_vertex_array);
+                        glBindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
+                        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Point), 0);
+                        glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Point), (char*)(0) + 3 * sizeof(float));
+                        glBindBuffer(GL_ARRAY_BUFFER, 0);
+                        glEnableVertexAttribArray(0);
+                        glEnableVertexAttribArray(1);
+                        glBindVertexArray(0);
+
+                        m_point_count = static_cast<GLsizei>(points.size());
+                    }
                 }
-                else if (m_wireframe.size())
+                else
                     clear_wireframe();
             }
 
@@ -548,10 +589,8 @@ namespace MHWRender {
 
                 glEnd();
 
-                if (m_display_mode == DISPLAY_POINT_CLOUD && m_points.size() > 0)
+                if (m_display_mode == DISPLAY_POINT_CLOUD && m_point_count > 0)
                 {
-                    // TODO: something is wrong with the vertex array pointers, some shared gl state is fucked up
-                    // this will be avoided once I move to shaders and direct state access
                     glColor3f(1.0f, 1.0f, 1.0f);
                     glPointSize(m_point_size);
                     glEnable(GL_POINT_SMOOTH);
@@ -561,15 +600,19 @@ namespace MHWRender {
                     glEnable(GL_BLEND);
                     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-                    glBegin(GL_POINTS);
-
-                    for (auto point : m_points)
                     {
-                        glColor4ubv(point.color);
-                        glVertex3fv(&point.position.x);
-                    }
+                        GLPipeline::ScopedSet pipeline_set(*float_point_pipeline);
+                        float world_view_proj_mat[4][4];
+                        context.getMatrix(MHWRender::MDrawContext::kWorldViewProjMtx).get(world_view_proj_mat);
 
-                    glEnd();
+                        float_point_pipeline->get_program(GL_VERTEX_SHADER)->set_uniform(GL_MATRIX4_ARB, 0, 1, world_view_proj_mat[0]);
+
+                        glBindVertexArray(m_vertex_array);
+
+                        glDrawArrays(GL_POINTS, 0, m_point_count);
+
+                        glBindVertexArray(0);
+                    }
 
                     glDisable(GL_DEPTH_TEST);
                     glDisable(GL_BLEND);
@@ -585,9 +628,9 @@ namespace MHWRender {
                 glPopMatrix();
             }
 
-            void sort(const MDagPath& camera_path, const MDagPath& object_path)
+            void sort(const MDagPath&, const MDagPath&)
             {
-                if (m_display_mode == DISPLAY_POINT_CLOUD && m_points.size())
+                /*if (m_display_mode == DISPLAY_POINT_CLOUD && m_points.size())
                 {
                     // test sorting if that helps
                     MPoint camera_pos(0.0, 0.0, 0.0, 1.0);
@@ -598,7 +641,7 @@ namespace MHWRender {
                     tbb::parallel_sort(m_points.begin(), m_points.end(), [&](const Point& a, const Point& b) -> bool {
                         return camera_pos.distanceTo(a.position) > camera_pos.distanceTo(b.position);
                     });
-                }
+                }*/
             }
         };
     }
@@ -642,8 +685,6 @@ namespace MHWRender {
         DrawData* data = oldData == 0 ? new DrawData() : reinterpret_cast<DrawData*>(oldData);
 
         data->update(obj_path, p_vdb_visualizer->get_update());
-        // sadly we need sorting to avoid glitches in the viewport...
-        // TODO: move this to the gpu!
         data->sort(camera_path, obj_path);
 
         return data;
@@ -663,8 +704,52 @@ namespace MHWRender {
         return p_vdb_visualizer->boundingBox();
     }
 
+    // https://www.opengl.org/wiki/Built-in_Variable_(GLSL) for gl_PerVertex
     bool VDBDrawOverride::init_shaders()
     {
+        try {
+            auto float_point_vertex = GLProgram::create_program(GL_VERTEX_SHADER, 1, R"glsl(
+#version 450 core
+uniform mat4 world_view_proj;
+layout(location = 0) in vec3 Position;
+layout(location = 1) in vec4 ColorAlpha;
+
+layout(location = 0) out vec4 out_ColorAlpha;
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+void main(void)
+{
+    gl_Position = world_view_proj * vec4(Position, 1.0);
+    out_ColorAlpha = ColorAlpha;
+}
+        )glsl");
+            auto point_color_fragment = GLProgram::create_program(GL_FRAGMENT_SHADER, 1, R"glsl(
+#version 450 core
+layout(location = 0) in vec4 ColorAlpha;
+layout(location = 0, index = 0) out vec4 FragColor;
+void main(void)
+{
+    FragColor = ColorAlpha;
+}
+        )glsl");
+            float_point_pipeline = GLPipeline::create_pipeline(2, &float_point_vertex, &point_color_fragment);
+        }
+        catch(GLProgram::CreateException& ex)
+        {
+            std::cerr << "[openvdb_render] Error creating shader" << std::endl;
+            std::cerr << ex.what() << std::endl;
+            return false;
+        }
+        catch(GLPipeline::ValidateException& ex)
+        {
+            std::cerr << "[openvdb_render] Error validating pipeline" << std::endl;
+            std::cerr << ex.what() << std::endl;
+            return false;
+        }
         return true;
     }
 }

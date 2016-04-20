@@ -68,8 +68,8 @@ std::shared_ptr<GLProgram> GLProgram::create_program(GLenum stage, GLsizei count
         }
         else
         {
-            GLsizei log_length = 0;
-            glGetShaderInfoLog(shader, 0, &log_length, 0);
+            GLint log_length = 0;
+            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
             if (log_length > 0)
             {
                 std::vector<GLchar> log(log_length, '\0');
@@ -86,6 +86,69 @@ std::shared_ptr<GLProgram> GLProgram::create_program(GLenum stage, GLsizei count
     return std::shared_ptr<GLProgram>(new GLProgram(program, stage));
 }
 
+void GLProgram::set_uniform(GLenum type, int location,  int count, ...)
+{
+    va_list va;
+    va_start(va, count);
+
+    if (type == GL_FLOAT)
+    {
+        float args[4];
+        for (int i = 0; i < count; ++i)
+            args[i] = static_cast<float>(va_arg(va, double));
+        if (count == 1)
+            glProgramUniform1f(m_program, location, args[0]);
+        else if (count == 2)
+            glProgramUniform2f(m_program, location, args[0], args[1]);
+        else if (count == 3)
+            glProgramUniform3f(m_program, location, args[0], args[1], args[2]);
+        else if (count == 4)
+            glProgramUniform4f(m_program, location, args[0], args[1], args[2], args[3]);
+    }
+    else if (type == GL_INT)
+    {
+        int args[4];
+        for (int i = 0; i < count; ++i)
+            args[i] = va_arg(va, int);
+        if (count == 1)
+            glProgramUniform1i(m_program, location, args[0]);
+        else if (count == 2)
+            glProgramUniform2i(m_program, location, args[0], args[1]);
+        else if (count == 3)
+            glProgramUniform3i(m_program, location, args[0], args[1], args[2]);
+        else if (count == 4)
+            glProgramUniform4i(m_program, location, args[0], args[1], args[2], args[3]);
+    }
+    else if (type == GL_UNSIGNED_INT)
+    {
+        unsigned int args[4];
+        for (int i = 0; i < count; ++i)
+            args[i] = va_arg(va, unsigned int);
+        if (count == 1)
+            glProgramUniform1ui(m_program, location, args[0]);
+        else if (count == 2)
+            glProgramUniform2ui(m_program, location, args[0], args[1]);
+        else if (count == 3)
+            glProgramUniform3ui(m_program, location, args[0], args[1], args[2]);
+        else if (count == 4)
+            glProgramUniform4ui(m_program, location, args[0], args[1], args[2], args[3]);
+    }
+    else if (type == GL_MATRIX4_ARB)
+    {
+        float* arg = reinterpret_cast<float*>(alloca(sizeof(float) * count * 16));
+        for (int i = 0; i < count; ++i)
+            memcpy(&arg[i * 16], va_arg(va, const float*), sizeof(float) * 16);
+        glProgramUniformMatrix4fv(m_program, location, count, 0, arg);
+    }
+
+    va_end(va);
+}
+
+int GLProgram::get_uniform_location(const char* name)
+{
+    return glGetUniformLocation(m_program, name);
+}
+
 GLPipeline::GLPipeline()
 {
 }
@@ -94,29 +157,42 @@ GLPipeline::~GLPipeline()
 {
 }
 
-std::shared_ptr<GLPipeline> GLPipeline::create_pipeline()
+std::shared_ptr<GLPipeline> GLPipeline::create_pipeline(int count, ...)
 {
-    return std::shared_ptr<GLPipeline>(new GLPipeline());
+    GLPipeline* pipeline = new GLPipeline();
+
+    va_list va;
+    va_start(va, count);
+
+    for (int i = 0; i < count; ++i)
+        pipeline->add_program(*va_arg(va, std::shared_ptr<GLProgram>*));
+
+    va_end(va);
+
+    pipeline->validate();
+
+    return std::shared_ptr<GLPipeline>(pipeline);
 }
 
-GLPipeline& GLPipeline::add_program(std::shared_ptr<GLProgram>& program)
+void GLPipeline::add_program(std::shared_ptr<GLProgram>& program)
 {
     m_programs.push_back(program);
-    return *this;
 }
 
 void GLPipeline::validate()
 {
     glGenProgramPipelines(1, &m_pipeline);
+
     for (const auto& program : m_programs)
-        glUseProgramStages(m_pipeline, program->get_stage(), program->get_program());
+        glUseProgramStages(m_pipeline, program->get_stage_bit(), program->get_program());
+
     glValidateProgramPipeline(m_pipeline);
     GLint status = GL_FALSE;
     glGetProgramPipelineiv(m_pipeline, GL_VALIDATE_STATUS, &status);
     if (status != GL_TRUE)
     {
-        GLsizei log_length = 0;
-        glGetProgramPipelineInfoLog(m_pipeline, 0, &log_length, 0);
+        GLint log_length = 0;
+        glGetProgramPipelineiv(m_pipeline, GL_INFO_LOG_LENGTH, &log_length);
         if (log_length > 0)
         {
             std::vector<GLchar> log(log_length, '\0');
@@ -153,4 +229,35 @@ GLPipeline::ScopedSet::ScopedSet(const GLPipeline& pipeline)
 GLPipeline::ScopedSet::~ScopedSet()
 {
     glBindProgramPipeline(0);
+}
+
+GLuint GLProgram::get_stage() const
+{
+    return m_stage;
+}
+
+GLuint GLProgram::get_stage_bit() const
+{
+    switch (m_stage)
+    {
+        case GL_VERTEX_SHADER:
+            return GL_VERTEX_SHADER_BIT;
+        case GL_FRAGMENT_SHADER:
+            return GL_FRAGMENT_SHADER_BIT;
+        case GL_GEOMETRY_SHADER:
+            return GL_GEOMETRY_SHADER_BIT;
+        case GL_TESS_CONTROL_SHADER:
+            return GL_TESS_CONTROL_SHADER_BIT;
+        case GL_TESS_EVALUATION_SHADER:
+            return GL_TESS_EVALUATION_SHADER_BIT;
+        case GL_COMPUTE_SHADER:
+            return GL_COMPUTE_SHADER_BIT;
+        default:
+            return 0;
+    }
+}
+
+GLuint GLProgram::get_program() const
+{
+    return m_program;
 }
