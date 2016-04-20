@@ -23,6 +23,7 @@
 #include <maya/MPointArray.h>
 #include <maya/MSelectionList.h>
 #include <maya/MDagPath.h>
+#include <maya/MFnStringData.h>
 
 #include <boost/regex.hpp>
 
@@ -425,6 +426,7 @@ MStatus VDBVisualizerShape::initialize()
     MFnTypedAttribute tAttr;
     MFnEnumAttribute eAttr;
     MFnUnitAttribute uAttr;
+    MFnStringData sData;
 
     MStatus status = MS::kSuccess;
 
@@ -531,6 +533,7 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setMin(1.0f);
     nAttr.setSoftMax(10.0f);
     nAttr.setDefault(2.0f);
+    nAttr.setChannelBox(true);
 
     s_point_jitter = nAttr.create("pointJitter", "point_jitter", MFnNumericData::kFloat);
     nAttr.setMin(0.0f);
@@ -541,15 +544,18 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setMin(1);
     nAttr.setSoftMax(20);
     nAttr.setDefault(10);
+    nAttr.setChannelBox(true);
 
     s_scattering_source = eAttr.create("scatteringSource", "scattering_source");
     eAttr.addField("parameter", 0);
     eAttr.addField("channel", 1);
+    eAttr.setDefault(1);
 
     s_scattering = nAttr.createColor("scattering", "scattering");
     nAttr.setDefault(1.0, 1.0, 1.0);
 
     s_scattering_channel = tAttr.create("scatteringChannel", "scattering_channel", MFnData::kString);
+    tAttr.setDefault(sData.create("density"));
 
     s_scattering_color = nAttr.createColor("scatteringColor", "scattering_color");
     nAttr.setDefault(1.0, 1.0, 1.0);
@@ -558,6 +564,7 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setDefault(1.0f);
     nAttr.setMin(0.0f);
     nAttr.setSoftMax(1.0f);
+    nAttr.setChannelBox(true);
 
     s_anisotropy = nAttr.create("anisotropy", "anisotropy", MFnNumericData::kFloat);
     nAttr.setDefault(0.0f);
@@ -568,6 +575,7 @@ MStatus VDBVisualizerShape::initialize()
     eAttr.addField("parameter", 0);
     eAttr.addField("channel", 1);
     eAttr.addField("scattering", 2);
+    eAttr.setDefault(2);
 
     s_attenuation = nAttr.createColor("attenuation", "attenuation");
     nAttr.setDefault(1.0, 1.0, 1.0);
@@ -581,10 +589,12 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setDefault(1.0f);
     nAttr.setMin(0.0f);
     nAttr.setSoftMax(1.0f);
+    nAttr.setChannelBox(true);
 
     s_attenuation_mode = eAttr.create("attenuationMode", "attenuation_mode");
     eAttr.addField("absorption", 0);
     eAttr.addField("extinction", 1);
+    eAttr.setChannelBox(true);
 
     s_emission_source = eAttr.create("emissionSource", "emission_source");
     eAttr.addField("parameter", 0);
@@ -602,6 +612,7 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setDefault(1.0f);
     nAttr.setMin(0.0f);
     nAttr.setSoftMax(1.0f);
+    nAttr.setChannelBox(true);
 
     s_position_offset = nAttr.createPoint("positionOffset", "position_offset");
     nAttr.setDefault(0.0, 0.0, 0.0);
@@ -618,6 +629,7 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setDefault(100.0f);
     nAttr.setMin(1.0f);
     nAttr.setSoftMax(300.0f);
+    nAttr.setChannelBox(true);
     addAttribute(s_sampling_quality);
 
     s_additional_channel_export = tAttr.create("additionalChannelExport", "additional_channel_export", MFnData::kString);

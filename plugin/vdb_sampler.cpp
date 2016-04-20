@@ -40,6 +40,7 @@ void VDBGradientParams::create_params()
     nAttr.setSoftMin(0.0f);
     nAttr.setSoftMax(1.0f);
     nAttr.setConnectable(false);
+    nAttr.setChannelBox(true);
     MPxNode::addAttribute(input_min);
 
     input_max = nAttr.create(gradient_name + "InputMax", gradient_name + "_input_max", MFnNumericData::kFloat);
@@ -47,6 +48,7 @@ void VDBGradientParams::create_params()
     nAttr.setSoftMin(0.0f);
     nAttr.setSoftMax(1.0f);
     nAttr.setConnectable(false);
+    nAttr.setChannelBox(true);
     MPxNode::addAttribute(input_max);
 
     bias = nAttr.create(gradient_name + "Bias", gradient_name + "_bias", MFnNumericData::kFloat);
@@ -68,6 +70,7 @@ void VDBGradientParams::create_params()
     nAttr.setSoftMin(0.0f);
     nAttr.setSoftMax(1.0f);
     nAttr.setConnectable(false);
+    nAttr.setChannelBox(true);
     MPxNode::addAttribute(output_min);
 
     output_max = nAttr.create(gradient_name + "OutputMax", gradient_name + "_output_max", MFnNumericData::kFloat);
@@ -75,6 +78,7 @@ void VDBGradientParams::create_params()
     nAttr.setSoftMin(0.0f);
     nAttr.setSoftMax(1.0f);
     nAttr.setConnectable(false);
+    nAttr.setChannelBox(true);
     MPxNode::addAttribute(output_max);
 
     clamp_min = nAttr.create(gradient_name + "ClampMin", gradient_name + "_clamp_min", MFnNumericData::kBoolean);
