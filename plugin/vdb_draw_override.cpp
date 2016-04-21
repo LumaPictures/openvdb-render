@@ -709,7 +709,7 @@ namespace MHWRender {
     {
         try {
             auto float_point_vertex = GLProgram::create_program(GL_VERTEX_SHADER, 1, R"glsl(
-#version 450 core
+#version 440 core
 uniform mat4 world_view_proj;
 layout(location = 0) in vec3 Position;
 layout(location = 1) in vec4 ColorAlpha;
@@ -728,7 +728,7 @@ void main(void)
 }
         )glsl");
             auto point_color_fragment = GLProgram::create_program(GL_FRAGMENT_SHADER, 1, R"glsl(
-#version 450 core
+#version 440 core
 layout(location = 0) in vec4 ColorAlpha;
 layout(location = 0, index = 0) out vec4 FragColor;
 void main(void)
