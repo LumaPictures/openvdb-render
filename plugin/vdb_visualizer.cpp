@@ -56,6 +56,7 @@ MObject VDBVisualizerShape::s_point_size;
 MObject VDBVisualizerShape::s_point_jitter;
 MObject VDBVisualizerShape::s_point_skip;
 
+MObject VDBVisualizerShape::s_override_shader;
 MObject VDBVisualizerShape::s_scattering_source;
 MObject VDBVisualizerShape::s_scattering;
 MObject VDBVisualizerShape::s_scattering_channel;
@@ -546,6 +547,10 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setDefault(10);
     nAttr.setChannelBox(true);
 
+    s_override_shader = nAttr.create("overrideShader", "override_shader", MFnNumericData::kBoolean);
+    nAttr.setDefault(false);
+    nAttr.setChannelBox(true);
+
     s_scattering_source = eAttr.create("scatteringSource", "scattering_source");
     eAttr.addField("parameter", 0);
     eAttr.addField("channel", 1);
@@ -636,7 +641,7 @@ MStatus VDBVisualizerShape::initialize()
     addAttribute(s_additional_channel_export);
 
     MObject display_params[] = {
-            s_point_size, s_point_jitter, s_point_skip,
+            s_point_size, s_point_jitter, s_point_skip, s_override_shader,
             s_scattering_source, s_scattering, s_scattering_channel, s_scattering_color,
             s_scattering_intensity, s_anisotropy, s_attenuation_source, s_attenuation,
             s_attenuation_channel, s_attenuation_color, s_attenuation_intensity, s_attenuation_mode,
@@ -773,7 +778,6 @@ VDBVisualizerShapeUI::VDBVisualizerShapeUI()
 
 VDBVisualizerShapeUI::~VDBVisualizerShapeUI()
 {
-
 
 }
 

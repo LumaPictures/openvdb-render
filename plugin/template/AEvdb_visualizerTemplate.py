@@ -195,7 +195,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.endLayout()
 
         self.beginLayout('Render Parameters', collapse=False)
-
+        self.addControl('overrideShader', label='Override Shader')
         self.beginLayout('Sampling', collapse=False)
         self.addControl('position_offset')
         self.addControl('interpolation')

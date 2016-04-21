@@ -106,6 +106,7 @@ public:
     static MObject s_point_skip;
 
     // shader parameters
+    static MObject s_override_shader;
     static MObject s_scattering_source;
     static MObject s_scattering;
     static MObject s_scattering_channel;

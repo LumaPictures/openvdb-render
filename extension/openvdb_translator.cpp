@@ -30,7 +30,7 @@ void check_maya_plug(MPlug plug, std::set<void*>& checked_maya_nodes, std::set<s
     for (unsigned int i = 0; i < conns_length; ++i)
         check_maya_node(conns[i].node(), checked_maya_nodes, out_grids);
 }
-
+// todo check the export arnold nodes, that could be faster!
 void check_maya_node(MObject node, std::set<void*>& checked_maya_nodes, std::set<std::string>& out_grids)
 {
     MStatus status;
