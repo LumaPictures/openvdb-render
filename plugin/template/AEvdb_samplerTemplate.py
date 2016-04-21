@@ -4,8 +4,6 @@ from channelController import channelController
 
 class AEvdb_samplerTemplate(pm.uitypes.AETemplate, channelController):
     def __init__(self, node_name):
-        self.init_gradient_params("base")
-
         self.beginScrollLayout()
 
         self.beginLayout('Channel Parameters', collapse=False)
