@@ -2,11 +2,7 @@
 
 #include <set>
 
-#include <maya/MRampAttribute.h>
-
-namespace {
-    const unsigned int num_ramp_samples = 256;
-}
+#include "shader_translator.h"
 
 void* OpenvdbTranslator::creator()
 {
@@ -16,7 +12,8 @@ void* OpenvdbTranslator::creator()
 AtNode* OpenvdbTranslator::CreateArnoldNodes()
 {
     AtNode* volume = AddArnoldNode("volume");
-    AddArnoldNode("openvdb_shader", "shader");
+    if (!FindMayaPlug("overrideShader").asBool())
+        AddArnoldNode("openvdb_shader", "shader");
     return volume;
 }
 
@@ -118,86 +115,29 @@ void OpenvdbTranslator::Export(AtNode* volume)
     ProcessParameter(volume, "min", AI_TYPE_POINT, "bboxMin");
     ProcessParameter(volume, "max", AI_TYPE_POINT, "bboxMax");
 
-    AtNode* shader = GetArnoldNode("shader");
-
-    AiNodeSetPtr(volume, "shader", shader);
-
-    ProcessParameter(shader, "scattering_source", AI_TYPE_INT, "scatteringSource");
-    ProcessParameter(shader, "scattering", AI_TYPE_RGB, "scattering");
-    ProcessParameter(shader, "scattering_channel", AI_TYPE_STRING, "scatteringChannel");
-    ProcessParameter(shader, "scattering_color", AI_TYPE_RGB, "scatteringColor");
-    ProcessParameter(shader, "scattering_intensity", AI_TYPE_FLOAT, "scatteringIntensity");
-    ProcessParameter(shader, "anisotropy", AI_TYPE_FLOAT, "anisotropy");
-
-    ProcessParameter(shader, "attenuation_source", AI_TYPE_INT, "attenuationSource");
-    ProcessParameter(shader, "attenuation", AI_TYPE_RGB, "attenuation");
-    ProcessParameter(shader, "attenuation_channel", AI_TYPE_STRING, "attenuationChannel");
-    ProcessParameter(shader, "attenuation_color", AI_TYPE_RGB, "attenuationColor");
-    ProcessParameter(shader, "attenuation_intensity", AI_TYPE_FLOAT, "attenuationIntensity");
-    ProcessParameter(shader, "attenuation_mode", AI_TYPE_INT, "attenuationMode");
-
-    ProcessParameter(shader, "emission_source", AI_TYPE_INT, "emissionSource");
-    ProcessParameter(shader, "emission", AI_TYPE_RGB, "emission");
-    ProcessParameter(shader, "emission_channel", AI_TYPE_STRING, "emissionChannel");
-    ProcessParameter(shader, "emission_color", AI_TYPE_RGB, "emissionColor");
-    ProcessParameter(shader, "emission_intensity", AI_TYPE_FLOAT, "emissionIntensity");
-
-    ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
-    ProcessParameter(shader, "compensate_scaling", AI_TYPE_BOOLEAN, "compensateScaling");
-
-    std::array<std::string, 3> gradient_names = {"scattering", "attenuation", "emission"};
-
-    for (auto gradient : gradient_names)
+    if (FindMayaPlug("overrideShader").asBool())
     {
-        ProcessParameter(shader, (gradient + "_channel_mode").c_str(), AI_TYPE_INT, (gradient + "ChannelMode").c_str());
-        ProcessParameter(shader, (gradient + "_contrast").c_str(), AI_TYPE_FLOAT, (gradient + "Contrast").c_str());
-        ProcessParameter(shader, (gradient + "_contrast_pivot").c_str(), AI_TYPE_FLOAT, (gradient + "ContrastPivot").c_str());
-        ProcessParameter(shader, (gradient + "_input_min").c_str(), AI_TYPE_FLOAT, (gradient + "InputMin").c_str());
-        ProcessParameter(shader, (gradient + "_input_max").c_str(), AI_TYPE_FLOAT, (gradient + "InputMax").c_str());
-        ProcessParameter(shader, (gradient + "_bias").c_str(), AI_TYPE_FLOAT, (gradient + "Bias").c_str());
-        ProcessParameter(shader, (gradient + "_gain").c_str(), AI_TYPE_FLOAT, (gradient + "Gain").c_str());
-        ProcessParameter(shader, (gradient + "_output_min").c_str(), AI_TYPE_FLOAT, (gradient + "OutputMin").c_str());
-        ProcessParameter(shader, (gradient + "_output_max").c_str(), AI_TYPE_FLOAT, (gradient + "OutputMax").c_str());
-        ProcessParameter(shader, (gradient + "_clamp_min").c_str(), AI_TYPE_BOOLEAN, (gradient + "ClampMin").c_str());
-        ProcessParameter(shader, (gradient + "_clamp_max").c_str(), AI_TYPE_BOOLEAN, (gradient + "ClampMax").c_str());
-        ProcessParameter(shader, (gradient + "_gamma").c_str(), AI_TYPE_FLOAT, (gradient + "Gamma").c_str());
-        ProcessParameter(shader, (gradient + "_hue_shift").c_str(), AI_TYPE_FLOAT, (gradient + "HueShift").c_str());
-        ProcessParameter(shader, (gradient + "_saturation").c_str(), AI_TYPE_FLOAT, (gradient + "Saturation").c_str());
-        ProcessParameter(shader, (gradient + "_exposure").c_str(), AI_TYPE_FLOAT, (gradient + "Exposure").c_str());
-        ProcessParameter(shader, (gradient + "_multiply").c_str(), AI_TYPE_FLOAT, (gradient + "Multiply").c_str());
-        ProcessParameter(shader, (gradient + "_add").c_str(), AI_TYPE_FLOAT, (gradient + "Add").c_str());
+        const int instanceNum = m_dagPath.isInstanced() ? m_dagPath.instanceNumber() : 0;
 
-        MStatus status = MS::kSuccess;
-        MPlug plug = FindMayaPlug((gradient + "FloatRamp").c_str(), &status);
-        if (status && !plug.isNull())
+        MPlug shadingGroupPlug = GetNodeShadingGroup(m_dagPath.node(), instanceNum);
+        if (!shadingGroupPlug.isNull())
         {
-            MRampAttribute ramp_attr(plug);
-            MFloatArray samples;
-            ramp_attr.sampleValueRamp(num_ramp_samples, samples, &status);
-            if (status)
+            AtNode* shader = ExportNode(shadingGroupPlug);
+            if (shader != 0)
             {
-                AtArray* arr = AiArrayConvert(num_ramp_samples, 1, AI_TYPE_FLOAT, &samples[0]);
-                AiNodeSetArray(shader, (gradient + "_float_ramp").c_str(), arr);
+                AiNodeSetPtr(volume, "shader", shader);
+                AiNodeDeclare(volume, "mtoa_shading_groups", "constant ARRAY NODE");
+                AiNodeSetArray(volume, "mtoa_shading_groups", AiArray(1, 1, AI_TYPE_NODE, shader));
             }
         }
+    }
+    else
+    {
+        AtNode* shader = GetArnoldNode("shader");
 
-        plug = FindMayaPlug((gradient + "RgbRamp").c_str(), &status);
-        if (status && !plug.isNull())
-        {
-            MRampAttribute ramp_attr(plug);
-            MColorArray samples;
-            ramp_attr.sampleColorRamp(num_ramp_samples, samples, &status);
-            if (status)
-            {
-                AtArray* arr = AiArrayAllocate(num_ramp_samples, 1, AI_TYPE_RGB);
-                for (unsigned int i = 0; i < num_ramp_samples; ++i)
-                {
-                    const MColor& sample = samples[i];
-                    AiArraySetRGB(arr, i, AiColorCreate(sample.r, sample.g, sample.b));
-                }
-                AiNodeSetArray(shader, (gradient + "_rgb_ramp").c_str(), arr);
-            }
-        }
+        AiNodeSetPtr(volume, "shader", shader);
+
+        ExportParams(shader);
     }
 
     const float sampling_quality = FindMayaPlug("samplingQuality").asFloat();

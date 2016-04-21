@@ -661,6 +661,12 @@ MBoundingBox VDBVisualizerShape::boundingBox() const
     return m_vdb_data.bbox;
 }
 
+void VDBVisualizerShape::postConstructor()
+{
+    MPxNode::postConstructor();
+    setRenderable(true);
+}
+
 VDBVisualizerShapeUI::VDBVisualizerShapeUI()
 {
 

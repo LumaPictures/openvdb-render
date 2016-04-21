@@ -565,10 +565,6 @@ namespace MHWRender {
                 float world_view_mat[4][4];
                 context.getMatrix(MHWRender::MDrawContext::kWorldViewMtx).get(world_view_mat);
 
-                glMatrixMode(GL_MODELVIEW);
-                glPushMatrix();
-                glLoadMatrixf(&world_view_mat[0][0]);
-
                 glPushAttrib(GL_CURRENT_BIT);
 
                 if (m_is_empty)
@@ -582,12 +578,18 @@ namespace MHWRender {
                     glColor4fv(m_wireframe_color);
 
 
+                glMatrixMode(GL_MODELVIEW);
+                glPushMatrix();
+                glLoadMatrixf(&world_view_mat[0][0]);
+
                 glBegin(GL_LINES);
 
                 for (const auto& vertex : m_wireframe)
                     glVertex3f(vertex.x, vertex.y, vertex.z);
 
                 glEnd();
+
+                glPopMatrix();
 
                 if (m_display_mode == DISPLAY_POINT_CLOUD && m_point_count > 0)
                 {
@@ -601,11 +603,12 @@ namespace MHWRender {
                     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
                     {
-                        GLPipeline::ScopedSet pipeline_set(*float_point_pipeline);
                         float world_view_proj_mat[4][4];
                         context.getMatrix(MHWRender::MDrawContext::kWorldViewProjMtx).get(world_view_proj_mat);
 
                         float_point_pipeline->get_program(GL_VERTEX_SHADER)->set_uniform(GL_MATRIX4_ARB, 0, 1, world_view_proj_mat[0]);
+
+                        GLPipeline::ScopedSet pipeline_set(*float_point_pipeline);
 
                         glBindVertexArray(m_vertex_array);
 
@@ -614,7 +617,6 @@ namespace MHWRender {
                         glBindVertexArray(0);
                     }
 
-                    glDisable(GL_DEPTH_TEST);
                     glDisable(GL_BLEND);
                     glDisable(GL_POINT_SMOOTH);
                     glDepthMask(GL_TRUE);
@@ -624,8 +626,6 @@ namespace MHWRender {
                     glPopAttrib();
 
                 glPopAttrib();
-
-                glPopMatrix();
             }
 
             void sort(const MDagPath&, const MDagPath&)

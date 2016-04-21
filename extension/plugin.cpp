@@ -3,6 +3,7 @@
 
 #include "openvdb_translator.h"
 #include "sampler_translator.h"
+#include "shader_translator.h"
 
 extern "C"
 {
@@ -17,6 +18,10 @@ extern "C"
         extension.RegisterTranslator("vdb_sampler",
                                      "",
                                      SamplerTranslator::creator);
+
+        extension.RegisterTranslator("vdb_shader",
+                                     "",
+                                     VDBShaderTranslator::creator);
     }
 
     DLLEXPORT void deinitializeExtension(CExtension&)

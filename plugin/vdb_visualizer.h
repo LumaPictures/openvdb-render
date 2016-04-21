@@ -79,6 +79,7 @@ public:
 
     MStatus compute(const MPlug& plug, MDataBlock& dataBlock);
     static MStatus initialize();
+    void postConstructor();
 
     static const MTypeId typeId;
     static const MString typeName;

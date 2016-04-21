@@ -181,6 +181,15 @@ MStatus VDBShaderNode::compute(const MPlug&, MDataBlock&)
 
 MStatus VDBShaderNode::initialize()
 {
+    MFnNumericAttribute nAttr;
+
+    MObject out_color = nAttr.createColor("outColor", "oc");
+    nAttr.setKeyable(false);
+    nAttr.setStorable(false);
+    nAttr.setReadable(true);
+    nAttr.setWritable(false);
+    addAttribute(out_color);
+
     s_shader_params.create_params();
 
     return MS::kSuccess;
