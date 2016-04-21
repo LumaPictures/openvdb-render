@@ -10,6 +10,7 @@
 
 #include "vdb_sampler.h"
 #include "gradient.hpp"
+#include "vdb_shader.h"
 
 enum VDBDisplayMode{
     DISPLAY_AXIS_ALIGNED_BBOX = 0,
@@ -105,35 +106,12 @@ public:
     static MObject s_point_jitter;
     static MObject s_point_skip;
 
-    // shader parameters
     static MObject s_override_shader;
-    static MObject s_scattering_source;
-    static MObject s_scattering;
-    static MObject s_scattering_channel;
-    static MObject s_scattering_color;
-    static MObject s_scattering_intensity;
-    static MObject s_anisotropy;
-    static MObject s_attenuation_source;
-    static MObject s_attenuation;
-    static MObject s_attenuation_channel;
-    static MObject s_attenuation_color;
-    static MObject s_attenuation_intensity;
-    static MObject s_attenuation_mode;
-    static MObject s_emission_source;
-    static MObject s_emission;
-    static MObject s_emission_channel;
-    static MObject s_emission_color;
-    static MObject s_emission_intensity;
-    static MObject s_position_offset;
-    static MObject s_interpolation;
-    static MObject s_compensate_scaling;
     static MObject s_sampling_quality;
-
-    static VDBGradientParams s_scattering_gradient;
-    static VDBGradientParams s_attenuation_gradient;
-    static VDBGradientParams s_emission_gradient;
-
     static MObject s_additional_channel_export;
+
+    // shader parameters
+    static VDBShaderParams s_shader_params;
 
     static const boost::regex s_frame_expr;
     static const boost::regex s_hash_expr;
