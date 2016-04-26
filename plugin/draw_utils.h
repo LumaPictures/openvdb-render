@@ -28,8 +28,10 @@ public:
 
     static std::shared_ptr<GLProgram> create_program(GLenum stage, GLsizei count, ...);
 
-    void set_uniform(GLenum type, int location, int count, ...);
-    int get_uniform_location(const char* name);
+    void set_uniform(GLenum type, int location, int tuple, ...);
+    void set_uniformv(GLenum type, int location, int tuple, int count, ...);
+    void set_matrix(int location, int count, bool transpose, const float* matrices);
+    int get_uniform_location(const char* name) const;
 
     GLuint get_stage() const;
     GLuint get_stage_bit() const;

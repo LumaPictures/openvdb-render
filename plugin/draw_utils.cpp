@@ -86,65 +86,116 @@ std::shared_ptr<GLProgram> GLProgram::create_program(GLenum stage, GLsizei count
     return std::shared_ptr<GLProgram>(new GLProgram(program, stage));
 }
 
-void GLProgram::set_uniform(GLenum type, int location,  int count, ...)
+void GLProgram::set_uniform(GLenum type, int location, int tuple, ...)
 {
     va_list va;
-    va_start(va, count);
+    va_start(va, tuple);
 
     if (type == GL_FLOAT)
     {
-        float args[4];
-        for (int i = 0; i < count; ++i)
+        float* args = reinterpret_cast<float*>(alloca(sizeof(float) * tuple));
+        for (int i = 0; i < tuple; ++i)
             args[i] = static_cast<float>(va_arg(va, double));
-        if (count == 1)
+        if (tuple == 1)
             glProgramUniform1f(m_program, location, args[0]);
-        else if (count == 2)
+        else if (tuple == 2)
             glProgramUniform2f(m_program, location, args[0], args[1]);
-        else if (count == 3)
+        else if (tuple == 3)
             glProgramUniform3f(m_program, location, args[0], args[1], args[2]);
-        else if (count == 4)
+        else if (tuple == 4)
             glProgramUniform4f(m_program, location, args[0], args[1], args[2], args[3]);
     }
     else if (type == GL_INT)
     {
-        int args[4];
-        for (int i = 0; i < count; ++i)
+        int* args = reinterpret_cast<int*>(alloca(sizeof(int) * tuple));
+        for (int i = 0; i < tuple; ++i)
             args[i] = va_arg(va, int);
-        if (count == 1)
+        if (tuple == 1)
             glProgramUniform1i(m_program, location, args[0]);
-        else if (count == 2)
+        else if (tuple == 2)
             glProgramUniform2i(m_program, location, args[0], args[1]);
-        else if (count == 3)
+        else if (tuple == 3)
             glProgramUniform3i(m_program, location, args[0], args[1], args[2]);
-        else if (count == 4)
+        else if (tuple == 4)
             glProgramUniform4i(m_program, location, args[0], args[1], args[2], args[3]);
     }
     else if (type == GL_UNSIGNED_INT)
     {
-        unsigned int args[4];
-        for (int i = 0; i < count; ++i)
+        unsigned int* args = reinterpret_cast<unsigned int*>(alloca(sizeof(unsigned int) * tuple));
+        for (int i = 0; i < tuple; ++i)
             args[i] = va_arg(va, unsigned int);
-        if (count == 1)
+        if (tuple == 1)
             glProgramUniform1ui(m_program, location, args[0]);
-        else if (count == 2)
+        else if (tuple == 2)
             glProgramUniform2ui(m_program, location, args[0], args[1]);
-        else if (count == 3)
+        else if (tuple == 3)
             glProgramUniform3ui(m_program, location, args[0], args[1], args[2]);
-        else if (count == 4)
+        else if (tuple == 4)
             glProgramUniform4ui(m_program, location, args[0], args[1], args[2], args[3]);
-    }
-    else if (type == GL_MATRIX4_ARB)
-    {
-        float* arg = reinterpret_cast<float*>(alloca(sizeof(float) * count * 16));
-        for (int i = 0; i < count; ++i)
-            memcpy(&arg[i * 16], va_arg(va, const float*), sizeof(float) * 16);
-        glProgramUniformMatrix4fv(m_program, location, count, 0, arg);
     }
 
     va_end(va);
 }
 
-int GLProgram::get_uniform_location(const char* name)
+void GLProgram::set_uniformv(GLenum type, int location, int tuple, int count, ...)
+{
+    va_list va;
+    va_start(va, count);
+
+    const int element_count = tuple * count;
+
+    if (type == GL_FLOAT)
+    {
+        float* args = reinterpret_cast<float*>(alloca(sizeof(float) * element_count));
+        for (int i = 0; i < element_count; ++i)
+            args[i] = static_cast<float>(va_arg(va, double));
+        if (tuple == 1)
+            glProgramUniform1fv(m_program, location, count, args);
+        else if (tuple == 2)
+            glProgramUniform2fv(m_program, location, count, args);
+        else if (tuple == 3)
+            glProgramUniform3fv(m_program, location, count, args);
+        else if (tuple == 4)
+            glProgramUniform4fv(m_program, location, count, args);
+    }
+    else if (type == GL_INT)
+    {
+        int* args = reinterpret_cast<int*>(alloca(sizeof(int) * element_count));
+        for (int i = 0; i < element_count; ++i)
+            args[i] = va_arg(va, int);
+        if (tuple == 1)
+            glProgramUniform1iv(m_program, location, count, args);
+        else if (tuple == 2)
+            glProgramUniform2iv(m_program, location, count, args);
+        else if (tuple == 3)
+            glProgramUniform3iv(m_program, location, count, args);
+        else if (tuple == 4)
+            glProgramUniform4iv(m_program, location, count, args);
+    }
+    else if (type == GL_UNSIGNED_INT)
+    {
+        unsigned int* args = reinterpret_cast<unsigned int*>(alloca(sizeof(unsigned int) * element_count));
+        for (int i = 0; i < element_count; ++i)
+            args[i] = va_arg(va, unsigned int);
+        if (tuple == 1)
+            glProgramUniform1uiv(m_program, location, count, args);
+        else if (tuple == 2)
+            glProgramUniform2uiv(m_program, location, count, args);
+        else if (tuple == 3)
+            glProgramUniform3uiv(m_program, location, count, args);
+        else if (tuple == 4)
+            glProgramUniform4uiv(m_program, location, count, args);
+    }
+
+    va_end(va);
+}
+
+void GLProgram::set_matrix(int location, int count, bool transpose, const float* matrices)
+{
+    glProgramUniformMatrix4fv(m_program, location, count, transpose, matrices);
+}
+
+int GLProgram::get_uniform_location(const char* name) const
 {
     return glGetUniformLocation(m_program, name);
 }
