@@ -4,15 +4,15 @@ AI_SHADER_NODE_EXPORT_METHODS(openvdbSimpleShaderMethods);
 
 namespace {
     struct ShaderData{
-        AtString color_channel;
+        AtString smoke_channel;
         AtString opacity_channel;
-        AtString emission_channel;
+        AtString fire_channel;
 
         int interpolation;
 
-        bool sample_color;
+        bool sample_smoke;
         bool sample_opacity;
-        bool sample_emission;
+        bool sample_fire;
         bool compensate_scaling;
 
         void* operator new(size_t size)
@@ -25,34 +25,34 @@ namespace {
             AiFree(d);
         }
 
-        ShaderData() : interpolation(0), sample_color(false), sample_opacity(false), sample_emission(false), compensate_scaling(true)
+        ShaderData() : interpolation(0), sample_smoke(false), sample_opacity(false), sample_fire(false), compensate_scaling(true)
         {
 
         }
 
         void update(AtNode* node, AtParamValue*)
         {
-            color_channel = AtString(AiNodeGetStr(node, "color_channel"));
+            smoke_channel = AtString(AiNodeGetStr(node, "smoke_channel"));
             opacity_channel = AtString(AiNodeGetStr(node, "opacity_channel"));
-            emission_channel = AtString(AiNodeGetStr(node, "emission_channel"));
+            fire_channel = AtString(AiNodeGetStr(node, "fire_channel"));
 
-            sample_color = color_channel.length() > 0;
+            sample_smoke = smoke_channel.length() > 0;
             sample_opacity = opacity_channel.length() > 0;
-            sample_emission = emission_channel.length() > 0;
+            sample_fire = fire_channel.length() > 0;
         }
     };
 
     enum{
-        p_color,
-        p_color_channel,
-        p_color_intensity,
+        p_smoke,
+        p_smoke_channel,
+        p_smoke_intensity,
         p_anisotropy,
         p_opacity,
         p_opacity_channel,
         p_opacity_intensity,
-        p_emission,
-        p_emission_channel,
-        p_emission_intensity,
+        p_fire,
+        p_fire_channel,
+        p_fire_intensity,
         p_interpolation,
         p_compensate_scaling
     };
@@ -62,18 +62,18 @@ namespace {
 
 node_parameters
 {
-    AiParameterRGB("color", 1.0f, 1.0f, 1.0f);
-    AiParameterStr("color_channel", "");
-    AiParameterFlt("color_intensity", 1.0f);
+    AiParameterRGB("smoke", 1.0f, 1.0f, 1.0f);
+    AiParameterStr("smoke_channel", "");
+    AiParameterFlt("smoke_intensity", 1.0f);
     AiParameterFlt("anisotropy", 0.0f);
 
     AiParameterRGB("opacity", 1.0f, 1.0f, 1.0f);
     AiParameterStr("opacity_channel", "");
     AiParameterFlt("opacity_intensity", 1.0f);
 
-    AiParameterRGB("emission", 1.0f, 1.0f, 1.0f);
-    AiParameterStr("emission_channel", "");
-    AiParameterFlt("emission_intensity", 1.0f);
+    AiParameterRGB("fire", 1.0f, 1.0f, 1.0f);
+    AiParameterStr("fire_channel", "");
+    AiParameterFlt("fire_intensity", 1.0f);
 
     AiParameterEnum("interpolation", 0, interpolations);
     AiParameterBool("compensate_scaling", true);
@@ -125,18 +125,18 @@ shader_evaluate
             AiVolumeSampleRGB(data->opacity_channel, data->interpolation, &opacity);
         opacity *= AiShaderEvalParamRGB(p_opacity) * (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
 
-        AtRGB color = AI_RGB_WHITE;
-        if (data->sample_color)
-            AiVolumeSampleRGB(data->color_channel, data->interpolation, &color);
-        color *= opacity * AiShaderEvalParamRGB(p_color) * AiShaderEvalParamFlt(p_color_intensity);
+        AtRGB smoke = AI_RGB_WHITE;
+        if (data->sample_smoke)
+            AiVolumeSampleRGB(data->smoke_channel, data->interpolation, &smoke);
+        smoke *= opacity * AiShaderEvalParamRGB(p_smoke) * AiShaderEvalParamFlt(p_smoke_intensity);
 
-        AtRGB emission = AI_RGB_WHITE;
-        if (data->sample_emission)
-            AiVolumeSampleRGB(data->emission_channel, data->interpolation, &emission);
-        emission *= opacity * AiShaderEvalParamRGB(p_emission) * AiShaderEvalParamFlt(p_emission_intensity);
+        AtRGB fire = AI_RGB_WHITE;
+        if (data->sample_fire)
+            AiVolumeSampleRGB(data->fire_channel, data->interpolation, &fire);
+        fire *= opacity * AiShaderEvalParamRGB(p_fire) * AiShaderEvalParamFlt(p_fire_intensity);
 
-        AiShaderGlobalsSetVolumeScattering(sg, color, AiShaderEvalParamFlt(p_anisotropy));
+        AiShaderGlobalsSetVolumeScattering(sg, smoke, AiShaderEvalParamFlt(p_anisotropy));
         AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
-        AiShaderGlobalsSetVolumeEmission(sg, emission);
+        AiShaderGlobalsSetVolumeEmission(sg, fire);
     }
 }
