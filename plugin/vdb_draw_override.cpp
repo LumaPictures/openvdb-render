@@ -26,9 +26,7 @@
 
 namespace {
     std::shared_ptr<GLPipeline> float_point_pipeline;
-    //std::shared_ptr<GLPipeline> bit16_point_pipeline = 0;
-    //std::shared_ptr<GLPipeline> bit12_point_pipeline = 0;
-
+    std::shared_ptr<GLPipeline> int_point_pipeline;
 #pragma pack(0)
     struct Point{
         MFloatVector position;
@@ -704,13 +702,14 @@ namespace MHWRender {
         return p_vdb_visualizer->boundingBox();
     }
 
+    // TODO: use uniform buffer objects
     // https://www.opengl.org/wiki/Built-in_Variable_(GLSL) for gl_PerVertex
     bool VDBDrawOverride::init_shaders()
     {
         try {
             auto float_point_vertex = GLProgram::create_program(GL_VERTEX_SHADER, 1, R"glsl(
 #version 440 core
-uniform mat4 world_view_proj;
+layout(location = 0) uniform mat4 world_view_proj;
 layout(location = 0) in vec3 Position;
 layout(location = 1) in vec4 ColorAlpha;
 
@@ -727,6 +726,7 @@ void main(void)
     out_ColorAlpha = ColorAlpha;
 }
         )glsl");
+
             auto point_color_fragment = GLProgram::create_program(GL_FRAGMENT_SHADER, 1, R"glsl(
 #version 440 core
 layout(location = 0) in vec4 ColorAlpha;
@@ -737,6 +737,31 @@ void main(void)
 }
         )glsl");
             float_point_pipeline = GLPipeline::create_pipeline(2, &float_point_vertex, &point_color_fragment);
+
+            auto int_point_vertex = GLProgram::create_program(GL_VERTEX_SHADER, 1, R"glsl(
+#version 440 core
+layout(location = 0) uniform mat4 world_view_proj;
+layout(location = 1) uniform ivec3 volume_grid[4]; // origin, x, y, z axis
+layout(location = 5) uniform vec3 grid_size; // size of the grid in floats
+layout(location = 6) uniform float jitter_size;
+layout(location = 0) in ivec3 Position;
+layout(location = 1) in vec4 ColorAlpha;
+
+layout(location = 0) out vec4 out_ColorAlpha;
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
+void main(void)
+{
+    gl_Position = world_view_proj * vec4(float(Position.x), float(Position.y), float(Position.z), 1.0);
+    out_ColorAlpha = ColorAlpha;
+}
+        )glsl");
+
+            int_point_pipeline = GLPipeline::create_pipeline(2, &int_point_vertex, &point_color_fragment);
         }
         catch(GLProgram::CreateException& ex)
         {
