@@ -215,6 +215,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.beginLayout('Render Parameters', collapse=False)
         self.addControl('overrideShader', label='Override Shader')
         self.addControl('shaderMode', label='Shader Mode')
+        self.addControl('matte', label='Matte')
 
         self.beginLayout('Sampling', collapse=False)
         self.addControl('position_offset')

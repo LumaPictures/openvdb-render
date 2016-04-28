@@ -102,6 +102,7 @@ public:
     static MObject s_bbox_max;
     static MObject s_channel_stats;
     static MObject s_voxel_size;
+    static MObject s_matte;
 
     // display parameters
     static MObject s_point_size;

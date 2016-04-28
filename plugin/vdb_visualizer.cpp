@@ -51,6 +51,7 @@ MObject VDBVisualizerShape::s_bbox_min;
 MObject VDBVisualizerShape::s_bbox_max;
 MObject VDBVisualizerShape::s_channel_stats;
 MObject VDBVisualizerShape::s_voxel_size;
+MObject VDBVisualizerShape::s_matte;
 
 MObject VDBVisualizerShape::s_point_size;
 MObject VDBVisualizerShape::s_point_jitter;
@@ -514,6 +515,10 @@ MStatus VDBVisualizerShape::initialize()
     }
 
     attributeAffects(s_display_mode, s_update_trigger);
+
+    s_matte = nAttr.create("matte", "matte", MFnNumericData::kBoolean);
+    nAttr.setDefault(false);
+    addAttribute(s_matte);
 
     s_point_size = nAttr.create("pointSize", "point_size", MFnNumericData::kFloat);
     nAttr.setMin(1.0f);

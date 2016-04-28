@@ -604,7 +604,7 @@ namespace MHWRender {
                         float world_view_proj_mat[4][4];
                         context.getMatrix(MHWRender::MDrawContext::kWorldViewProjMtx).get(world_view_proj_mat);
 
-                        float_point_pipeline->get_program(GL_VERTEX_SHADER)->set_uniform(GL_MATRIX4_ARB, 0, 1, world_view_proj_mat[0]);
+                        float_point_pipeline->get_program(GL_VERTEX_SHADER)->set_matrix(0, 1, false, world_view_proj_mat[0]);
 
                         GLPipeline::ScopedSet pipeline_set(*float_point_pipeline);
 

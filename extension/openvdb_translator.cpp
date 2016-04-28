@@ -48,6 +48,12 @@ void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, s
         check_channel("attenuation_channel");
         check_channel("emission_channel");
     }
+    else if (AiNodeIs(node, "openvdb_simple_shader"))
+    {
+        check_channel("smoke_channel");
+        check_channel("opacity_channel");
+        check_channel("fire_channel");
+    }
 
     AtParamIterator* param_iter = AiNodeEntryGetParamIterator(AiNodeGetNodeEntry(node));
     while (!AiParamIteratorFinished(param_iter))
@@ -146,6 +152,8 @@ void OpenvdbTranslator::Export(AtNode* volume)
     const float sampling_quality = FindMayaPlug("samplingQuality").asFloat();
     const float voxel_size = FindMayaPlug("voxelSize").asFloat();
     AiNodeSetFlt(volume, "step_size", voxel_size / (sampling_quality / 100.0f));
+
+    AiNodeSetBool(volume, "matte", FindMayaPlug("matte").asBool());
 }
 
 void OpenvdbTranslator::ExportMotion(AtNode* volume, unsigned int step)
