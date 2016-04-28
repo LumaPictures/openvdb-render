@@ -53,6 +53,7 @@ namespace {
         p_fire,
         p_fire_channel,
         p_fire_intensity,
+        p_position_offset,
         p_interpolation,
         p_compensate_scaling
     };
@@ -75,6 +76,7 @@ node_parameters
     AiParameterStr("fire_channel", "");
     AiParameterFlt("fire_intensity", 1.0f);
 
+    AiParameterVec("position_offset", 0.0f, 0.0f, 0.0f);
     AiParameterEnum("interpolation", 0, interpolations);
     AiParameterBool("compensate_scaling", true);
 

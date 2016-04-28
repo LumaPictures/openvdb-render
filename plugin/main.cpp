@@ -9,6 +9,7 @@
 #include "vdb_query.h"
 #include "vdb_sampler.h"
 #include "vdb_shader.h"
+#include "vdb_simple_shader.h"
 
 MStatus initializePlugin(MObject obj)
 {
@@ -67,6 +68,15 @@ MStatus initializePlugin(MObject obj)
         return status;
     }
 
+    status = plugin.registerNode(VDBSimpleShaderNode::s_type_name, VDBSimpleShaderNode::s_type_id,
+                                 VDBSimpleShaderNode::creator, VDBSimpleShaderNode::initialize, MPxNode::kDependNode, &VDBSimpleShaderNode::s_classification);
+
+    if (!status)
+    {
+        status.perror("[openvdb] Error registering the VDBSimpleShader Node.");
+        return status;
+    }
+
     status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
             VDBVisualizerShape::drawDbClassification,
             MHWRender::VDBDrawOverride::registrantId,
@@ -122,6 +132,14 @@ MStatus uninitializePlugin(MObject obj)
     if (!status)
     {
         status.perror("[openvdb] Error deregistering the VDBShader Node.");
+        return status;
+    }
+
+    status = plugin.deregisterNode(VDBSimpleShaderNode::s_type_id);
+
+    if (!status)
+    {
+        status.perror("[openvdb] Error deregistering the VDBSimpleShader Node.");
         return status;
     }
 
