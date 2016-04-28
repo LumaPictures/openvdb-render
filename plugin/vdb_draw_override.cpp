@@ -612,6 +612,13 @@ namespace MHWRender {
 
                         glDrawArrays(GL_POINTS, 0, m_point_count);
 
+                        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+                        glDepthMask(GL_TRUE);
+
+                        glDrawArrays(GL_POINTS, 0, m_point_count);
+
+                        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
                         glBindVertexArray(0);
                     }
 
