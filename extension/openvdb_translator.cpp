@@ -13,7 +13,12 @@ AtNode* OpenvdbTranslator::CreateArnoldNodes()
 {
     AtNode* volume = AddArnoldNode("volume");
     if (!FindMayaPlug("overrideShader").asBool())
-        AddArnoldNode("openvdb_shader", "shader");
+    {
+        if (FindMayaPlug("shaderMode").asShort() == 0)
+            AddArnoldNode("openvdb_shader", "shader");
+        else
+            AddArnoldNode("openvdb_simple_shader", "shader");
+    }
     return volume;
 }
 
@@ -86,7 +91,28 @@ void OpenvdbTranslator::Export(AtNode* volume)
     {
         shader = GetArnoldNode("shader");
         AiNodeSetPtr(volume, "shader", shader);
-        ExportParams(shader);
+        if (FindMayaPlug("shaderMode").asShort() == 0)
+            ExportParams(shader);
+        else
+        {
+            ProcessParameter(shader, "smoke", AI_TYPE_RGB, "smoke");
+            ProcessParameter(shader, "smoke_channel", AI_TYPE_STRING, "smokeChannel");
+            ProcessParameter(shader, "smoke_intensity", AI_TYPE_FLOAT, "smokeIntensity");
+            ProcessParameter(shader, "anisotropy", AI_TYPE_FLOAT, "anisotropy");
+
+            ProcessParameter(shader, "opacity", AI_TYPE_RGB, "opacity");
+            ProcessParameter(shader, "opacity_channel", AI_TYPE_STRING, "opacityChannel");
+            ProcessParameter(shader, "opacity_intensity", AI_TYPE_FLOAT, "opacityIntensity");
+            ProcessParameter(shader, "opacity_mode", AI_TYPE_INT, "opacityMode");
+
+            ProcessParameter(shader, "fire", AI_TYPE_RGB, "fire");
+            ProcessParameter(shader, "fire_channel", AI_TYPE_STRING, "fireChannel");
+            ProcessParameter(shader, "fire_intensity", AI_TYPE_FLOAT, "fireIntensity");
+
+            ProcessParameter(shader, "position_offset", AI_TYPE_VECTOR, "positionOffset");
+            ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
+            ProcessParameter(shader, "compensate_scaling", AI_TYPE_BOOLEAN, "compensateScaling");
+        }
     }
 
     std::set<std::string> out_grids;

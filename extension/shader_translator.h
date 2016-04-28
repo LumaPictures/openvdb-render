@@ -32,6 +32,7 @@ public:
         this->ProcessParameter(shader, "emission_color", AI_TYPE_RGB, "emissionColor");
         this->ProcessParameter(shader, "emission_intensity", AI_TYPE_FLOAT, "emissionIntensity");
 
+        this->ProcessParameter(shader, "position_offset", AI_TYPE_VECTOR, "positionOffset");
         this->ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
         this->ProcessParameter(shader, "compensate_scaling", AI_TYPE_BOOLEAN, "compensateScaling");
 
