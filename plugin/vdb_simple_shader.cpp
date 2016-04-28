@@ -35,12 +35,6 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
     nAttr.setChannelBox(true);
     MPxNode::addAttribute(smoke_intensity);
 
-    anisotropy = nAttr.create("anisotropy", "anisotropy", MFnNumericData::kFloat);
-    nAttr.setDefault(0.0f);
-    nAttr.setMin(-1.0f);
-    nAttr.setMax(1.0f);
-    MPxNode::addAttribute(anisotropy);
-
     opacity = nAttr.createColor("opacity", "opacity");
     nAttr.setDefault(1.0, 1.0, 1.0);
     MPxNode::addAttribute(opacity);
@@ -71,6 +65,12 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
 
     if (add_shared)
     {
+        anisotropy = nAttr.create("anisotropy", "anisotropy", MFnNumericData::kFloat);
+        nAttr.setDefault(0.0f);
+        nAttr.setMin(-1.0f);
+        nAttr.setMax(1.0f);
+        MPxNode::addAttribute(anisotropy);
+
         position_offset = nAttr.createPoint("positionOffset", "position_offset");
         nAttr.setDefault(0.0, 0.0, 0.0);
         MPxNode::addAttribute(position_offset);

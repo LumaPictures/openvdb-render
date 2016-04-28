@@ -62,6 +62,24 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
     def update_emission_channel(self, param_name):
         self.update_channel('emission', param_name)
 
+    def create_smoke_channel(self, param_name):
+            self.create_channel('Smoke Channel', 'smoke', param_name)
+
+    def update_smoke_channel(self, param_name):
+        self.update_channel('smoke', param_name)
+
+    def create_opacity_channel(self, param_name):
+            self.create_channel('Opacity Channel', 'opacity', param_name)
+
+    def update_opacity_channel(self, param_name):
+        self.update_channel('opacity', param_name)
+
+    def create_fire_channel(self, param_name):
+        self.create_channel('Fire Channel', 'fire', param_name)
+
+    def update_fire_channel(self, param_name):
+        self.update_channel('fire', param_name)
+
     @staticmethod
     def press_vdb_path(param_name):
         basic_filter = 'OpenVDB File(*.vdb)'
@@ -196,12 +214,35 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
 
         self.beginLayout('Render Parameters', collapse=False)
         self.addControl('overrideShader', label='Override Shader')
+        self.addControl('shaderMode', label='Shader Mode')
+
         self.beginLayout('Sampling', collapse=False)
         self.addControl('position_offset')
         self.addControl('interpolation')
         self.addControl('compensate_scaling', label='Compensate for Scaling')
         self.addControl('sampling_quality', label='Sampling Quality')
         self.endLayout()
+
+        self.beginLayout('Simple Shader', collapse=True)
+        self.beginLayout('Smoke', collapse=False)
+        self.addControl('smoke', label='Smoke')
+        self.callCustom(self.create_smoke_channel, self.update_smoke_channel, 'smoke_channel')
+        self.addControl('smokeIntensity', label='Intensity')
+        self.addControl('anisotropy', label='Anisotropy')
+        self.endLayout()
+        self.beginLayout('Opacity', collapse=False)
+        self.addControl('opacity', label='Opacity')
+        self.callCustom(self.create_opacity_channel, self.update_opacity_channel, 'opacity_channel')
+        self.addControl('opacityIntensity', label='Intensity')
+        self.endLayout()
+        self.beginLayout('Fire', collapse=False)
+        self.endLayout()
+        self.addControl('fire', label='Fire')
+        self.callCustom(self.create_fire_channel, self.update_fire_channel, 'fire_channel')
+        self.addControl('fireIntensity', label='Intensity')
+        self.endLayout()
+
+        self.beginLayout('Arnold Shader', collapse=False)
 
         self.beginLayout('Scattering', collapse=False)
         self.addControl('scattering_source', label='Source')
@@ -230,6 +271,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.create_gradient_params('emission', node_name)
         self.addControl('emission_color', label='Color')
         self.addControl('emission_intensity', label='Intensity')
+        self.endLayout()
         self.endLayout()
 
         self.beginLayout('Overrides', collapse=True)

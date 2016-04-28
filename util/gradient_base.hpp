@@ -287,6 +287,19 @@ public:
 
     }
 
+    void clear()
+    {
+        m_float_ramp.resize(2);
+        m_float_ramp[0] = 0.0f;
+        m_float_ramp[1] = 1.0f;
+
+        m_rgb_ramp.resize(2);
+        m_rgb_ramp[0] = make_color(0.0f, 0.0f, 0.0f);
+        m_rgb_ramp[1] = make_color(1.0f, 1.0f, 1.0f);
+
+        m_channel_mode = CHANNEL_MODE_RAW;
+    }
+
     ~GradientBase()
     {
 

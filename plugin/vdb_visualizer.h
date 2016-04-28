@@ -11,6 +11,7 @@
 #include "vdb_sampler.h"
 #include "gradient.hpp"
 #include "vdb_shader.h"
+#include "vdb_simple_shader.h"
 
 enum VDBDisplayMode{
     DISPLAY_AXIS_ALIGNED_BBOX = 0,
@@ -112,7 +113,9 @@ public:
     static MObject s_additional_channel_export;
 
     // shader parameters
+    static MObject s_shader_mode;
     static VDBShaderParams s_shader_params;
+    static VDBSimpleShaderParams s_simple_shader_params;
 
     static const boost::regex s_frame_expr;
     static const boost::regex s_hash_expr;
