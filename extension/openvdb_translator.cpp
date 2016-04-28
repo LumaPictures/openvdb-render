@@ -131,7 +131,7 @@ void OpenvdbTranslator::Export(AtNode* volume)
             out_grids.insert(additional_grid.asChar());
     }
 
-    AtArray* grid_names = AiArrayAllocate(out_grids.size(), 1, AI_TYPE_STRING);
+    AtArray* grid_names = AiArrayAllocate(static_cast<unsigned int>(out_grids.size()), 1, AI_TYPE_STRING);
 
     unsigned int id = 0;
     for (auto out_grid : out_grids)
