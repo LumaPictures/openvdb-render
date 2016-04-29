@@ -2,10 +2,12 @@
 
 #include <maya/MPxGeometryOverride.h>
 
+#include <memory>
+
 #include "vdb_visualizer.h"
 
 namespace MHWRender{
-
+    struct VDBGeometryOverrideData;
     class VDBGeometryOverride : public MPxGeometryOverride{
     public:
         VDBGeometryOverride(const MObject& obj);
@@ -28,5 +30,7 @@ namespace MHWRender{
         static MString registrantId;
     private:
         VDBVisualizerShape* p_vdb_visualizer;
+
+        std::unique_ptr<VDBGeometryOverrideData> p_data;
     };
 }

@@ -372,7 +372,6 @@ namespace MHWRender {
 
                     quick_reserve(num_vertices);
 
-                    MFloatVector mn(0.0f, 0.0f, 0.0f), mx(0.0f, 0.0f, 0.0f);
                     for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
                     {
                         if (openvdb::GridBase::ConstPtr grid = *it)
