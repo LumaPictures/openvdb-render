@@ -7,6 +7,7 @@
 #include <openvdb/openvdb.h>
 // std regex in gcc 4.8.3 is broken
 #include <boost/regex.hpp>
+#include <maya/MNodeMessage.h>
 
 #include "vdb_sampler.h"
 #include "gradient.hpp"
@@ -123,5 +124,7 @@ public:
 
     VDBVisualizerData* get_update();
 private:
+    static void attribute_changed(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& other_plug, void* client_data);
+
     VDBVisualizerData m_vdb_data;
 };

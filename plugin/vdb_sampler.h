@@ -9,6 +9,7 @@ struct VDBGradientParams{
     void create_params();
     void affect_output(MObject& out_object);
     void post_constructor(MObject tmo);
+    bool check_plug(const MPlug& plug);
 
     MString gradient_name;
     MObject mode;

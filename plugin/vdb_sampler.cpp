@@ -174,6 +174,16 @@ void VDBGradientParams::post_constructor(MObject tmo)
     MPlug rgb_plug(tmo, rgb_ramp);
 }
 
+bool VDBGradientParams::check_plug(const MPlug& plug)
+{
+    return plug == mode || plug == contrast || plug == contrast_pivot || plug == input_min ||
+           plug == input_max ||   plug == bias || plug == gain || plug == output_min ||
+           plug == output_max || plug == clamp_min || plug == clamp_max || plug == gamma ||
+           plug == hue_shift || plug == saturation || plug == exposure || plug == multiply ||
+           plug == add || plug == float_ramp || plug == rgb_ramp;
+}
+
+
 const MTypeId VDBSamplerNode::s_type_id(ID_VDB_VOLUME_SAMPLER);
 const MString VDBSamplerNode::s_type_name("vdb_sampler");
 const MString VDBSamplerNode::s_classification("utility/general/volume");

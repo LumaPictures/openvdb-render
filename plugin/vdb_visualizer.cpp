@@ -24,11 +24,15 @@
 #include <maya/MSelectionList.h>
 #include <maya/MDagPath.h>
 #include <maya/MFnStringData.h>
+#include <maya/MFnDependencyNode.h>
+#include <maya/MViewport2Renderer.h>
 
 #include <boost/regex.hpp>
 
 #include <sstream>
-#include <maya/MFnDependencyNode.h>
+#include <maya/MGlobal.h>
+#include <maya/MNodeMessage.h>
+
 
 #include "../util/maya_utils.hpp"
 
@@ -727,6 +731,22 @@ MBoundingBox VDBVisualizerShape::boundingBox() const
     return m_vdb_data.bbox;
 }
 
+void VDBVisualizerShape::attribute_changed(MNodeMessage::AttributeMessage, MPlug& plug, MPlug&, void* client_data)
+{
+    VDBVisualizerShape* shape = reinterpret_cast<VDBVisualizerShape*>(client_data);
+
+    if (s_shader_params.check_plug(plug) || s_simple_shader_params.check_plug(plug) ||
+        plug == s_vdb_path || plug == s_cache_time ||  plug == s_cache_playback_start ||
+        plug == s_cache_playback_end || plug == s_cache_playback_offset || plug == s_cache_before_mode ||
+        plug == s_cache_after_mode || plug == s_display_mode || plug == s_override_shader ||
+        plug == s_point_size || plug == s_point_jitter || plug == s_point_skip)
+    {
+        MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
+        if (renderer != nullptr)
+            renderer->setGeometryDrawDirty(shape->thisMObject(), true);
+    }
+}
+
 void VDBVisualizerShape::postConstructor()
 {
     setRenderable(true);
@@ -734,6 +754,9 @@ void VDBVisualizerShape::postConstructor()
     s_shader_params.scattering_gradient.post_constructor(tmo);
     s_shader_params.attenuation_gradient.post_constructor(tmo);
     s_shader_params.emission_gradient.post_constructor(tmo);
+
+    if (MGlobal::mayaState() == MGlobal::kInteractive)
+        MNodeMessage::addAttributeChangedCallback(tmo, attribute_changed, this);
 }
 
 VDBVisualizerShapeUI::VDBVisualizerShapeUI()

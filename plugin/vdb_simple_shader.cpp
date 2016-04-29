@@ -113,6 +113,15 @@ void VDBSimpleShaderParams::affect_output(MObject& out_object)
     }
 }
 
+bool VDBSimpleShaderParams::check_plug(MPlug& plug)
+{
+    return plug == smoke || plug == smoke_channel || plug == smoke_intensity ||
+           plug == anisotropy || plug == opacity || plug == opacity_channel ||
+           plug == opacity_intensity || plug == opacity_shadow || plug == fire ||
+           plug == fire_channel || plug == fire_intensity || plug == position_offset ||
+           plug == interpolation || plug == compensate_scaling;
+}
+
 const MTypeId VDBSimpleShaderNode::s_type_id(ID_VDB_SIMPLE_VOLUME_SHADER);
 const MString VDBSimpleShaderNode::s_type_name("vdb_simple_shader");
 const MString VDBSimpleShaderNode::s_classification("shader/volume");

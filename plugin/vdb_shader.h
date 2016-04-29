@@ -3,6 +3,7 @@
 #include <maya/MPxNode.h>
 #include <maya/MString.h>
 #include <maya/MTypeId.h>
+#include <maya/MPlug.h>
 
 #include "vdb_sampler.h"
 
@@ -11,6 +12,7 @@ struct VDBShaderParams{
 
     void create_params();
     void affect_output(MObject& out_object);
+    bool check_plug(const MPlug& plug);
 
     MObject scattering_source;
     MObject scattering;

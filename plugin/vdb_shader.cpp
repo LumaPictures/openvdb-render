@@ -159,6 +159,18 @@ void VDBShaderParams::affect_output(MObject& out_object)
     emission_gradient.affect_output(out_object);
 }
 
+bool VDBShaderParams::check_plug(const MPlug& plug)
+{
+    return plug == scattering_source || plug == scattering || plug == scattering_channel ||
+           plug == scattering_color || plug == scattering_intensity || plug == anisotropy ||
+           plug == attenuation_source || plug == attenuation || plug == attenuation_channel ||
+           plug == attenuation_color || plug == attenuation_intensity || plug == attenuation_mode ||
+           plug == emission_source || plug == emission || plug == emission_channel ||
+           plug == emission_color || plug == emission_intensity || plug == position_offset ||
+           plug == interpolation || plug == compensate_scaling || scattering_gradient.check_plug(plug) ||
+           attenuation_gradient.check_plug(plug) || emission_gradient.check_plug(plug);
+}
+
 void* VDBShaderNode::creator()
 {
     return new VDBShaderNode();

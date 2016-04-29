@@ -5,6 +5,7 @@
 #include <maya/MDrawRegistry.h>
 
 #include "vdb_draw_override.h"
+#include "vdb_geometry_override.h"
 #include "vdb_visualizer.h"
 #include "vdb_query.h"
 #include "vdb_sampler.h"
@@ -77,7 +78,7 @@ MStatus initializePlugin(MObject obj)
         return status;
     }
 
-    status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
+    /*status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
             VDBVisualizerShape::drawDbClassification,
             MHWRender::VDBDrawOverride::registrantId,
             MHWRender::VDBDrawOverride::creator
@@ -86,6 +87,18 @@ MStatus initializePlugin(MObject obj)
     if (!status)
     {
         status.perror("[openvdb] Error registering the VDBVisualizer Draw Override.");
+        return status;
+    }*/
+
+    status = MHWRender::MDrawRegistry::registerGeometryOverrideCreator(
+            VDBVisualizerShape::drawDbClassification,
+            MHWRender::VDBGeometryOverride::registrantId,
+            MHWRender::VDBGeometryOverride::creator
+    );
+
+    if (!status)
+    {
+        status.perror("[openvdb] Error registering the VDBVisualizer Geometry Override.");
         return status;
     }
 
@@ -143,7 +156,7 @@ MStatus uninitializePlugin(MObject obj)
         return status;
     }
 
-    status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
+    /*status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
             VDBVisualizerShape::drawDbClassification,
             MHWRender::VDBDrawOverride::registrantId
     );
@@ -151,6 +164,17 @@ MStatus uninitializePlugin(MObject obj)
     if (!status)
     {
         status.perror("[openvdb] Error deregistering the VDBVisualizer Draw Override.");
+        return status;
+    }*/
+
+    status = MHWRender::MDrawRegistry::deregisterGeometryOverrideCreator(
+            VDBVisualizerShape::drawDbClassification,
+            MHWRender::VDBGeometryOverride::registrantId
+    );
+
+    if (!status)
+    {
+        status.perror("[openvdb] Error deregistering the VDBVisualizer Geometry Override.");
         return status;
     }
 
