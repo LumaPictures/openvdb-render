@@ -109,7 +109,7 @@ void OpenvdbTranslator::Export(AtNode* volume)
             ProcessParameter(shader, "opacity", AI_TYPE_RGB, "opacity");
             ProcessParameter(shader, "opacity_channel", AI_TYPE_STRING, "opacityChannel");
             ProcessParameter(shader, "opacity_intensity", AI_TYPE_FLOAT, "opacityIntensity");
-            ProcessParameter(shader, "opacity_mode", AI_TYPE_INT, "opacityMode");
+            ProcessParameter(shader, "opacity_shadow", AI_TYPE_RGB, "opacityShadow");
 
             ProcessParameter(shader, "fire", AI_TYPE_RGB, "fire");
             ProcessParameter(shader, "fire_channel", AI_TYPE_STRING, "fireChannel");

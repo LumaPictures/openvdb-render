@@ -49,6 +49,10 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
     nAttr.setChannelBox(true);
     MPxNode::addAttribute(opacity_intensity);
 
+    opacity_shadow = nAttr.createColor("opacityShadow", "opacity_shadow");
+    nAttr.setDefault(1.0, 1.0, 1.0);
+    MPxNode::addAttribute(opacity_shadow);
+
     fire = nAttr.createColor("fire", "fire");
     nAttr.setDefault(0.0, 0.0, 0.0);
     MPxNode::addAttribute(fire);
@@ -96,6 +100,7 @@ void VDBSimpleShaderParams::affect_output(MObject& out_object)
     MPxNode::attributeAffects(opacity, out_object);
     MPxNode::attributeAffects(opacity_channel, out_object);
     MPxNode::attributeAffects(opacity_intensity, out_object);
+    MPxNode::attributeAffects(opacity_shadow, out_object);
     MPxNode::attributeAffects(fire, out_object);
     MPxNode::attributeAffects(fire_channel, out_object);
     MPxNode::attributeAffects(fire_intensity, out_object);

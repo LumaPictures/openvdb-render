@@ -17,6 +17,7 @@ struct VDBSimpleShaderParams{
     MObject opacity;
     MObject opacity_channel;
     MObject opacity_intensity;
+    MObject opacity_shadow;
     MObject fire;
     MObject fire_channel;
     MObject fire_intensity;

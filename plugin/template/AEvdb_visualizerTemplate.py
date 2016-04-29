@@ -235,6 +235,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl('opacity', label='Opacity')
         self.callCustom(self.create_opacity_channel, self.update_opacity_channel, 'opacity_channel')
         self.addControl('opacityIntensity', label='Intensity')
+        self.addControl('opacityShadow', label='Shadow Multiplier')
         self.endLayout()
         self.beginLayout('Fire', collapse=False)
         self.endLayout()

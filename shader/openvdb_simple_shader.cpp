@@ -50,6 +50,7 @@ namespace {
         p_opacity,
         p_opacity_channel,
         p_opacity_intensity,
+        p_opacity_shadow,
         p_fire,
         p_fire_channel,
         p_fire_intensity,
@@ -71,6 +72,7 @@ node_parameters
     AiParameterRGB("opacity", 1.0f, 1.0f, 1.0f);
     AiParameterStr("opacity_channel", "");
     AiParameterFlt("opacity_intensity", 1.0f);
+    AiParameterRGB("opacity_shadow", 1.0f, 1.0f, 1.0f);
 
     AiParameterRGB("fire", 1.0f, 1.0f, 1.0f);
     AiParameterStr("fire_channel", "");
@@ -117,7 +119,7 @@ shader_evaluate
         AtRGB opacity = AI_RGB_WHITE;
         if (data->sample_opacity)
             AiVolumeSampleRGB(data->opacity_channel, data->interpolation, &opacity);
-        opacity *= AiShaderEvalParamRGB(p_opacity) * (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
+        opacity *= (AiShaderEvalParamRGB(p_opacity) * AiShaderEvalParamRGB(p_opacity_shadow)) * (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
         AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
     }
     else
