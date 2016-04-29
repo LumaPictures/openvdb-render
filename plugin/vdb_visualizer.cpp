@@ -729,8 +729,11 @@ MBoundingBox VDBVisualizerShape::boundingBox() const
 
 void VDBVisualizerShape::postConstructor()
 {
-    MPxNode::postConstructor();
     setRenderable(true);
+    MObject tmo = thisMObject();
+    s_shader_params.scattering_gradient.post_constructor(tmo);
+    s_shader_params.attenuation_gradient.post_constructor(tmo);
+    s_shader_params.emission_gradient.post_constructor(tmo);
 }
 
 VDBVisualizerShapeUI::VDBVisualizerShapeUI()

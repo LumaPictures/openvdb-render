@@ -8,6 +8,7 @@ struct VDBGradientParams{
 
     void create_params();
     void affect_output(MObject& out_object);
+    void post_constructor(MObject tmo);
 
     MString gradient_name;
     MObject mode;
@@ -45,6 +46,8 @@ public:
     virtual MStatus compute(const MPlug& plug, MDataBlock& dataBlock);
 
     static MStatus initialize();
+
+    virtual void postConstructor();
 
     static const MTypeId s_type_id;
     static const MString s_type_name;

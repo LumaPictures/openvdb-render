@@ -6,6 +6,7 @@
 
 #include <lumaNodeId.h>
 #include <maya/MFnTypedAttribute.h>
+#include <maya/MFnDependencyNode.h>
 
 VDBGradientParams::VDBGradientParams(const char* _gradient_name) : gradient_name(_gradient_name)
 { }
@@ -167,6 +168,12 @@ void VDBGradientParams::affect_output(MObject& output_object)
     MPxNode::attributeAffects(rgb_ramp, output_object);
 }
 
+void VDBGradientParams::post_constructor(MObject tmo)
+{
+    MPlug float_plug(tmo, float_ramp);
+    MPlug rgb_plug(tmo, rgb_ramp);
+}
+
 const MTypeId VDBSamplerNode::s_type_id(ID_VDB_VOLUME_SAMPLER);
 const MString VDBSamplerNode::s_type_name("vdb_sampler");
 const MString VDBSamplerNode::s_classification("utility/general/volume");
@@ -225,4 +232,9 @@ VDBSamplerNode::VDBSamplerNode()
 VDBSamplerNode::~VDBSamplerNode()
 {
 
+}
+
+void VDBSamplerNode::postConstructor()
+{
+    s_gradient.post_constructor(thisMObject());
 }
