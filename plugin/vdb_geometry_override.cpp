@@ -266,16 +266,20 @@ namespace MHWRender{
                                 push_back_wireframe(grid);
                         }
 
-                        if (vertices.size() > 0)
+                        const size_t vertex_count = vertices.size();
+
+                        if (vertex_count > 0)
                         {
-                            std::cerr << "SEtting bbox indices" << std::endl;
-                            set_bbox_indices(static_cast<unsigned int>(vertices.size() / 8));
+                            MVertexBuffer* vertex_buffer = geo.createVertexBuffer(desc);
+                            MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(vertex_buffer->acquire(vertex_count));
+                            for (size_t i = 0; i < vertex_count; ++i)
+                                bbox_vertices[i] = vertices[i];
+                            vertex_buffer->commit(bbox_vertices);
+                            set_bbox_indices(static_cast<unsigned int>(vertex_count / 8));
                         }
-                        std::cerr << "Finished generating per grid bbox!" << std::endl;
                     }
                     catch(...)
                     {
-                        std::cerr << "Exception caught!" << std::endl;
                     }
                 }
                 else if (display_mode == DISPLAY_POINT_CLOUD)
