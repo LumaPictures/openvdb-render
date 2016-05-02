@@ -738,7 +738,7 @@ void VDBVisualizerShape::attribute_changed(MNodeMessage::AttributeMessage, MPlug
     if (s_shader_params.check_plug(plug) || s_simple_shader_params.check_plug(plug) ||
         plug == s_vdb_path || plug == s_cache_time ||  plug == s_cache_playback_start ||
         plug == s_cache_playback_end || plug == s_cache_playback_offset || plug == s_cache_before_mode ||
-        plug == s_cache_after_mode || plug == s_display_mode || plug == s_override_shader ||
+        plug == s_cache_after_mode || plug == s_display_mode || plug == s_override_shader || plug == s_shader_mode ||
         plug == s_point_size || plug == s_point_jitter || plug == s_point_skip)
     {
         MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
