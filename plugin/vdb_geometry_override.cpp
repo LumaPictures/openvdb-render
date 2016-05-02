@@ -579,7 +579,6 @@ namespace MHWRender{
                         }
                         catch(...)  {
                             p_data->scattering_grid = nullptr;
-                            return;
                         }
 
                         RGBSampler* scattering_sampler = nullptr;
@@ -602,7 +601,6 @@ namespace MHWRender{
                         }
                         catch(...)  {
                             p_data->emission_grid = nullptr;
-                            return;
                         }
 
                         RGBSampler* emission_sampler = nullptr;
@@ -621,9 +619,9 @@ namespace MHWRender{
 
                         RGBSampler* attenuation_sampler = 0;
 
-                        if (p_data->emission_grid->valueType() == "float")
+                        if (p_data->attenuation_grid->valueType() == "float")
                             attenuation_sampler = new FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(p_data->attenuation_grid));
-                        else if (p_data->emission_grid->valueType() == "vec3s")
+                        else if (p_data->attenuation_grid->valueType() == "vec3s")
                             attenuation_sampler = new Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(p_data->attenuation_grid));
                         else
                             attenuation_sampler = new RGBSampler(MFloatVector(1.0f, 1.0f, 1.0f));
