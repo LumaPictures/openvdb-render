@@ -7,7 +7,11 @@
 #include <openvdb/tools/Interpolation.h>
 #include <openvdb/Exceptions.h>
 
+#include <tbb/task_scheduler_init.h>
+#include <tbb/parallel_for.h>
+
 #include <iostream>
+
 
 namespace{
     class RGBSampler {
@@ -322,7 +326,7 @@ namespace MHWRender{
                 list.append(point_cloud);
 
                 MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
-                        MHWRender::MShaderManager::k3dFatPointShader, nullptr, nullptr);
+                        MHWRender::MShaderManager::k3dCPVFatPointShader, nullptr, nullptr);
                 if (shader)
                     point_cloud->setShader(shader);
             }
@@ -398,7 +402,7 @@ namespace MHWRender{
                     if (desc.semantic() != MGeometry::kPosition)
                         return;
                     MVertexBuffer* vertex_buffer = geo.createVertexBuffer(desc);
-                    MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(vertex_buffer->acquire(8));
+                    MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(vertex_buffer->acquire(8, true));
                     MFloatVector min = p_data->bbox.min();
                     MFloatVector max = p_data->bbox.max();
                     bbox_vertices[0] = MFloatVector(min.x, min.y, min.z);
@@ -446,7 +450,7 @@ namespace MHWRender{
                         if (vertex_count > 0)
                         {
                             MVertexBuffer* vertex_buffer = geo.createVertexBuffer(desc);
-                            MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(vertex_buffer->acquire(vertex_count));
+                            MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(vertex_buffer->acquire(vertex_count, true));
                             for (unsigned int i = 0; i < vertex_count; ++i)
                                 bbox_vertices[i] = vertices[i];
                             vertex_buffer->commit(bbox_vertices);
@@ -463,11 +467,11 @@ namespace MHWRender{
             const int index = list.indexOf("point_cloud");
             if (index < 0)
                 return;
-
             try{
                 if (!p_data->vdb_file->isOpen())
                     p_data->vdb_file->open(false);
-                p_data->attenuation_grid = p_data->vdb_file->readGrid(p_data->attenuation_channel);
+                if (p_data->attenuation_grid == nullptr || p_data->attenuation_grid->getName() != p_data->attenuation_channel)
+                    p_data->attenuation_grid = p_data->vdb_file->readGrid(p_data->attenuation_channel);
             }
             catch(...) {
                 p_data->attenuation_grid = nullptr;
@@ -476,15 +480,7 @@ namespace MHWRender{
                 return;
             }
 
-            const float point_jitter = p_data->point_jitter;
-            const float do_jitter = point_jitter > 0.001f;
-
             const openvdb::Vec3d voxel_size = p_data->attenuation_grid->voxelSize();
-
-            std::minstd_rand generator; // LCG
-            std::uniform_real_distribution<float> distributionX(-point_jitter * static_cast<float>(voxel_size.x()), point_jitter * static_cast<float>(voxel_size.x()));
-            std::uniform_real_distribution<float> distributionY(-point_jitter * static_cast<float>(voxel_size.y()), point_jitter * static_cast<float>(voxel_size.y()));
-            std::uniform_real_distribution<float> distributionZ(-point_jitter * static_cast<float>(voxel_size.z()), point_jitter * static_cast<float>(voxel_size.z()));
 
             FloatVoxelIterator* iter = nullptr;
 
@@ -507,15 +503,8 @@ namespace MHWRender{
                 if ((point_id++ % point_skip) != 0)
                     continue;
                 openvdb::Vec3d vdb_pos = attenuation_transform.indexToWorld(iter->get_coord());
-                MFloatVector pos(static_cast<float>(vdb_pos.x()), static_cast<float>(vdb_pos.y()),
-                                 static_cast<float>(vdb_pos.z()));
-                if (do_jitter)
-                {
-                    pos.x += distributionX(generator);
-                    pos.y += distributionY(generator);
-                    pos.z += distributionZ(generator);
-                }
-                vertices.push_back(pos);
+                vertices.push_back(MFloatVector(static_cast<float>(vdb_pos.x()), static_cast<float>(vdb_pos.y()),
+                                                static_cast<float>(vdb_pos.z())));
             }
 
             vertices.shrink_to_fit();
@@ -523,7 +512,11 @@ namespace MHWRender{
 
             if (vertex_count == 0)
                 return;
-            
+
+            delete iter;
+
+            tbb::task_scheduler_init task_init;
+
             const MRenderItem* item = list.itemAt(index);
             MIndexBuffer* index_buffer = geo.createIndexBuffer(MGeometry::kUnsignedInt32);
             unsigned int* indices = reinterpret_cast<unsigned int*>(index_buffer->acquire(vertex_count, true));
@@ -540,8 +533,32 @@ namespace MHWRender{
                     {
                         MVertexBuffer* vertex_buffer = geo.createVertexBuffer(desc);
                         MFloatVector* pc_vertices = reinterpret_cast<MFloatVector*>(vertex_buffer->acquire(static_cast<unsigned int>(vertices.size()), true));
-                        for (size_t i = 0; i < vertices.size(); ++i)
-                            pc_vertices[i] = vertices[i];
+                        const float point_jitter = p_data->point_jitter;
+                        if (point_jitter > 0.001f)
+                        {
+                            std::uniform_real_distribution<float> distributionX(-point_jitter * static_cast<float>(voxel_size.x()), point_jitter * static_cast<float>(voxel_size.x()));
+                            std::uniform_real_distribution<float> distributionY(-point_jitter * static_cast<float>(voxel_size.y()), point_jitter * static_cast<float>(voxel_size.y()));
+                            std::uniform_real_distribution<float> distributionZ(-point_jitter * static_cast<float>(voxel_size.z()), point_jitter * static_cast<float>(voxel_size.z()));
+
+                            tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count), [&](const tbb::blocked_range<unsigned int>& r) {
+                                std::minstd_rand generator; // LCG
+                                for (unsigned int i = r.begin(); i != r.end(); ++i)
+                                {
+                                    generator.seed(i);
+                                    MFloatVector pos = vertices[i];
+                                    pos.x += distributionX(generator);
+                                    pos.y += distributionY(generator);
+                                    pos.z += distributionZ(generator);
+                                    pc_vertices[i] = pos;
+                                }
+                            });
+                        }
+                        else
+                        {
+                            tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count), [&](const tbb::blocked_range<unsigned int>& r) {
+                                memcpy(&pc_vertices[r.begin()], &vertices[r.begin()], (r.end() - r.begin()) * sizeof(MFloatVector));
+                            });
+                        }
                         vertex_buffer->commit(pc_vertices);
                     }
                         break;
@@ -552,7 +569,90 @@ namespace MHWRender{
                         std::cerr << "[openvdb_render] Texture semantic found" << std::endl;
                         break;
                     case MGeometry::kColor:
-                        std::cerr << "[openvdb_render] Color semantic found" << std::endl;
+                    {
+                        if (desc.dataType() != MGeometry::kFloat || desc.dimension() != 4)
+                            return;
+
+                        try{
+                            if (p_data->scattering_grid == nullptr || p_data->scattering_grid->getName() != p_data->scattering_channel)
+                                p_data->scattering_grid = p_data->vdb_file->readGrid(p_data->scattering_channel);
+                        }
+                        catch(...)  {
+                            p_data->scattering_grid = nullptr;
+                            return;
+                        }
+
+                        RGBSampler* scattering_sampler = nullptr;
+
+                        if (p_data->scattering_grid == nullptr)
+                            scattering_sampler = new RGBSampler();
+                        else
+                        {
+                            if (p_data->scattering_grid->valueType() == "float")
+                                scattering_sampler = new FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(p_data->scattering_grid));
+                            else if (p_data->scattering_grid->valueType() == "vec3s")
+                                scattering_sampler = new Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(p_data->scattering_grid));
+                            else
+                                scattering_sampler = new RGBSampler();
+                        }
+
+                        try{
+                            if (p_data->emission_grid == nullptr || p_data->emission_grid->getName() != p_data->emission_channel)
+                                p_data->emission_grid = p_data->vdb_file->readGrid(p_data->emission_channel);
+                        }
+                        catch(...)  {
+                            p_data->emission_grid = nullptr;
+                            return;
+                        }
+
+                        RGBSampler* emission_sampler = nullptr;
+
+                        if (p_data->emission_grid == nullptr)
+                            emission_sampler = new RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
+                        else
+                        {
+                            if (p_data->emission_grid->valueType() == "float")
+                                emission_sampler = new FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(p_data->emission_grid));
+                            else if (p_data->emission_grid->valueType() == "vec3s")
+                                emission_sampler = new Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(p_data->emission_grid));
+                            else
+                                emission_sampler = new RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
+                        }
+
+                        RGBSampler* attenuation_sampler = 0;
+
+                        if (p_data->emission_grid->valueType() == "float")
+                            attenuation_sampler = new FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(p_data->attenuation_grid));
+                        else if (p_data->emission_grid->valueType() == "vec3s")
+                            attenuation_sampler = new Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(p_data->attenuation_grid));
+                        else
+                            attenuation_sampler = new RGBSampler(MFloatVector(1.0f, 1.0f, 1.0f));
+
+                        MVertexBuffer* vertex_buffer = geo.createVertexBuffer(desc);
+                        MColor* colors = reinterpret_cast<MColor*>(vertex_buffer->acquire(vertex_count, true));
+                        tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count), [&](const tbb::blocked_range<unsigned int>& r) {
+                            for (unsigned int i = r.begin(); i < r.end(); ++i)
+                            {
+                                const MFloatVector& v = vertices[i];
+                                const openvdb::Vec3d pos(v.x, v.y, v.z);
+                                MColor& color = colors[i];
+                                const MFloatVector scattering_color = p_data->scattering_gradient.evaluate(scattering_sampler->get_rgb(pos));
+                                const MFloatVector emission_color = p_data->emission_gradient.evaluate(emission_sampler->get_rgb(pos));
+                                const MFloatVector attenuation_color = p_data->attenuation_gradient.evaluate(attenuation_sampler->get_rgb(pos));
+                                color.r = scattering_color.x * p_data->scattering_color.x + emission_color.x * p_data->emission_color.x;
+                                color.g = scattering_color.y * p_data->scattering_color.y + emission_color.y * p_data->emission_color.y;
+                                color.b = scattering_color.z * p_data->scattering_color.z + emission_color.z * p_data->emission_color.z;
+                                color.a = (attenuation_color.x * p_data->attenuation_color.x +
+                                           attenuation_color.y * p_data->attenuation_color.y +
+                                           attenuation_color.z * p_data->attenuation_color.z) / 3.0f;
+                            }
+                        });
+                        vertex_buffer->commit(colors);
+
+                        delete scattering_sampler;
+                        delete emission_sampler;
+                        delete attenuation_sampler;
+                    }
                         break;
                     default:
                         std::cerr << "[openvdb_render] Unknown semantic found" << std::endl;

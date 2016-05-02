@@ -4,7 +4,6 @@
 #include <maya/MGlobal.h>
 #include <maya/MDrawRegistry.h>
 
-#include "vdb_draw_override.h"
 #include "vdb_geometry_override.h"
 #include "vdb_visualizer.h"
 #include "vdb_query.h"
@@ -19,7 +18,7 @@ MStatus initializePlugin(MObject obj)
 
     if (is_interactive)
     {
-        if (glewInit() != GLEW_OK)
+        /*if (glewInit() != GLEW_OK)
         {
             status.perror("[openvdb] Error initializing glew.");
             return status;
@@ -29,14 +28,7 @@ MStatus initializePlugin(MObject obj)
         {
             status.perror("[openvdb] Direct State Access is not available, update your drivers or use a newer GPU!");
             return status;
-        }
-
-        if (!MHWRender::VDBDrawOverride::init_shaders())
-        {
-            status.perror("[openvdb] Error initializing shaders.");
-            return status;
-        }
-
+        }*/
     }
 
     MFnPlugin plugin(obj, "Luma Pictures", "0.0.1", "Any");
@@ -77,18 +69,6 @@ MStatus initializePlugin(MObject obj)
         status.perror("[openvdb] Error registering the VDBSimpleShader Node.");
         return status;
     }
-
-    /*status = MHWRender::MDrawRegistry::registerDrawOverrideCreator(
-            VDBVisualizerShape::drawDbClassification,
-            MHWRender::VDBDrawOverride::registrantId,
-            MHWRender::VDBDrawOverride::creator
-    );
-
-    if (!status)
-    {
-        status.perror("[openvdb] Error registering the VDBVisualizer Draw Override.");
-        return status;
-    }*/
 
     status = MHWRender::MDrawRegistry::registerGeometryOverrideCreator(
             VDBVisualizerShape::drawDbClassification,
@@ -155,17 +135,6 @@ MStatus uninitializePlugin(MObject obj)
         status.perror("[openvdb] Error deregistering the VDBSimpleShader Node.");
         return status;
     }
-
-    /*status = MHWRender::MDrawRegistry::deregisterDrawOverrideCreator(
-            VDBVisualizerShape::drawDbClassification,
-            MHWRender::VDBDrawOverride::registrantId
-    );
-
-    if (!status)
-    {
-        status.perror("[openvdb] Error deregistering the VDBVisualizer Draw Override.");
-        return status;
-    }*/
 
     status = MHWRender::MDrawRegistry::deregisterGeometryOverrideCreator(
             VDBVisualizerShape::drawDbClassification,
