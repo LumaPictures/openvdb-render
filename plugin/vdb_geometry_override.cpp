@@ -280,6 +280,8 @@ namespace MHWRender{
 
     void VDBGeometryOverride::updateRenderItems(const MDagPath&, MRenderItemList& list)
     {
+        for (int i = list.length() - 1; i >= 0; --i)
+            list.removeAt(i);
         list.clear();
 
         MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
