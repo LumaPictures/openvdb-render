@@ -39,6 +39,8 @@ namespace {
             sample_smoke = smoke_channel.length() > 0;
             sample_opacity = opacity_channel.length() > 0;
             sample_fire = fire_channel.length() > 0;
+
+            interpolation = AiNodeGetInt(node, "interpolation");
         }
     };
 
