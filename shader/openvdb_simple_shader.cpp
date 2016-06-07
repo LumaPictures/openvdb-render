@@ -122,6 +122,7 @@ shader_evaluate
         if (data->sample_opacity)
             AiVolumeSampleRGB(data->opacity_channel, data->interpolation, &opacity);
         opacity *= (AiShaderEvalParamRGB(p_opacity) * AiShaderEvalParamRGB(p_opacity_shadow)) * (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
+        AiColorClipToZero(opacity);
         AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
     }
     else
@@ -141,6 +142,9 @@ shader_evaluate
             AiVolumeSampleRGB(data->fire_channel, data->interpolation, &fire);
         fire *= opacity * AiShaderEvalParamRGB(p_fire) * AiShaderEvalParamFlt(p_fire_intensity);
 
+        AiColorClipToZero(smoke);
+        AiColorClipToZero(opacity);
+        AiColorClipToZero(fire);
         AiShaderGlobalsSetVolumeScattering(sg, smoke, AiShaderEvalParamFlt(p_anisotropy));
         AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
         AiShaderGlobalsSetVolumeEmission(sg, fire);
