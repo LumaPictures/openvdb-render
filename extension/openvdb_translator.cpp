@@ -149,6 +149,34 @@ void OpenvdbTranslator::Export(AtNode* volume)
     AiNodeDeclare(volume, "grids", "constant ARRAY STRING");
     AiNodeSetArray(volume, "grids", grid_names);
 
+    MString velocity_grids_string = FindMayaPlug("velocity_grids").asString();
+    MStringArray velocity_grids;
+    velocity_grids_string.split(' ', velocity_grids);
+    const unsigned int velocity_grids_count = velocity_grids.length();
+    if (velocity_grids_count > 0)
+    {
+        AiNodeDeclare(volume, "velocity_grids", "constant ARRAY STRING");
+        AtArray* velocity_grid_names = AiArrayAllocate(velocity_grids_count, 1, AI_TYPE_STRING);
+        for (unsigned int i = 0; i < velocity_grids_count; ++i)
+            AiArraySetStr(velocity_grid_names, i, velocity_grids[i].asChar());
+        AiNodeSetArray(volume, "velocity_grids", velocity_grid_names);
+
+        AiNodeDeclare(volume, "velocity_scale", "constant FLOAT");
+        AiNodeSetFlt(volume, "velocity_scale", FindMayaPlug("velocityScale").asFloat());
+
+        AiNodeDeclare(volume, "velocity_fps", "constant FLOAT");
+        AiNodeSetFlt(volume, "velocity_fps", FindMayaPlug("velocityFps").asFloat());
+
+        AiNodeDeclare(volume, "velocity_shutter_start", "constant FLOAT");
+        AiNodeSetFlt(volume, "velocity_shutter_start", FindMayaPlug("velocityShutterStart").asFloat());
+
+        AiNodeDeclare(volume, "velocity_shutter_end", "constant FLOAT");
+        AiNodeSetFlt(volume, "velocity_shutter_end", FindMayaPlug("velocityShutterEnd").asFloat());
+    }
+
+    AiNodeDeclare(volume, "bounds_slack", "constant FLOAT");
+    AiNodeSetFlt(volume, "bounds_slack", FindMayaPlug("boundsSlack").asFloat());
+
     const float sampling_quality = FindMayaPlug("samplingQuality").asFloat();
     const float voxel_size = FindMayaPlug("voxelSize").asFloat();
     AiNodeSetFlt(volume, "step_size", voxel_size / (sampling_quality / 100.0f));

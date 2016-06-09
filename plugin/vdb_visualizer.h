@@ -114,6 +114,16 @@ public:
     static MObject s_sampling_quality;
     static MObject s_additional_channel_export;
 
+    // Velocity params
+    static MObject s_velocity_grids;
+    static MObject s_velocity_scale;
+    static MObject s_velocity_fps;
+    static MObject s_velocity_shutter_start;
+    static MObject s_velocity_shutter_end;
+
+    // disp params
+    static MObject s_bounds_slack;
+
     // shader parameters
     static MObject s_shader_mode;
     static VDBShaderParams s_shader_params;

@@ -65,6 +65,13 @@ MObject VDBVisualizerShape::s_override_shader;
 MObject VDBVisualizerShape::s_sampling_quality;
 MObject VDBVisualizerShape::s_additional_channel_export;
 
+MObject VDBVisualizerShape::s_velocity_grids;
+MObject VDBVisualizerShape::s_velocity_scale;
+MObject VDBVisualizerShape::s_velocity_fps;
+MObject VDBVisualizerShape::s_velocity_shutter_start;
+MObject VDBVisualizerShape::s_velocity_shutter_end;
+MObject VDBVisualizerShape::s_bounds_slack;
+
 MObject VDBVisualizerShape::s_shader_mode;
 VDBShaderParams VDBVisualizerShape::s_shader_params;
 VDBSimpleShaderParams VDBVisualizerShape::s_simple_shader_params;
@@ -554,6 +561,40 @@ MStatus VDBVisualizerShape::initialize()
 
     s_additional_channel_export = tAttr.create("additionalChannelExport", "additional_channel_export", MFnData::kString);
     addAttribute(s_additional_channel_export);
+
+    s_velocity_grids = tAttr.create("velocityGrids", "velocity_grids", MFnData::kString);
+    addAttribute(s_velocity_grids);
+
+    s_velocity_scale = nAttr.create("velocityScale", "velocity_scale", MFnNumericData::kFloat);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(2.0f);
+    nAttr.setDefault(1.0f);
+    nAttr.setChannelBox(true);
+    addAttribute(s_velocity_scale);
+
+    s_velocity_fps = nAttr.create("velocityFps", "velocity_fps", MFnNumericData::kFloat);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(30.0f);
+    nAttr.setDefault(24.0f);
+    addAttribute(s_velocity_fps);
+
+    s_velocity_shutter_start = nAttr.create("velocityShutterStart", "velocity_shutter_start", MFnNumericData::kFloat);
+    nAttr.setDefault(-0.25f);
+    nAttr.setSoftMin(-1.0f);
+    nAttr.setSoftMax(0.0f);
+    addAttribute(s_velocity_shutter_start);
+
+    s_velocity_shutter_end = nAttr.create("velocityShutterEnd", "velocity_shutter_end", MFnNumericData::kFloat);
+    nAttr.setDefault(0.25f);
+    nAttr.setSoftMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    addAttribute(s_velocity_shutter_end);
+
+    s_bounds_slack = nAttr.create("boundsSlack", "bounds_slack", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    addAttribute(s_bounds_slack);
 
     s_shader_mode = eAttr.create("shaderMode", "shader_mode");
     eAttr.addField("Arnold Volume Collector", SHADER_MODE_VOLUME_COLLECTOR);
