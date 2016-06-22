@@ -242,14 +242,7 @@ namespace MHWRender{
         p_data->display_mode = vis_data->display_mode;
         p_data->bbox = vis_data->bbox;
 
-        if (vis_data->vdb_file == nullptr || !vis_data->vdb_file->isOpen())
-        {
-            p_data->clear();
-            return;
-        }
-
-        const std::string filename = vis_data->vdb_file->filename();
-
+        const std::string& filename = vis_data->vdb_path;
         if (p_data->vdb_file != nullptr && filename != p_data->vdb_file->filename())
             p_data->clear();
 

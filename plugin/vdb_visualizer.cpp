@@ -448,13 +448,13 @@ MStatus VDBVisualizerShape::initialize()
     eAttr.addField("None", CACHE_OUT_OF_RANGE_MODE_NONE);
     eAttr.addField("Hold", CACHE_OUT_OF_RANGE_MODE_HOLD);
     eAttr.addField("Repeat", CACHE_OUT_OF_RANGE_MODE_REPEAT);
-    eAttr.setDefault(1);
+    eAttr.setDefault(CACHE_OUT_OF_RANGE_MODE_HOLD);
 
     s_cache_after_mode = eAttr.create("cacheAfterMode", "cache_after_mode");
     eAttr.addField("None", CACHE_OUT_OF_RANGE_MODE_NONE);
     eAttr.addField("Hold", CACHE_OUT_OF_RANGE_MODE_HOLD);
     eAttr.addField("Repeat", CACHE_OUT_OF_RANGE_MODE_REPEAT);
-    eAttr.setDefault(1);
+    eAttr.setDefault(CACHE_OUT_OF_RANGE_MODE_HOLD);
 
     s_display_mode = eAttr.create("displayMode", "display_mode");
     eAttr.addField("Axis Aligned Bounding Box", DISPLAY_AXIS_ALIGNED_BBOX);
