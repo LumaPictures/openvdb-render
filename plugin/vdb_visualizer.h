@@ -8,6 +8,7 @@
 // std regex in gcc 4.8.3 is broken
 #include <boost/regex.hpp>
 #include <maya/MNodeMessage.h>
+#include <maya/MDGMessage.h>
 
 #include "vdb_sampler.h"
 #include "gradient.hpp"
@@ -135,6 +136,8 @@ public:
     VDBVisualizerData* get_update();
 private:
     static void attribute_changed(MNodeMessage::AttributeMessage msg, MPlug& plug, MPlug& other_plug, void* client_data);
+    static void time_changed(MTime& time, void* client_data);
 
     VDBVisualizerData m_vdb_data;
+    MCallbackId m_time_changed_id;
 };
