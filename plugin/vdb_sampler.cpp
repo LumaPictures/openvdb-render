@@ -221,7 +221,7 @@ MStatus VDBSamplerNode::initialize()
     eAttr.addField("Closest", 0);
     eAttr.addField("Trilinear", 1);
     eAttr.addField("Tricubic", 2);
-    eAttr.setDefault(0);
+    eAttr.setDefault(1);
     addAttribute(s_interpolation);
 
     s_gradient.create_params();

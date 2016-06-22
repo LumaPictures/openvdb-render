@@ -63,7 +63,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.update_channel("emission", param_name)
 
     def create_smoke_channel(self, param_name):
-            self.create_channel("Smoke Channel", "smoke", param_name)
+            self.create_channel("Color Channel", "smoke", param_name)
 
     def update_smoke_channel(self, param_name):
         self.update_channel("smoke", param_name)
@@ -75,7 +75,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.update_channel("opacity", param_name)
 
     def create_fire_channel(self, param_name):
-        self.create_channel("Fire Channel", "fire", param_name)
+        self.create_channel("Emission Channel", "fire", param_name)
 
     def update_fire_channel(self, param_name):
         self.update_channel("fire", param_name)
@@ -283,8 +283,8 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.endLayout()
 
         self.beginLayout("Simple Shader", collapse=True)
-        self.beginLayout("Smoke", collapse=False)
-        self.addControl("smoke", label="Smoke")
+        self.beginLayout("Color", collapse=False)
+        self.addControl("smoke", label="Color")
         self.callCustom(self.create_smoke_channel, self.update_smoke_channel, "smoke_channel")
         self.addControl("smokeIntensity", label="Intensity")
         self.addControl("anisotropy", label="Anisotropy")
@@ -295,14 +295,14 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl("opacityIntensity", label="Intensity")
         self.addControl("opacityShadow", label="Shadow Multiplier")
         self.endLayout()
-        self.beginLayout("Fire", collapse=False)
+        self.beginLayout("Emission", collapse=False)
         self.endLayout()
-        self.addControl("fire", label="Fire")
+        self.addControl("fire", label="Emission")
         self.callCustom(self.create_fire_channel, self.update_fire_channel, "fire_channel")
         self.addControl("fireIntensity", label="Intensity")
         self.endLayout()
 
-        self.beginLayout("Arnold Shader", collapse=False)
+        self.beginLayout("Arnold Shader", collapse=True)
 
         self.beginLayout("Scattering", collapse=False)
         self.addControl("scattering_source", label="Source")

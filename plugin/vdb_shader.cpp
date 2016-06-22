@@ -120,6 +120,7 @@ void VDBShaderParams::create_params()
     eAttr.addField("Closest", 0);
     eAttr.addField("Trilinear", 1);
     eAttr.addField("Tricubic", 2);
+    eAttr.setDefault(1);
     MPxNode::addAttribute(interpolation);
 
     compensate_scaling = nAttr.create("compensateScaling", "compensate_scaling", MFnNumericData::kBoolean);

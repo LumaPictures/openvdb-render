@@ -40,6 +40,7 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
     MPxNode::addAttribute(opacity);
 
     opacity_channel = tAttr.create("opacityChannel", "opacity_channel", MFnData::kString);
+    tAttr.setDefault(sData.create("density"));
     MPxNode::addAttribute(opacity_channel);
 
     opacity_intensity = nAttr.create("opacityIntensity", "opacity_intensity", MFnNumericData::kFloat);
@@ -83,6 +84,7 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
         eAttr.addField("Closest", 0);
         eAttr.addField("Trilinear", 1);
         eAttr.addField("Tricubic", 2);
+        eAttr.setDefault(1);
         MPxNode::addAttribute(interpolation);
 
         compensate_scaling = nAttr.create("compensateScaling", "compensate_scaling", MFnNumericData::kBoolean);
