@@ -174,6 +174,28 @@ namespace{
             return iter.getCoord();
         }
     };
+
+    static bool operator!=(const MBoundingBox& a, const MBoundingBox& b)
+    {
+        return a.min() != b.min() || a.max() != b.max();
+    }
+
+    static bool operator!=(const Gradient& a, const Gradient& b)
+    {
+        return a.is_different(b);
+    }
+
+    template <typename T>
+    bool setup_parameter(T& target, T& source)
+    {
+        if (target != source)
+        {
+            target = source;
+            return true;
+        }
+        else
+            return false;
+    }
 }
 
 namespace MHWRender{
@@ -194,19 +216,27 @@ namespace MHWRender{
         Gradient attenuation_gradient;
         Gradient emission_gradient;
 
+        std::unique_ptr<openvdb::io::File> vdb_file;
+        openvdb::GridBase::ConstPtr scattering_grid;
+        openvdb::GridBase::ConstPtr attenuation_grid;
+        openvdb::GridBase::ConstPtr emission_grid;
+
         float point_size;
         float point_jitter;
 
         int point_skip;
         VDBDisplayMode display_mode;
 
-        std::unique_ptr<openvdb::io::File> vdb_file;
-        openvdb::GridBase::ConstPtr scattering_grid;
-        openvdb::GridBase::ConstPtr attenuation_grid;
-        openvdb::GridBase::ConstPtr emission_grid;
+        bool has_changed;
 
+        VDBGeometryOverrideData();
         void clear();
     };
+
+    VDBGeometryOverrideData::VDBGeometryOverrideData() : vdb_file(nullptr), has_changed(false)
+    {
+
+    }
 
     void VDBGeometryOverrideData::clear()
     {
@@ -239,40 +269,59 @@ namespace MHWRender{
         if (vis_data == 0)
             return;
 
-        p_data->display_mode = vis_data->display_mode;
-        p_data->bbox = vis_data->bbox;
+        VDBGeometryOverrideData* data = p_data.get();
 
         const std::string& filename = vis_data->vdb_path;
-        if (p_data->vdb_file != nullptr && filename != p_data->vdb_file->filename())
-            p_data->clear();
+        auto open_file = [&] () {
+            data->has_changed = true;
+            data->clear();
 
-        try{
-            p_data->vdb_file.reset(new openvdb::io::File(filename));
+            try{
+                data->vdb_file.reset(new openvdb::io::File(filename));
+            }
+            catch(...){
+                data->vdb_file.reset();
+            }
+        };
+
+        if (filename.empty())
+        {
+            data->has_changed = true;
+            data->clear();
         }
-        catch(...){
-            p_data->vdb_file.reset();
-        }
+        else if (data->vdb_file == nullptr)
+            open_file();
+        else if (filename != data->vdb_file->filename())
+            open_file();
 
-        p_data->scattering_color = vis_data->scattering_color;
-        p_data->attenuation_color = vis_data->attenuation_color;
-        p_data->emission_color = vis_data->emission_color;
+        data->has_changed |= setup_parameter(data->display_mode, vis_data->display_mode);
+        data->has_changed |= setup_parameter(data->bbox, vis_data->bbox);
 
-        p_data->attenuation_channel = vis_data->attenuation_channel;
-        p_data->scattering_channel = vis_data->scattering_channel;
-        p_data->emission_channel = vis_data->emission_channel;
+        data->has_changed |= setup_parameter(data->scattering_color, vis_data->scattering_color);
+        data->has_changed |= setup_parameter(data->attenuation_color, vis_data->attenuation_color);
+        data->has_changed |= setup_parameter(data->emission_color, vis_data->emission_color);
 
-        p_data->scattering_gradient = vis_data->scattering_gradient;
-        p_data->attenuation_gradient = vis_data->attenuation_gradient;
-        p_data->emission_gradient = vis_data->emission_gradient;
+        data->has_changed |= setup_parameter(data->attenuation_channel, vis_data->attenuation_channel);
+        data->has_changed |= setup_parameter(data->scattering_channel, vis_data->scattering_channel);
+        data->has_changed |= setup_parameter(data->emission_channel, vis_data->emission_channel);
 
-        p_data->point_size = vis_data->point_size;
-        p_data->point_jitter = vis_data->point_jitter;
+        data->has_changed |= setup_parameter(data->scattering_gradient, vis_data->scattering_gradient);
+        data->has_changed |= setup_parameter(data->attenuation_gradient, vis_data->attenuation_gradient);
+        data->has_changed |= setup_parameter(data->emission_gradient, vis_data->emission_gradient);
 
-        p_data->point_skip = vis_data->point_skip;
+        data->has_changed |= setup_parameter(data->point_size, vis_data->point_size);
+        data->has_changed |= setup_parameter(data->point_jitter, vis_data->point_jitter);
+
+        data->has_changed |= setup_parameter(data->point_skip, vis_data->point_skip);
     }
 
     void VDBGeometryOverride::updateRenderItems(const MDagPath&, MRenderItemList& list)
     {
+        VDBGeometryOverrideData* data = p_data.get();
+
+        if (!data->has_changed)
+            return;
+
         for (int i = list.length() - 1; i >= 0; --i)
             list.removeAt(i);
         list.clear();
@@ -285,9 +334,8 @@ namespace MHWRender{
         if (shader_manager == nullptr)
             return;
 
-        const bool file_exists = p_data->vdb_file != nullptr;
-
-        const VDBDisplayMode display_mode = p_data->display_mode;
+        const bool file_exists = data->vdb_file != nullptr;
+        const VDBDisplayMode display_mode = data->display_mode;
 
         if (!file_exists || display_mode <= DISPLAY_GRID_BBOX)
         {
@@ -334,6 +382,12 @@ namespace MHWRender{
         // if I want to profile, or debug, the unique_ptr does a lots of extra checks
         // which skews my input data, so have to use a bare pointer here
         VDBGeometryOverrideData* data = p_data.get();
+
+        if (!data->has_changed)
+            return;
+
+        data->has_changed = false;
+
         auto set_bbox_indices = [&](const unsigned int num_bboxes){
             const int index = list.indexOf("bounding_box");
             if (index >= 0)
@@ -539,14 +593,15 @@ namespace MHWRender{
                             std::uniform_real_distribution<float> distributionZ(-point_jitter * static_cast<float>(voxel_size.z()), point_jitter * static_cast<float>(voxel_size.z()));
 
                             tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count), [&](const tbb::blocked_range<unsigned int>& r) {
-                                std::minstd_rand generator; // LCG
+                                std::minstd_rand generatorX(42); // LCG
+                                std::minstd_rand generatorY(137);
+                                std::minstd_rand generatorZ(1337);
                                 for (unsigned int i = r.begin(); i != r.end(); ++i)
                                 {
-                                    generator.seed(i);
                                     MFloatVector pos = vertices[i];
-                                    pos.x += distributionX(generator);
-                                    pos.y += distributionY(generator);
-                                    pos.z += distributionZ(generator);
+                                    pos.x += distributionX(generatorX);
+                                    pos.y += distributionY(generatorY);
+                                    pos.z += distributionZ(generatorZ);
                                     pc_vertices[i] = pos;
                                 }
                             });

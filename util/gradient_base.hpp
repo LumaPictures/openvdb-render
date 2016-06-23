@@ -332,4 +332,49 @@ public:
         else
             return apply_rgb_controls(apply_rgb_gradient((color_r(v) + color_g(v) + color_b(v)) / 3.0f));
     }
+
+    inline bool is_different(const GradientBase<Color>& other) const
+    {
+        const size_t float_ramp_size = m_float_ramp.size();
+        if (float_ramp_size != other.m_float_ramp.size())
+            return true;
+        if (float_ramp_size > 0)
+        {
+            if (memcmp(m_float_ramp.data(), other.m_float_ramp.data(), sizeof(float) * float_ramp_size) != 0)
+                return true;
+        }
+
+        const size_t rgb_ramp_size = m_rgb_ramp.size();
+        if (rgb_ramp_size != other.m_rgb_ramp.size())
+            return true;
+        if (rgb_ramp_size > 0)
+        {
+            if (memcmp(m_rgb_ramp.data(), other.m_rgb_ramp.data(), sizeof(Color) * rgb_ramp_size) != 0)
+                return true;
+        }
+
+        return m_contrast != other.m_contrast ||
+               m_contrast_pivot != other.m_contrast_pivot ||
+               m_input_min != other.m_input_min ||
+               m_input_max != other.m_input_max ||
+               m_bias != other.m_bias ||
+               m_gain != other.m_gain ||
+        m_gain != other.m_gain ||
+        m_output_min != other.m_output_min ||
+        m_output_max != other.m_output_max ||
+        m_gamma != other.m_gamma ||
+        m_hue_shift != other.m_hue_shift ||
+        m_saturation != other.m_saturation ||
+        m_exposure != other.m_exposure ||
+        m_multiply != other.m_multiply ||
+        m_add != other.m_add ||
+        m_inv_input_range != other.m_inv_input_range ||
+        m_output_range != other.m_output_range ||
+        m_inv_bias != other.m_inv_bias ||
+        m_inv_gain != other.m_inv_gain ||
+        m_inv_one_minus_gain != other.m_inv_one_minus_gain ||
+        m_channel_mode != other.m_channel_mode ||
+        m_clamp_min != other.m_clamp_min ||
+        m_clamp_max!= other.m_clamp_max;
+    }
 };
