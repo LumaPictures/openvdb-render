@@ -186,7 +186,7 @@ namespace{
     }
 
     template <typename T>
-    bool setup_parameter(T& target, T& source)
+    bool setup_parameter(T& target, const T& source)
     {
         if (target != source)
         {
