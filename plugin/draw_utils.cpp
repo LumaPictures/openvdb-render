@@ -258,7 +258,7 @@ GLuint GLPipeline::get_filled_stages() const
 {
     GLuint stages = 0;
     for (const auto& program : m_programs)
-        stages = stages | program->get_stage();
+        stages = stages | program->get_stage_bit();
     return stages;
 }
 
@@ -266,7 +266,7 @@ std::shared_ptr<GLProgram> GLPipeline::get_program(GLuint stage) const
 {
     for (const auto& program : m_programs)
     {
-        if (program->get_stage() | stage)
+        if (program->get_stage() == stage)
             return program;
     }
     return m_programs.front();
