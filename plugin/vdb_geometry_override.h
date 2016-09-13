@@ -27,6 +27,8 @@ namespace MHWRender{
             MGeometry& data);
         void cleanUp();
 
+        virtual DrawAPI supportedDrawAPIs() const;
+
         static MString registrantId;
     private:
         VDBVisualizerShape* p_vdb_visualizer;

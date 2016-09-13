@@ -713,6 +713,11 @@ namespace MHWRender{
         }
     }
 
+    DrawAPI VDBGeometryOverride::supportedDrawAPIs() const
+    {
+        return DrawAPI::kOpenGL | DrawAPI::kOpenGLCoreProfile;
+    }
+
     void VDBGeometryOverride::cleanUp()
     {
     }
