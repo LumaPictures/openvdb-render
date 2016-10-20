@@ -9,7 +9,6 @@ if (NOT ILMBASE_ROOT)
     set(ILMBASE_ROOT $ENV{ILMBASE_ROOT})
 endif ()
 
-find_path(LUMA_NODE_ID_INCLUDE NAMES lumaNodeId.h)
 find_path(GLEW_INCLUDE NAMES GL/glew.h)
 find_path(OPENVDB_INCLUDE NAMES openvdb/openvdb.h)
 include_directories(${LUMA_NODE_ID_INCLUDE})

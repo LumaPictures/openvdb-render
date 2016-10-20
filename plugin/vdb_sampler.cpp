@@ -1,10 +1,11 @@
 #include "vdb_sampler.h"
 
+#include "../util/node_ids.h"
+
 #include <maya/MFnEnumAttribute.h>
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MRampAttribute.h>
 
-#include <lumaNodeId.h>
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnDependencyNode.h>
 

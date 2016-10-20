@@ -12,7 +12,7 @@
 
 #include "vdb_visualizer.h"
 
-#include <lumaNodeId.h>
+#include "../util/node_ids.h"
 
 #include <maya/MFnNumericAttribute.h>
 #include <maya/MFnTypedAttribute.h>

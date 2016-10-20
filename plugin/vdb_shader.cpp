@@ -5,7 +5,7 @@
 #include <maya/MFnTypedAttribute.h>
 #include <maya/MFnStringData.h>
 
-#include <lumaNodeId.h>
+#include "../util/node_ids.h"
 
 const MTypeId VDBShaderNode::s_type_id(ID_VDB_VOLUME_SHADER);
 const MString VDBShaderNode::s_type_name("vdb_shader");
