@@ -38,7 +38,7 @@
 
 const MTypeId VDBVisualizerShape::typeId(ID_VDB_VISUALIZER);
 const MString VDBVisualizerShape::typeName("vdb_visualizer");
-const MString VDBVisualizerShape::drawDbClassification("drawdb/geometry/fractal/vdb_visualizer");
+const MString VDBVisualizerShape::drawDbClassification("drawdb/subscene/volume/vdb_visualizer");
 
 MObject VDBVisualizerShape::s_update_trigger;
 MObject VDBVisualizerShape::s_vdb_path;
@@ -206,13 +206,13 @@ VDBVisualizerData::~VDBVisualizerData()
 
 void VDBVisualizerData::clear(const MBoundingBox& bb)
 {
-    if (vdb_file)
+    if (vdb_file != nullptr)
     {
         if (vdb_file->isOpen())
             vdb_file->close();
         delete vdb_file;
+        vdb_file = nullptr;
     }
-    vdb_file = nullptr;
     bbox = bb;
 }
 
@@ -781,7 +781,7 @@ void VDBVisualizerShape::attribute_changed(MNodeMessage::AttributeMessage, MPlug
         VDBVisualizerShape* shape = reinterpret_cast<VDBVisualizerShape*>(client_data);
 
         if (s_shader_params.check_plug(plug) || s_simple_shader_params.check_plug(plug) ||
-            plug == s_vdb_path || plug == s_cache_time ||  plug == s_cache_playback_start ||
+            plug == s_vdb_path || plug == s_cache_time || plug == s_cache_playback_start ||
             plug == s_cache_playback_end || plug == s_cache_playback_offset || plug == s_cache_before_mode ||
             plug == s_cache_after_mode || plug == s_display_mode || plug == s_override_shader || plug == s_shader_mode ||
             plug == s_point_size || plug == s_point_jitter || plug == s_point_skip)

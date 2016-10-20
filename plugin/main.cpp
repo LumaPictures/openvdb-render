@@ -4,7 +4,7 @@
 #include <maya/MGlobal.h>
 #include <maya/MDrawRegistry.h>
 
-#include "vdb_geometry_override.h"
+#include "vdb_subscene_override.h"
 #include "vdb_visualizer.h"
 #include "vdb_query.h"
 #include "vdb_sampler.h"
@@ -15,21 +15,6 @@ MStatus initializePlugin(MObject obj)
 {
     const bool is_interactive = MGlobal::mayaState() == MGlobal::kInteractive;
     MStatus status = MS::kFailure;
-
-    if (is_interactive)
-    {
-        /*if (glewInit() != GLEW_OK)
-        {
-            status.perror("[openvdb] Error initializing glew.");
-            return status;
-        }
-
-        if (!glewIsSupported("GL_EXT_direct_state_access"))
-        {
-            status.perror("[openvdb] Direct State Access is not available, update your drivers or use a newer GPU!");
-            return status;
-        }*/
-    }
 
     MFnPlugin plugin(obj, "Luma Pictures", "0.0.1", "Any");
 
@@ -70,15 +55,15 @@ MStatus initializePlugin(MObject obj)
         return status;
     }
 
-    status = MHWRender::MDrawRegistry::registerGeometryOverrideCreator(
-            VDBVisualizerShape::drawDbClassification,
-            MHWRender::VDBGeometryOverride::registrantId,
-            MHWRender::VDBGeometryOverride::creator
+    status = MHWRender::MDrawRegistry::registerSubSceneOverrideCreator(
+        VDBVisualizerShape::drawDbClassification,
+        MHWRender::VDBSubSceneOverride::registrantId,
+        MHWRender::VDBSubSceneOverride::creator
     );
 
     if (!status)
     {
-        status.perror("[openvdb] Error registering the VDBVisualizer Geometry Override.");
+        status.perror("[openvdb] Error registering the VDBVisualizer Sub Scene Override.");
         return status;
     }
 
@@ -136,14 +121,14 @@ MStatus uninitializePlugin(MObject obj)
         return status;
     }
 
-    status = MHWRender::MDrawRegistry::deregisterGeometryOverrideCreator(
+    status = MHWRender::MDrawRegistry::deregisterSubSceneOverrideCreator(
             VDBVisualizerShape::drawDbClassification,
-            MHWRender::VDBGeometryOverride::registrantId
+            MHWRender::VDBSubSceneOverride::registrantId
     );
 
     if (!status)
     {
-        status.perror("[openvdb] Error deregistering the VDBVisualizer Geometry Override.");
+        status.perror("[openvdb] Error deregistering the VDBVisualizer Sub Scene Override.");
         return status;
     }
 

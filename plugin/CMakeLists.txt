@@ -12,7 +12,6 @@ endif ()
 find_path(GLEW_INCLUDE NAMES GL/glew.h)
 find_path(OPENVDB_INCLUDE NAMES openvdb/openvdb.h)
 include_directories(${LUMA_NODE_ID_INCLUDE})
-include_directories(${GLEW_INCLUDE})
 include_directories(${OPENVDB_INCLUDE})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(SYSTEM ${ILMBASE_ROOT}/include) #register is deprecated with c++11
@@ -22,7 +21,6 @@ link_directories(${MAYA_LIBRARY_DIR})
 
 set(MAYA_LIBS OpenMaya Foundation OpenMayaAnim OpenMayaFX OpenMayaUI OpenMayaRender)
 
-find_library(GLEW_STATIC_LIBRARY NAMES libGLEW.a)
 find_library(OPENVDB_STATIC_LIBRARY NAMES libopenvdb.a)
 
 file(GLOB SRC *.cpp)
@@ -32,7 +30,7 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
 if (WIN32)
     set_target_properties(${PLUGIN_NAME} PROPERTIES SUFFIX ".mll")
 endif ()
-target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${GLEW_STATIC_LIBRARY} GL ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES})
 
 install(TARGETS ${PLUGIN_NAME}
         DESTINATION plug-ins)
