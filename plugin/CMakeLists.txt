@@ -29,6 +29,9 @@ file(GLOB SRC *.cpp)
 
 add_library(${PLUGIN_NAME} SHARED ${SRC})
 set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
+if (WIN32)
+    set_target_properties(${PLUGIN_NAME} PROPERTIES SUFFIX ".mll")
+endif ()
 target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${GLEW_STATIC_LIBRARY} GL ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES})
 
 install(TARGETS ${PLUGIN_NAME}
