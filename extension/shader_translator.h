@@ -38,7 +38,7 @@ public:
 
         std::array<std::string, 3> gradient_names = {"scattering", "attenuation", "emission"};
 
-        for (auto gradient : gradient_names)
+        for (const auto& gradient : gradient_names)
         {
             this->ProcessParameter(shader, (gradient + "_channel_mode").c_str(), AI_TYPE_INT, (gradient + "ChannelMode").c_str());
             this->ProcessParameter(shader, (gradient + "_contrast").c_str(), AI_TYPE_FLOAT, (gradient + "Contrast").c_str());

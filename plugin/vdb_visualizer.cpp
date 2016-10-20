@@ -515,14 +515,14 @@ MStatus VDBVisualizerShape::initialize()
         s_update_trigger, s_grid_names, s_out_vdb_path, s_bbox_min, s_bbox_max, s_channel_stats, s_voxel_size
     };
 
-    for (auto output_param : output_params)
+    for (const auto& output_param : output_params)
         addAttribute(output_param);
 
-    for (auto input_param : input_params)
+    for (const auto& input_param : input_params)
     {
         addAttribute(input_param);
 
-        for (auto output_param : output_params)
+        for (const auto& output_param : output_params)
             attributeAffects(input_param, output_param);
     }
 
@@ -610,7 +610,7 @@ MStatus VDBVisualizerShape::initialize()
             s_point_size, s_point_jitter, s_point_skip, s_override_shader, s_shader_mode
     };
 
-    for (auto shader_param : display_params)
+    for (const auto& shader_param : display_params)
     {
         addAttribute(shader_param);
         attributeAffects(shader_param, s_update_trigger);
@@ -874,7 +874,7 @@ bool VDBVisualizerShapeUI::select(MSelectInfo& selectInfo, MSelectionList& selec
                 std::make_pair(0, 4), std::make_pair(1, 5), std::make_pair(2, 6), std::make_pair(3, 7)
         };
 
-        for (auto line : line_array)
+        for (const auto& line : line_array)
         {
             const auto& p0 = points[line.first];
             const auto& p1 = points[line.second];
