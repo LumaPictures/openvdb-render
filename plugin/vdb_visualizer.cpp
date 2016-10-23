@@ -34,7 +34,7 @@
 #include <maya/MNodeMessage.h>
 
 
-#include "../util/maya_utils.hpp"
+#include "vdb_maya_utils.hpp"
 
 const MTypeId VDBVisualizerShape::typeId(ID_VDB_VISUALIZER);
 const MString VDBVisualizerShape::typeName("vdb_visualizer");
@@ -773,32 +773,6 @@ MBoundingBox VDBVisualizerShape::boundingBox() const
     return m_vdb_data.bbox;
 }
 
-void VDBVisualizerShape::attribute_changed(MNodeMessage::AttributeMessage, MPlug& plug, MPlug&, void* client_data)
-{
-    MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
-    if (renderer != nullptr)
-    {
-        VDBVisualizerShape* shape = reinterpret_cast<VDBVisualizerShape*>(client_data);
-
-        if (s_shader_params.check_plug(plug) || s_simple_shader_params.check_plug(plug) ||
-            plug == s_vdb_path || plug == s_cache_time || plug == s_cache_playback_start ||
-            plug == s_cache_playback_end || plug == s_cache_playback_offset || plug == s_cache_before_mode ||
-            plug == s_cache_after_mode || plug == s_display_mode || plug == s_override_shader || plug == s_shader_mode ||
-            plug == s_point_size || plug == s_point_jitter || plug == s_point_skip)
-            renderer->setGeometryDrawDirty(shape->thisMObject(), true);
-    }
-}
-
-void VDBVisualizerShape::time_changed(MTime&, void* client_data)
-{
-    MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
-    if (renderer != nullptr)
-    {
-        VDBVisualizerShape* shape = reinterpret_cast<VDBVisualizerShape*>(client_data);
-        renderer->setGeometryDrawDirty(shape->thisMObject(), true);
-    }
-}
-
 void VDBVisualizerShape::postConstructor()
 {
     setRenderable(true);
@@ -806,13 +780,6 @@ void VDBVisualizerShape::postConstructor()
     s_shader_params.scattering_gradient.post_constructor(tmo);
     s_shader_params.attenuation_gradient.post_constructor(tmo);
     s_shader_params.emission_gradient.post_constructor(tmo);
-
-    if (MGlobal::mayaState() == MGlobal::kInteractive)
-    {
-        MNodeMessage::addAttributeChangedCallback(tmo, attribute_changed, this);
-        m_time_changed_id = MDGMessage::addTimeChangeCallback(time_changed, this);
-    }
-
 }
 
 VDBVisualizerShapeUI::VDBVisualizerShapeUI()

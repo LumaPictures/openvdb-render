@@ -12,7 +12,7 @@
 
 #include "vdb_visualizer.h"
 
-#include "../util/maya_utils.hpp"
+#include "vdb_maya_utils.hpp"
 
 namespace {
     const char* file_short_flag = "f";

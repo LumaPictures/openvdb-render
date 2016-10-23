@@ -1,6 +1,6 @@
 #include "vdb_subscene_override.h"
 
-#include "../util/maya_utils.hpp"
+#include "vdb_maya_utils.hpp"
 #include "vdb_subscene_utils.hpp"
 
 
