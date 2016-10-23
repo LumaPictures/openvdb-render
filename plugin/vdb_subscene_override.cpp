@@ -1,8 +1,6 @@
 #include "vdb_subscene_override.h"
 
 #include "vdb_maya_utils.hpp"
-#include "vdb_subscene_utils.hpp"
-
 
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
@@ -379,15 +377,15 @@ namespace MHWRender {
                 RGBSampler* scattering_sampler = nullptr;
 
                 if (data->scattering_grid == nullptr)
-                    scattering_sampler = new (alloca(sizeof(RGBSampler))) RGBSampler();
+                    scattering_sampler = new (m_scattering_sampler.data()) RGBSampler();
                 else
                 {
                     if (data->scattering_grid->valueType() == "float")
-                        scattering_sampler = new (alloca(sizeof(FloatToRGBSampler))) FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->scattering_grid));
+                        scattering_sampler = new (m_scattering_sampler.data()) FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->scattering_grid));
                     else if (data->scattering_grid->valueType() == "vec3s")
-                        scattering_sampler = new (alloca(sizeof(Vec3SToRGBSampler))) Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->scattering_grid));
+                        scattering_sampler = new (m_scattering_sampler.data()) Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->scattering_grid));
                     else
-                        scattering_sampler = new (alloca(sizeof(RGBSampler))) RGBSampler();
+                        scattering_sampler = new (m_scattering_sampler.data()) RGBSampler();
                 }
 
                 try{
@@ -401,25 +399,25 @@ namespace MHWRender {
                 RGBSampler* emission_sampler = nullptr;
 
                 if (data->emission_grid == nullptr)
-                    emission_sampler = new (alloca(sizeof(RGBSampler))) RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
+                    emission_sampler = new (m_emission_sampler.data()) RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
                 else
                 {
                     if (data->emission_grid->valueType() == "float")
-                        emission_sampler = new (alloca(sizeof(FloatToRGBSampler))) FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->emission_grid));
+                        emission_sampler = new (m_emission_sampler.data()) FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->emission_grid));
                     else if (data->emission_grid->valueType() == "vec3s")
-                        emission_sampler = new (alloca(sizeof(Vec3SToRGBSampler))) Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->emission_grid));
+                        emission_sampler = new (m_emission_sampler.data()) Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->emission_grid));
                     else
-                        emission_sampler = new (alloca(sizeof(RGBSampler))) RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
+                        emission_sampler = new (m_emission_sampler.data()) RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
                 }
 
                 RGBSampler* attenuation_sampler = 0;
 
                 if (data->attenuation_grid->valueType() == "float")
-                    attenuation_sampler = new (alloca(sizeof(FloatToRGBSampler))) FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->attenuation_grid));
+                    attenuation_sampler = new (m_attenuation_sampler.data()) FloatToRGBSampler(openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->attenuation_grid));
                 else if (data->attenuation_grid->valueType() == "vec3s")
-                    attenuation_sampler = new (alloca(sizeof(Vec3SToRGBSampler))) Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->attenuation_grid));
+                    attenuation_sampler = new (m_attenuation_sampler.data()) Vec3SToRGBSampler(openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->attenuation_grid));
                 else
-                    attenuation_sampler = new (alloca(sizeof(RGBSampler))) RGBSampler(MFloatVector(1.0f, 1.0f, 1.0f));
+                    attenuation_sampler = new (m_attenuation_sampler.data()) RGBSampler(MFloatVector(1.0f, 1.0f, 1.0f));
 
                 p_color_buffer.reset(new MVertexBuffer(color_buffer_desc));
                 MColor* colors = reinterpret_cast<MColor*>(p_color_buffer->acquire(vertex_count, true));

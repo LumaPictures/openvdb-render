@@ -4,9 +4,11 @@
 #include <memory>
 
 #include "vdb_visualizer.h"
+#include "vdb_subscene_utils.hpp"
 
 namespace MHWRender {
     struct VDBSubSceneOverrideData;
+
     class VDBSubSceneOverride : public MHWRender::MPxSubSceneOverride {
     public:
         static MPxSubSceneOverride* creator(const MObject& obj);
@@ -29,5 +31,13 @@ namespace MHWRender {
         std::unique_ptr<MVertexBuffer> p_position_buffer;
         std::unique_ptr<MVertexBuffer> p_color_buffer;
         std::unique_ptr<MIndexBuffer> p_index_buffer;
+        // max is not constexpr
+        static constexpr size_t sampler_mem_size = sizeof(FloatToRGBSampler) > sizeof(Vec3SToRGBSampler)
+                                                   ? sizeof(FloatToRGBSampler) : sizeof(Vec3SToRGBSampler);
+
+        typedef std::array<char, sampler_mem_size> sampler_mem_area;
+        sampler_mem_area m_scattering_sampler;
+        sampler_mem_area m_emission_sampler;
+        sampler_mem_area m_attenuation_sampler;
     };
 }

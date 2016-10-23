@@ -23,42 +23,36 @@ public:
 
 class FloatToRGBSampler : public RGBSampler {
     typedef openvdb::tools::GridSampler<openvdb::FloatGrid, openvdb::tools::BoxSampler> sampler_type;
-    sampler_type* p_sampler;
+    sampler_type m_sampler;
 public:
-    FloatToRGBSampler(openvdb::FloatGrid::ConstPtr grid)
+    FloatToRGBSampler(openvdb::FloatGrid::ConstPtr grid) : m_sampler(*grid)
     {
-        p_sampler = new sampler_type(*grid);
     }
 
     ~FloatToRGBSampler()
-    {
-        delete p_sampler;
-    }
+    { }
 
     MFloatVector get_rgb(const openvdb::Vec3d& wpos) const
     {
-        const float value = p_sampler->wsSample(wpos);
+        const float value = m_sampler.wsSample(wpos);
         return MFloatVector(value, value, value);
     }
 };
 
 class Vec3SToRGBSampler : public RGBSampler {
     typedef openvdb::tools::GridSampler<openvdb::Vec3SGrid, openvdb::tools::BoxSampler> sampler_type;
-    sampler_type* p_sampler;
+    sampler_type m_sampler;
 public:
-    Vec3SToRGBSampler(openvdb::Vec3SGrid::ConstPtr grid)
+    Vec3SToRGBSampler(openvdb::Vec3SGrid::ConstPtr grid) : m_sampler(*grid)
     {
-        p_sampler = new sampler_type(*grid);
     }
 
     ~Vec3SToRGBSampler()
-    {
-        delete p_sampler;
-    }
+    { }
 
     MFloatVector get_rgb(const openvdb::Vec3d& wpos) const
     {
-        const openvdb::Vec3s value = p_sampler->wsSample(wpos);
+        const openvdb::Vec3s value = m_sampler.wsSample(wpos);
         return MFloatVector(value.x(), value.y(), value.z());
     }
 };
@@ -227,4 +221,4 @@ inline void set_bbox_indices(const unsigned int num_bboxes, MHWRender::MIndexBuf
         indices[id++] = bbox_base + 7;
     }
     bbox_indices->commit(indices);
-};
+}
