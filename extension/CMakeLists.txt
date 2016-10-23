@@ -14,6 +14,10 @@ link_directories(${MAYA_LIBRARY_DIR})
 set(MAYA_LIBS OpenMaya Foundation OpenMayaAnim OpenMayaFX OpenMayaUI OpenMayaRender)
 
 file(GLOB SRC *.cpp)
+if (INCLUDE_HEADERS_IN_BUILD)
+    file(GLOB HDR *.hpp *.h ../util/*.hpp ../util/*.h)
+    set(SRC ${SRC} ${HDR})
+endif ()
 
 add_library(${PLUGIN_NAME} SHARED ${SRC})
 set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
