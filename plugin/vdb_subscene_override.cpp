@@ -8,6 +8,7 @@
 #include <tbb/parallel_for.h>
 
 #include <new>
+#include <random>
 
 namespace MHWRender {
     struct VDBSubSceneOverrideData {
@@ -304,12 +305,13 @@ namespace MHWRender {
                 vertices.reserve(iter->get_active_voxels());
                 const openvdb::math::Transform attenuation_transform = data->attenuation_grid->transform();
 
-                const int point_skip = data->point_skip;
-
-                int point_id = 0;
+                std::mt19937 mt_generator;
+                std::uniform_real_distribution<float> uniform_0_1_dist(0.0f, 1.0f);
+                const float point_skip_ratio = 1.0f / static_cast<float>(std::max(data->point_skip, 1));
                 for (; iter->is_valid(); iter->get_next())
                 {
-                    if ((point_id++ % point_skip) != 0)
+                    // this gives a better distribution than skipping based on index
+                    if (uniform_0_1_dist(mt_generator) > point_skip_ratio)
                         continue;
                     openvdb::Vec3d vdb_pos = attenuation_transform.indexToWorld(iter->get_coord());
                     vertices.push_back(MFloatVector(static_cast<float>(vdb_pos.x()), static_cast<float>(vdb_pos.y()),
@@ -343,9 +345,9 @@ namespace MHWRender {
                     std::uniform_real_distribution<float> distributionZ(-point_jitter * static_cast<float>(voxel_size.z()), point_jitter * static_cast<float>(voxel_size.z()));
 
                     tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count), [&](const tbb::blocked_range<unsigned int>& r) {
-                        std::minstd_rand generatorX(42); // LCG
-                        std::minstd_rand generatorY(137);
-                        std::minstd_rand generatorZ(1337);
+                        std::minstd_rand generatorX(42 + r.begin()); // LCG
+                        std::minstd_rand generatorY(137 + r.begin());
+                        std::minstd_rand generatorZ(1337 + r.begin());
                         for (unsigned int i = r.begin(); i != r.end(); ++i)
                         {
                             MFloatVector pos = vertices[i];

@@ -7,7 +7,6 @@
 #include <openvdb/Exceptions.h>
 
 class RGBSampler {
-private:
     MFloatVector default_color;
 public:
     RGBSampler(const MFloatVector& dc = MFloatVector(1.0f, 1.0f, 1.0f)) : default_color(dc)
@@ -23,7 +22,6 @@ public:
 };
 
 class FloatToRGBSampler : public RGBSampler {
-private:
     typedef openvdb::tools::GridSampler<openvdb::FloatGrid, openvdb::tools::BoxSampler> sampler_type;
     sampler_type* p_sampler;
 public:
@@ -45,7 +43,6 @@ public:
 };
 
 class Vec3SToRGBSampler : public RGBSampler {
-private:
     typedef openvdb::tools::GridSampler<openvdb::Vec3SGrid, openvdb::tools::BoxSampler> sampler_type;
     sampler_type* p_sampler;
 public:
