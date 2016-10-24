@@ -8,7 +8,83 @@
 #include <new>
 #include <random>
 
+namespace {
+    // We have to options to code shaders, either cgfx, which is deprecated since 2012
+    // or ogsfx, which is a glslfx like thing and severely underdocumented.
+    // I decided to go with ogsfx, that can be reused easier later on in other
+    // packages like katana. -- Pal
+    // Best example for ogsfx https://knowledge.autodesk.com/search-result/caas/CloudHelp/cloudhelp/2016/ENU/Maya-SDK/files/GUID-94505429-12F9-4F04-A4D9-B80880AD0BA1-htm.html
+
+    // Fun part comes, when maya is not giving you error messages when the shader is invalid.
+    // Awesome, right?
+
+    const char* point_cloud_technique = R"ogsfx(
+uniform mat4 wvp : WorldViewProjection;
+
+attribute vs_input
+{
+    vec3 in_position : POSITION;
+};
+
+attribute vs_to_ps
+{
+    vec4 point_color;
+};
+
+attribute ps_output
+{
+    vec4 out_color : COLOR0;
+}
+
+GLSLShader VS
+{
+    void main()
+    {
+        gl_Position = wvp * vec4(in_position, 1.0);
+        vsOut.point_color = vec(0.0, 1.0, 0.0, 1.0);
+    }
+}
+
+GLSLShader PS
+{
+    void main()
+    {
+        out_color = vec4(1.0, 0.0, 0.0, 1.0);
+    }
+}
+
+technique Main
+{
+    pass p0
+    {
+        VertexShader(in vs_input, out vs_to_ps vsOut) = VS;
+        PixelShader(in vs_to_ps psIn, out ps_output) = PS;
+    }
+}
+    )ogsfx";
+
+    const MHWRender::MShaderManager* get_shader_manager()
+    {
+        auto renderer = MHWRender::MRenderer::theRenderer();
+        if (renderer == nullptr)
+            return nullptr;
+
+        auto shader_manager = renderer->getShaderManager();
+        if (shader_manager == nullptr)
+            return nullptr;
+
+        return shader_manager;
+    }
+}
+
 namespace MHWRender {
+    void VDBSubSceneOverride::shader_instance_deleter::operator()(MShaderInstance* p)
+    {
+        auto shmgr = get_shader_manager();
+        if (shmgr != nullptr)
+            shmgr->releaseShader(p);
+    }
+
     struct VDBSubSceneOverrideData {
         MBoundingBox bbox;
 
@@ -35,11 +111,17 @@ namespace MHWRender {
         float point_jitter;
 
         int point_skip;
+        int update_trigger;
         VDBDisplayMode display_mode;
 
         bool data_has_changed;
 
-        VDBSubSceneOverrideData()
+        VDBSubSceneOverrideData() : point_size(std::numeric_limits<float>::infinity()),
+                                    point_jitter(std::numeric_limits<float>::infinity()),
+                                    point_skip(-1),
+                                    update_trigger(-1),
+                                    display_mode(DISPLAY_AXIS_ALIGNED_BBOX),
+                                    data_has_changed(false)
         {
             for (unsigned int x = 0; x < 4; ++x)
             {
@@ -73,8 +155,10 @@ namespace MHWRender {
             // box mode
             data_has_changed = false;
 
-            if (data == nullptr)
+            if (data == nullptr || update_trigger == data->update_trigger)
                 return matrix_changed;
+
+            update_trigger = data->update_trigger;
 
             const std::string& filename = data->vdb_path;
             auto open_file = [&] () {
@@ -132,6 +216,17 @@ namespace MHWRender {
         m_object = obj;
         MFnDependencyNode dnode(obj);
         p_vdb_visualizer = dynamic_cast<VDBVisualizerShape*>(dnode.userNode());
+        auto shmgr = get_shader_manager();
+        if (shmgr != nullptr)
+        {
+            p_point_cloud_shader.reset(shmgr->getEffectsBufferShader(
+                point_cloud_technique, static_cast<unsigned int>(strlen(point_cloud_technique)), "Main", 0, 0, false));
+
+            if (p_point_cloud_shader != nullptr)
+                p_point_cloud_shader->setIsTransparent(true);
+            else
+                std::cerr << "Point cloud shader is zero!" << std::endl;
+        }
     }
 
     VDBSubSceneOverride::~VDBSubSceneOverride()
@@ -195,10 +290,16 @@ namespace MHWRender {
             point_cloud->setDrawMode(MGeometry::kAll);
             point_cloud->depthPriority(MRenderItem::sDormantPointDepthPriority);
 
-            MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
-                MHWRender::MShaderManager::k3dCPVFatPointShader, nullptr, nullptr);
-            if (shader)
-                point_cloud->setShader(shader);
+            //if (p_point_cloud_shader == nullptr)
+            {
+                MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
+                    MHWRender::MShaderManager::k3dCPVFatPointShader, nullptr, nullptr);
+                if (shader)
+                    point_cloud->setShader(shader);
+            }
+            /*else
+                point_cloud->setShader(p_point_cloud_shader.get());*/
+
             container.add(point_cloud);
         }
 
@@ -464,6 +565,14 @@ namespace MHWRender {
                 MVertexBufferArray vertex_buffers;
                 vertex_buffers.addBuffer("", p_position_buffer.get());
                 vertex_buffers.addBuffer("", p_color_buffer.get());
+
+                /*const MVertexBufferDescriptorList& reqs = point_cloud->requiredVertexBuffers();
+                for (int i = 0; i < reqs.length(); ++i)
+                {
+                    MVertexBufferDescriptor desc;
+                    reqs.getDescriptor(i, desc);
+                    std::cerr << "Requirement : (" << desc.name() << ") " << desc.semantic() << std::endl;
+                }*/
                 setGeometryForRenderItem(*point_cloud, vertex_buffers, *p_index_buffer.get(), &data->bbox);
             }
         }

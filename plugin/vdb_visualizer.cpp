@@ -755,11 +755,8 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 m_vdb_data.emission_gradient.clear();
             }
         }
-
-        return &m_vdb_data;
     }
-    else
-        return 0;
+    return &m_vdb_data; // this data will be checked in the subscene override
 }
 
 bool VDBVisualizerShape::isBounded() const
