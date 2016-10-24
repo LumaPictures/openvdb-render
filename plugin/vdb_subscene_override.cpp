@@ -12,6 +12,8 @@ namespace MHWRender {
     struct VDBSubSceneOverrideData {
         MBoundingBox bbox;
 
+        MMatrix world_matrix;
+
         MFloatVector scattering_color;
         MFloatVector attenuation_color;
         MFloatVector emission_color;
@@ -35,11 +37,15 @@ namespace MHWRender {
         int point_skip;
         VDBDisplayMode display_mode;
 
-        bool has_changed;
+        bool data_has_changed;
 
         VDBSubSceneOverrideData()
         {
-
+            for (unsigned int x = 0; x < 4; ++x)
+            {
+                for (unsigned int y = 0; y < 4; ++y)
+                    world_matrix(x, y) = std::numeric_limits<float>::infinity();
+            }
         }
 
         ~VDBSubSceneOverrideData()
@@ -55,16 +61,24 @@ namespace MHWRender {
             vdb_file.reset();
         }
 
-        bool update(const VDBVisualizerData* data)
+        bool update(const VDBVisualizerData* data, const MObject& obj)
         {
+            MDagPath dg = MDagPath::getAPathTo(obj);
+            const MMatrix inc_world_matrix = dg.inclusiveMatrix();
+            const bool matrix_changed = world_matrix != inc_world_matrix;
+            if (matrix_changed)
+                world_matrix = inc_world_matrix;
             // TODO: we can limit some of the comparisons to the display mode
             // ie, we don't need to compare certain things if we are using the bounding
             // box mode
-            bool ret = false;
+            data_has_changed = false;
+
+            if (data == nullptr)
+                return matrix_changed;
 
             const std::string& filename = data->vdb_path;
             auto open_file = [&] () {
-                ret |= true;
+                data_has_changed |= true;
                 clear();
 
                 try{
@@ -77,7 +91,7 @@ namespace MHWRender {
 
             if (filename.empty())
             {
-                ret |= true;
+                data_has_changed |= true;
                 clear();
             }
             else if (vdb_file == nullptr)
@@ -85,23 +99,23 @@ namespace MHWRender {
             else if (filename != vdb_file->filename())
                 open_file();
 
-            ret |= setup_parameter(display_mode, data->display_mode);
-            ret |= setup_parameter(bbox, data->bbox);
-            ret |= setup_parameter(scattering_color, data->scattering_color);
-            ret |= setup_parameter(attenuation_color, data->attenuation_color);
-            ret |= setup_parameter(emission_color, data->emission_color);
-            ret |= setup_parameter(attenuation_channel, data->attenuation_channel);
-            ret |= setup_parameter(scattering_channel, data->scattering_channel);
-            ret |= setup_parameter(emission_channel, data->emission_channel);
-            ret |= setup_parameter(scattering_gradient, data->scattering_gradient);
-            ret |= setup_parameter(attenuation_gradient, data->attenuation_gradient);
-            ret |= setup_parameter(emission_gradient, data->emission_gradient);
-            ret |= setup_parameter(point_skip, data->point_skip);
+            data_has_changed |= setup_parameter(display_mode, data->display_mode);
+            data_has_changed |= setup_parameter(bbox, data->bbox);
+            data_has_changed |= setup_parameter(scattering_color, data->scattering_color);
+            data_has_changed |= setup_parameter(attenuation_color, data->attenuation_color);
+            data_has_changed |= setup_parameter(emission_color, data->emission_color);
+            data_has_changed |= setup_parameter(attenuation_channel, data->attenuation_channel);
+            data_has_changed |= setup_parameter(scattering_channel, data->scattering_channel);
+            data_has_changed |= setup_parameter(emission_channel, data->emission_channel);
+            data_has_changed |= setup_parameter(scattering_gradient, data->scattering_gradient);
+            data_has_changed |= setup_parameter(attenuation_gradient, data->attenuation_gradient);
+            data_has_changed |= setup_parameter(emission_gradient, data->emission_gradient);
+            data_has_changed |= setup_parameter(point_skip, data->point_skip);
 
             point_size = data->point_size;
             point_jitter = data->point_jitter; // We can jitter in the vertex shader. Hopefully
 
-            return ret;
+            return data_has_changed | matrix_changed;
         }
     };
 
@@ -115,6 +129,7 @@ namespace MHWRender {
     VDBSubSceneOverride::VDBSubSceneOverride(const MObject& obj) : MPxSubSceneOverride(obj),
                                                                    p_data(new VDBSubSceneOverrideData)
     {
+        m_object = obj;
         MFnDependencyNode dnode(obj);
         p_vdb_visualizer = dynamic_cast<VDBVisualizerShape*>(dnode.userNode());
     }
@@ -144,11 +159,6 @@ namespace MHWRender {
         if (shader_manager == nullptr)
             return;
 
-        const bool file_exists = data->vdb_file != nullptr;
-
-        const static MVertexBufferDescriptor position_buffer_desc("", MGeometry::kPosition, MGeometry::kFloat, 3);
-        const static MVertexBufferDescriptor color_buffer_desc("", MGeometry::kColor, MGeometry::kFloat, 4);
-
         MRenderItem* bounding_box = container.find("bounding_box");
         if (bounding_box == nullptr)
         {
@@ -157,8 +167,6 @@ namespace MHWRender {
                                                           MGeometry::kLines);
             bounding_box->enable(false);
             bounding_box->setDrawMode(MGeometry::kAll);
-            MMatrix identity_matrix = MMatrix::identity;
-            bounding_box->setMatrix(&identity_matrix);
             bounding_box->depthPriority(MRenderItem::sDormantWireDepthPriority);
 
             MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
@@ -185,8 +193,6 @@ namespace MHWRender {
                                                          false);
             point_cloud->enable(false);
             point_cloud->setDrawMode(MGeometry::kAll);
-            MMatrix identity_matrix = MMatrix::identity;
-            point_cloud->setMatrix(&identity_matrix);
             point_cloud->depthPriority(MRenderItem::sDormantPointDepthPriority);
 
             MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
@@ -195,6 +201,17 @@ namespace MHWRender {
                 point_cloud->setShader(shader);
             container.add(point_cloud);
         }
+
+        bounding_box->setMatrix(&data->world_matrix);
+        point_cloud->setMatrix(&data->world_matrix);
+
+        if (!data->data_has_changed)
+            return;
+
+        const bool file_exists = data->vdb_file != nullptr;
+
+        const static MVertexBufferDescriptor position_buffer_desc("", MGeometry::kPosition, MGeometry::kFloat, 3);
+        const static MVertexBufferDescriptor color_buffer_desc("", MGeometry::kColor, MGeometry::kFloat, 4);
 
         if (!file_exists || data->display_mode <= DISPLAY_GRID_BBOX)
         {
@@ -450,11 +467,12 @@ namespace MHWRender {
                 setGeometryForRenderItem(*point_cloud, vertex_buffers, *p_index_buffer.get(), &data->bbox);
             }
         }
+
+        data->data_has_changed = false;
     }
 
     bool VDBSubSceneOverride::requiresUpdate(const MSubSceneContainer& /*container*/, const MFrameContext& /*frameContext*/) const
     {
-        const VDBVisualizerData* data = p_vdb_visualizer->get_update();
-        return data != nullptr && p_data->update(data);
+        return p_data->update(p_vdb_visualizer->get_update(), m_object);
     }
 }

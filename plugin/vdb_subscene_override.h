@@ -22,6 +22,7 @@ namespace MHWRender {
 
         static MString registrantId;
     private:
+        MObject m_object;
         VDBVisualizerShape* p_vdb_visualizer;
         std::unique_ptr<VDBSubSceneOverrideData> p_data;
 
