@@ -6,13 +6,13 @@ OpenVDB Render is a generic toolkit for rendering and visualizing openvdb volume
 
 **Where are we right now?**
 
-The repository contains a maya plugin, MtoA extension and a set of Arnold shaders. Even though some of the components, like visualisation, are simple, all the tools are production proven and actively used at Luma Pictures.
+The repository contains a Maya plugin, MtoA extension and a set of Arnold shaders. Even though some of the components, like visualisation, are simple, all the tools are production proven and actively used at Luma Pictures.
 
-**What are our short term goals?**
+**What are our short-term goals?**
 
 -   Improve real-time display in Maya.
 -   Add support for Katana, and share as much code as possible between the Maya plugin and Katana.
--   Suport building on Windows.
+-   Support building on Windows.
 
 **Supported platforms**
 
