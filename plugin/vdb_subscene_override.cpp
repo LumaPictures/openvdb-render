@@ -24,6 +24,7 @@ uniform mat4 wvp : WorldViewProjection;
 attribute vs_input
 {
     vec3 in_position : POSITION;
+    vec4 in_color : TEXCOORD0;
 };
 
 attribute vs_to_ps
@@ -41,7 +42,8 @@ GLSLShader VS
     void main()
     {
         gl_Position = wvp * vec4(in_position, 1.0);
-        vsOut.point_color = vec(0.0, 1.0, 0.0, 1.0);
+        gl_PointSize = 10.0;
+        vsOut.point_color = in_color;
     }
 }
 
@@ -49,7 +51,7 @@ GLSLShader PS
 {
     void main()
     {
-        out_color = vec4(1.0, 0.0, 0.0, 1.0);
+        out_color = psIn.point_color;
     }
 }
 
@@ -290,15 +292,15 @@ namespace MHWRender {
             point_cloud->setDrawMode(MGeometry::kAll);
             point_cloud->depthPriority(MRenderItem::sDormantPointDepthPriority);
 
-            //if (p_point_cloud_shader == nullptr)
+            if (p_point_cloud_shader == nullptr)
             {
                 MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
                     MHWRender::MShaderManager::k3dCPVFatPointShader, nullptr, nullptr);
                 if (shader)
                     point_cloud->setShader(shader);
             }
-            /*else
-                point_cloud->setShader(p_point_cloud_shader.get());*/
+            else
+                point_cloud->setShader(p_point_cloud_shader.get());
 
             container.add(point_cloud);
         }
@@ -312,7 +314,7 @@ namespace MHWRender {
         const bool file_exists = data->vdb_file != nullptr;
 
         const static MVertexBufferDescriptor position_buffer_desc("", MGeometry::kPosition, MGeometry::kFloat, 3);
-        const static MVertexBufferDescriptor color_buffer_desc("", MGeometry::kColor, MGeometry::kFloat, 4);
+        const static MVertexBufferDescriptor color_buffer_desc("", MGeometry::kTexture, MGeometry::kFloat, 4);
 
         if (!file_exists || data->display_mode <= DISPLAY_GRID_BBOX)
         {
@@ -565,14 +567,6 @@ namespace MHWRender {
                 MVertexBufferArray vertex_buffers;
                 vertex_buffers.addBuffer("", p_position_buffer.get());
                 vertex_buffers.addBuffer("", p_color_buffer.get());
-
-                /*const MVertexBufferDescriptorList& reqs = point_cloud->requiredVertexBuffers();
-                for (int i = 0; i < reqs.length(); ++i)
-                {
-                    MVertexBufferDescriptor desc;
-                    reqs.getDescriptor(i, desc);
-                    std::cerr << "Requirement : (" << desc.name() << ") " << desc.semantic() << std::endl;
-                }*/
                 setGeometryForRenderItem(*point_cloud, vertex_buffers, *p_index_buffer.get(), &data->bbox);
             }
         }
