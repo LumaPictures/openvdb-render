@@ -40,6 +40,10 @@ struct VDBVisualizerData{
     Gradient attenuation_gradient;
     Gradient emission_gradient;
 
+    Gradient smoke_gradient;
+    Gradient opacity_gradient;
+    Gradient fire_gradient;
+
     openvdb::io::File* vdb_file;
 
     float point_size;

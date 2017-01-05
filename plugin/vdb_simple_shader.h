@@ -4,6 +4,8 @@
 #include <maya/MString.h>
 #include <maya/MTypeId.h>
 
+#include "vdb_sampler.h"
+
 struct VDBSimpleShaderParams{
     VDBSimpleShaderParams();
 
@@ -25,6 +27,11 @@ struct VDBSimpleShaderParams{
     MObject position_offset;
     MObject interpolation;
     MObject compensate_scaling;
+
+    VDBGradientParams smoke_gradient;
+    VDBGradientParams opacity_gradient;
+    VDBGradientParams fire_gradient;
+
 };
 
 class VDBSimpleShaderNode : public MPxNode {

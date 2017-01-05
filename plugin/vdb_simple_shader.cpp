@@ -8,7 +8,13 @@
 #include <maya/MFnStringData.h>
 
 
-VDBSimpleShaderParams::VDBSimpleShaderParams() : position_offset(MObject::kNullObj), interpolation(MObject::kNullObj), compensate_scaling(MObject::kNullObj)
+VDBSimpleShaderParams::VDBSimpleShaderParams() :
+position_offset(MObject::kNullObj),
+interpolation(MObject::kNullObj),
+compensate_scaling(MObject::kNullObj),
+smoke_gradient("simpleSmoke"),
+opacity_gradient("simpleOpacity"),
+fire_gradient("simpleFire")
 {
 
 }
@@ -68,6 +74,10 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
     nAttr.setChannelBox(true);
     MPxNode::addAttribute(fire_intensity);
 
+    smoke_gradient.create_params();
+    opacity_gradient.create_params();
+    fire_gradient.create_params();
+
     if (add_shared)
     {
         anisotropy = nAttr.create("anisotropy", "anisotropy", MFnNumericData::kFloat);
@@ -90,6 +100,7 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
         compensate_scaling = nAttr.create("compensateScaling", "compensate_scaling", MFnNumericData::kBoolean);
         nAttr.setDefault(true);
         MPxNode::addAttribute(compensate_scaling);
+
     }
 }
 
@@ -113,6 +124,11 @@ void VDBSimpleShaderParams::affect_output(MObject& out_object)
         MPxNode::attributeAffects(interpolation, out_object);
         MPxNode::attributeAffects(compensate_scaling, out_object);
     }
+
+    smoke_gradient.affect_output(out_object);
+    opacity_gradient.affect_output(out_object);
+    fire_gradient.affect_output(out_object);
+
 }
 
 bool VDBSimpleShaderParams::check_plug(MPlug& plug)
@@ -121,7 +137,8 @@ bool VDBSimpleShaderParams::check_plug(MPlug& plug)
            plug == anisotropy || plug == opacity || plug == opacity_channel ||
            plug == opacity_intensity || plug == opacity_shadow || plug == fire ||
            plug == fire_channel || plug == fire_intensity || plug == position_offset ||
-           plug == interpolation || plug == compensate_scaling;
+           plug == interpolation || plug == compensate_scaling || smoke_gradient.check_plug(plug) ||
+           opacity_gradient.check_plug(plug) || fire_gradient.check_plug(plug);
 }
 
 const MTypeId VDBSimpleShaderNode::s_type_id(ID_VDB_SIMPLE_VOLUME_SHADER);
