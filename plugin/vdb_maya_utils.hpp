@@ -46,6 +46,19 @@ inline bool read_grid_transformed_bbox_wire(openvdb::GridBase::ConstPtr grid, st
     return true;
 }
 
+inline bool grid_is_empty(openvdb::GridBase::ConstPtr grid)
+{
+    const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
+    if (file_bbox_min.x() == std::numeric_limits<int>::max() ||
+        file_bbox_min.y() == std::numeric_limits<int>::max() ||
+        file_bbox_min.z() == std::numeric_limits<int>::max())
+        return true;
+    const openvdb::Vec3i file_bbox_max = grid->metaValue<openvdb::Vec3i>("file_bbox_max");
+    return file_bbox_max.x() == std::numeric_limits<int>::min() ||
+           file_bbox_max.y() == std::numeric_limits<int>::min() ||
+           file_bbox_max.z() == std::numeric_limits<int>::min();
+}
+
 inline bool read_transformed_bounding_box(openvdb::GridBase::ConstPtr grid, MBoundingBox& bbox)
 {
     const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
