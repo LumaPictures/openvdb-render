@@ -461,9 +461,9 @@ MStatus VDBVisualizerShape::initialize()
     eAttr.addField("Axis Aligned Bounding Box", DISPLAY_AXIS_ALIGNED_BBOX);
     eAttr.addField("Per Grid Bounding Box", DISPLAY_GRID_BBOX);
     eAttr.addField("Point Cloud", DISPLAY_POINT_CLOUD);
-    eAttr.addField("Volumetric Non Shaded", DISPLAY_NON_SHADED);
-    eAttr.addField("Volumetric Shaded", DISPLAY_SHADED);
-    eAttr.addField("Mesh", DISPLAY_MESH);
+    //eAttr.addField("Volumetric Non Shaded", DISPLAY_NON_SHADED);
+    //eAttr.addField("Volumetric Shaded", DISPLAY_SHADED);
+    //eAttr.addField("Mesh", DISPLAY_MESH);
     eAttr.setDefault(DISPLAY_GRID_BBOX);
 
     addAttribute(s_display_mode);
@@ -708,6 +708,9 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                     m_vdb_data.emission_channel = "";
                 }
 
+                m_vdb_data.smoke_gradient.clear();
+                m_vdb_data.opacity_gradient.clear();
+                m_vdb_data.fire_gradient.clear();
                 m_vdb_data.scattering_gradient.update(s_shader_params.scattering_gradient, tmo);
                 m_vdb_data.attenuation_gradient.update(s_shader_params.attenuation_gradient, tmo);
                 m_vdb_data.emission_gradient.update(s_shader_params.emission_gradient, tmo);
@@ -753,6 +756,11 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 m_vdb_data.scattering_gradient.clear();
                 m_vdb_data.attenuation_gradient.clear();
                 m_vdb_data.emission_gradient.clear();
+
+                m_vdb_data.smoke_gradient.update(s_simple_shader_params.smoke_gradient, tmo);
+                m_vdb_data.opacity_gradient.update(s_simple_shader_params.opacity_gradient, tmo);
+                m_vdb_data.fire_gradient.update(s_simple_shader_params.fire_gradient, tmo);
+
             }
         }
     }
@@ -777,6 +785,9 @@ void VDBVisualizerShape::postConstructor()
     s_shader_params.scattering_gradient.post_constructor(tmo);
     s_shader_params.attenuation_gradient.post_constructor(tmo);
     s_shader_params.emission_gradient.post_constructor(tmo);
+    s_simple_shader_params.smoke_gradient.post_constructor(tmo);
+    s_simple_shader_params.opacity_gradient.post_constructor(tmo);
+    s_simple_shader_params.fire_gradient.post_constructor(tmo);
 }
 
 VDBVisualizerShapeUI::VDBVisualizerShapeUI()

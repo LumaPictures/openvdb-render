@@ -16,7 +16,7 @@ The repository contains a Maya plugin, MtoA extension and a set of Arnold shader
 
 **Supported platforms**
 
--   Maya 2016
+-   Maya 2016 (OpenGL Core Profile)
 -   CY2016
 -   Arnold 4.2.x.
 -   GCC 4.8.3.
