@@ -39,7 +39,6 @@
   </XML>
   <codeStyleSettings language="ObjectiveC">
     <option name="KEEP_CONTROL_STATEMENT_IN_ONE_LINE" value="false" />
-    <option name="ELSE_ON_NEW_LINE" value="true" />
     <option name="CATCH_ON_NEW_LINE" value="true" />
     <option name="SPACE_AFTER_TYPE_CAST" value="false" />
     <option name="KEEP_SIMPLE_METHODS_IN_ONE_LINE" value="false" />
