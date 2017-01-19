@@ -15,13 +15,18 @@
 #include "vdb_shader.h"
 #include "vdb_simple_shader.h"
 
-enum VDBDisplayMode{
+enum VDBDisplayMode {
     DISPLAY_AXIS_ALIGNED_BBOX = 0,
     DISPLAY_GRID_BBOX,
     DISPLAY_POINT_CLOUD,
     DISPLAY_NON_SHADED,
     DISPLAY_SHADED,
     DISPLAY_MESH
+};
+
+enum VDBShaderMode {
+    SHADER_MODE_VOLUME_COLLECTOR = 0,
+    SHADER_MODE_SIMPLE = 1
 };
 
 struct VDBVisualizerData{
@@ -40,10 +45,6 @@ struct VDBVisualizerData{
     Gradient attenuation_gradient;
     Gradient emission_gradient;
 
-    Gradient smoke_gradient;
-    Gradient opacity_gradient;
-    Gradient fire_gradient;
-
     openvdb::io::File* vdb_file;
 
     float point_size;
@@ -52,6 +53,7 @@ struct VDBVisualizerData{
     int point_skip;
     int update_trigger;
     VDBDisplayMode display_mode;
+    VDBShaderMode shader_mode;
 
     VDBVisualizerData();
     ~VDBVisualizerData();

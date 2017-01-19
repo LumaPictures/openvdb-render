@@ -51,8 +51,9 @@ public:
                 if (status)
                 {
                     m_float_ramp.resize(RAMP_SAMPLE_COUNT);
-                    for (unsigned int i = 0; i < RAMP_SAMPLE_COUNT; ++i)
+                    for (unsigned int i = 0; i < RAMP_SAMPLE_COUNT; ++i) {
                         m_float_ramp[i] = float_array[i];
+                    }
                 }
             }
             else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP)

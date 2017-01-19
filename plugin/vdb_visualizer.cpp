@@ -90,11 +90,6 @@ namespace {
         CACHE_OUT_OF_RANGE_MODE_REPEAT
     };
 
-    enum {
-        SHADER_MODE_VOLUME_COLLECTOR = 0,
-        SHADER_MODE_SIMPLE = 1
-    };
-
     // we have to do lots of line, rectangle intersection, so using the Cohen-Sutherland algorithm
     // https://en.wikipedia.org/wiki/Cohen%E2%80%93Sutherland_algorithm
     class SelectionRectangle {
@@ -199,7 +194,8 @@ namespace {
 VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)), scattering_color(1.0f, 1.0f, 1.0f),
                                          attenuation_color(1.0f, 1.0f, 1.0f), emission_color(1.0f, 1.0f, 1.0f),
                                          vdb_file(nullptr), point_size(2.0f), point_jitter(0.15f),
-                                         point_skip(1), update_trigger(0)
+                                         point_skip(1), update_trigger(0), display_mode(DISPLAY_GRID_BBOX),
+                                         shader_mode(SHADER_MODE_VOLUME_COLLECTOR)
 {
 }
 
@@ -657,7 +653,8 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
 
         if (m_vdb_data.display_mode >= DISPLAY_POINT_CLOUD)
         {
-            const short shader_mode = MPlug(tmo, s_shader_mode).asShort();
+            const auto shader_mode = static_cast<VDBShaderMode>(MPlug(tmo, s_shader_mode).asShort());
+            m_vdb_data.shader_mode = shader_mode;
             if (shader_mode == SHADER_MODE_VOLUME_COLLECTOR)
             {
                 const short scattering_mode = MPlug(tmo, s_shader_params.scattering_source).asShort();
@@ -728,9 +725,9 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                     m_vdb_data.emission_channel = "";
                 }
 
-                m_vdb_data.smoke_gradient.clear();
-                m_vdb_data.opacity_gradient.clear();
-                m_vdb_data.fire_gradient.clear();
+                m_vdb_data.scattering_gradient.clear();
+                m_vdb_data.attenuation_gradient.clear();
+                m_vdb_data.emission_gradient.clear();
                 m_vdb_data.scattering_gradient.update(s_shader_params.scattering_gradient, tmo);
                 m_vdb_data.attenuation_gradient.update(s_shader_params.attenuation_gradient, tmo);
                 m_vdb_data.emission_gradient.update(s_shader_params.emission_gradient, tmo);
@@ -776,11 +773,9 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 m_vdb_data.scattering_gradient.clear();
                 m_vdb_data.attenuation_gradient.clear();
                 m_vdb_data.emission_gradient.clear();
-
-                m_vdb_data.smoke_gradient.update(s_simple_shader_params.smoke_gradient, tmo);
-                m_vdb_data.opacity_gradient.update(s_simple_shader_params.opacity_gradient, tmo);
-                m_vdb_data.fire_gradient.update(s_simple_shader_params.fire_gradient, tmo);
-
+                m_vdb_data.scattering_gradient.update(s_simple_shader_params.smoke_gradient, tmo);
+                m_vdb_data.attenuation_gradient.update(s_simple_shader_params.opacity_gradient, tmo);
+                m_vdb_data.emission_gradient.update(s_simple_shader_params.fire_gradient, tmo);
             }
         }
     }

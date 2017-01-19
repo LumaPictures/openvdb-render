@@ -144,6 +144,7 @@ namespace MHWRender {
         int point_skip;
         int update_trigger;
         VDBDisplayMode display_mode;
+        VDBShaderMode shader_mode;
 
         bool data_has_changed;
 
@@ -151,7 +152,7 @@ namespace MHWRender {
                                     point_jitter(std::numeric_limits<float>::infinity()),
                                     point_skip(-1),
                                     update_trigger(-1),
-                                    display_mode(DISPLAY_AXIS_ALIGNED_BBOX),
+                                    display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_VOLUME_COLLECTOR),
                                     data_has_changed(false)
         {
             for (unsigned int x = 0; x < 4; ++x) {
@@ -218,6 +219,7 @@ namespace MHWRender {
             }
 
             data_has_changed |= setup_parameter(display_mode, data->display_mode);
+            data_has_changed |= setup_parameter(shader_mode, data->shader_mode);
             data_has_changed |= setup_parameter(bbox, data->bbox);
             data_has_changed |= setup_parameter(scattering_color, data->scattering_color);
             data_has_changed |= setup_parameter(attenuation_color, data->attenuation_color);
@@ -296,8 +298,6 @@ namespace MHWRender {
             return;
         }
 
-        p_point_cloud_shader->setParameter("point_size", data->point_size);
-
         MRenderItem* bounding_box = container.find("bounding_box");
         if (bounding_box == nullptr) {
             bounding_box = MHWRender::MRenderItem::Create("bounding_box",
@@ -347,6 +347,11 @@ namespace MHWRender {
 
         bounding_box->setMatrix(&data->world_matrix);
         point_cloud->setMatrix(&data->world_matrix);
+
+        // Setting up shader parameters
+        if (p_point_cloud_shader) {
+            p_point_cloud_shader->setParameter("point_size", data->point_size);
+        }
 
         if (!data->data_has_changed) {
             return;
