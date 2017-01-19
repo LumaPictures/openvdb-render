@@ -3,6 +3,7 @@
 #include "vdb_maya_utils.hpp"
 
 #include <maya/MGlobal.h>
+#include <maya/MFnDagNode.h>
 
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
@@ -167,13 +168,17 @@ namespace MHWRender {
 
         bool data_has_changed;
         bool shader_has_changed;
+        bool visible;
+        bool old_bounding_box_enabled;
+        bool old_point_cloud_enabled;
 
         VDBSubSceneOverrideData() :
             voxel_size(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()),
             point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
             vertex_count(0), point_skip(-1), update_trigger(-1),
             display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_VOLUME_COLLECTOR),
-            data_has_changed(false), shader_has_changed(false)
+            data_has_changed(false), shader_has_changed(false), visible(true),
+            old_bounding_box_enabled(false), old_point_cloud_enabled(false)
         {
             for (unsigned int x = 0; x < 4; ++x) {
                 for (unsigned int y = 0; y < 4; ++y) {
@@ -206,11 +211,25 @@ namespace MHWRender {
             // TODO: we can limit some of the comparisons to the display mode
             // ie, we don't need to compare certain things if we are using the bounding
             // box mode
-            data_has_changed = false;
-            shader_has_changed = false;
+
+            auto path_is_visible = [&dg]() -> bool {
+                MDagPath dg_copy = dg;
+                MFnDagNode dg_node;
+                for (MStatus status = MS::kSuccess; status; status = dg_copy.pop()) {
+                    dg_node.setObject(dg_copy.node());
+                    if (dg_node.isIntermediateObject()) {
+                        return false;
+                    } else if (!dg_node.findPlug("visibility").asBool()) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            const bool visibility_changed = setup_parameter(visible, path_is_visible());
 
             if (data == nullptr || update_trigger == data->update_trigger) {
-                return matrix_changed;
+                return matrix_changed | visibility_changed;
             }
 
             update_trigger = data->update_trigger;
@@ -256,7 +275,7 @@ namespace MHWRender {
             shader_has_changed |= setup_parameter(point_size, data->point_size);
             shader_has_changed |= setup_parameter(point_jitter, data->point_jitter);
 
-            return data_has_changed | shader_has_changed | matrix_changed;
+            return data_has_changed | shader_has_changed | matrix_changed | visibility_changed;
         }
     };
 
@@ -360,6 +379,17 @@ namespace MHWRender {
             }
 
             container.add(point_cloud);
+        }
+
+        if (!data->visible) {
+            data->old_point_cloud_enabled = point_cloud->isEnabled();
+            data->old_bounding_box_enabled = bounding_box->isEnabled();
+            point_cloud->enable(false);
+            bounding_box->enable(false);
+            return;
+        } else {
+            point_cloud->enable(data->old_point_cloud_enabled);
+            bounding_box->enable(data->old_bounding_box_enabled);
         }
 
         bounding_box->setMatrix(&data->world_matrix);
@@ -658,6 +688,7 @@ namespace MHWRender {
     bool VDBSubSceneOverride::requiresUpdate(const MSubSceneContainer& /*container*/,
                                              const MFrameContext& /*frameContext*/) const
     {
+
         return p_data->update(p_vdb_visualizer->get_update(), m_object);
     }
 }
