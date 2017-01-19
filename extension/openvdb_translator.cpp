@@ -35,7 +35,7 @@ void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, s
     auto check_channel = [&](const char* channel) {
         const char* ch = AiNodeGetStr(node, channel);
         if (ch != 0 && strlen(ch) > 0)
-            out_grids.insert(ch);
+            out_grids.insert(std::string(ch));
     };
 
     if (AiNodeIs(node, "volume_sample_float") || AiNodeIs(node, "volume_sample_rgb") || AiNodeIs(node, "openvdb_sampler"))
@@ -182,6 +182,36 @@ void OpenvdbTranslator::Export(AtNode* volume)
     AiNodeSetFlt(volume, "step_size", voxel_size / (sampling_quality / 100.0f));
 
     AiNodeSetBool(volume, "matte", FindMayaPlug("matte").asBool());
+
+    AiNodeSetBool(volume, "receive_shadows", FindMayaPlug("receiveShadows").asBool());
+
+    AiNodeSetByte(volume, "visibility", ComputeVisibility());
+
+    AtByte visibility = 0;
+    if (FindMayaPlug("primaryVisibility").asBool()) {
+        visibility |= AI_RAY_CAMERA;
+    }
+    if (FindMayaPlug("castsShadows").asBool()) {
+        visibility |= AI_RAY_SHADOW;
+    }
+    if (FindMayaPlug("visibleInDiffuse").asBool()) {
+        visibility |= AI_RAY_DIFFUSE;
+    }
+    if (FindMayaPlug("visibleInReflections").asBool()) {
+        visibility |= AI_RAY_REFLECTED;
+    }
+    if (FindMayaPlug("visibleInGlossy").asBool()) {
+        visibility |= AI_RAY_GLOSSY;
+    }
+    if (FindMayaPlug("visibleInRefractions").asBool()) {
+        visibility |= AI_RAY_REFRACTED;
+    }
+    if (FindMayaPlug("visibleInSubsurface").asBool()) {
+        visibility |= AI_RAY_SUBSURFACE;
+    }
+
+    AiNodeSetByte(volume, "visibility", visibility);
+    AiNodeSetBool(volume, "self_shadows", FindMayaPlug("selfShadows").asBool());
 }
 
 void OpenvdbTranslator::ExportMotion(AtNode* volume, unsigned int step)

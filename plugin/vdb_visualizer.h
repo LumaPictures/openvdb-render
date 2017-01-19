@@ -109,6 +109,10 @@ public:
     static MObject s_channel_stats;
     static MObject s_voxel_size;
     static MObject s_matte;
+    static MObject s_visible_in_diffuse;
+    static MObject s_visible_in_glossy;
+    static MObject s_visible_in_subsurface;
+    static MObject s_self_shadows;
 
     // display parameters
     static MObject s_point_size;

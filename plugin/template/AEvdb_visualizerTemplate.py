@@ -267,6 +267,17 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl("matte", label="Matte")
         self.addControl("boundsSlack", label="Bounds Slack")
 
+        self.beginLayout("Visibility Parameters", collapse=False)
+        self.addControl("primaryVisibility", label="Primary Visibility")
+        self.addControl("castsShadows", label="Casts Shadows")
+        self.addControl("visibleInDiffuse", label="Visible in Diffuse")
+        self.addControl("visibleInReflections", label="Visible in Reflections")
+        self.addControl("visibleInGlossy", label="Visible in Glossy")
+        self.addControl("visibleInRefractions", label="Visible in Refractions")
+        self.addControl("visibleInSubsurface", label="Visible in Subsurface")
+        self.addControl("selfShadows", label="Self Shadows")
+        self.endLayout()
+
         self.beginLayout("Sampling", collapse=False)
         self.addControl("position_offset")
         self.addControl("interpolation")

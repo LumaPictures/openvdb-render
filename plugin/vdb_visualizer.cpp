@@ -56,6 +56,10 @@ MObject VDBVisualizerShape::s_bbox_max;
 MObject VDBVisualizerShape::s_channel_stats;
 MObject VDBVisualizerShape::s_voxel_size;
 MObject VDBVisualizerShape::s_matte;
+MObject VDBVisualizerShape::s_visible_in_diffuse;
+MObject VDBVisualizerShape::s_visible_in_glossy;
+MObject VDBVisualizerShape::s_visible_in_subsurface;
+MObject VDBVisualizerShape::s_self_shadows;
 
 MObject VDBVisualizerShape::s_point_size;
 MObject VDBVisualizerShape::s_point_jitter;
@@ -531,6 +535,22 @@ MStatus VDBVisualizerShape::initialize()
     s_matte = nAttr.create("matte", "matte", MFnNumericData::kBoolean);
     nAttr.setDefault(false);
     addAttribute(s_matte);
+
+    s_visible_in_diffuse = nAttr.create("visibleInDiffuse", "visible_in_diffuse", MFnNumericData::kBoolean);
+    nAttr.setDefault(true);
+    addAttribute(s_visible_in_diffuse);
+
+    s_visible_in_glossy = nAttr.create("visibleInGlossy", "visible_in_glossy", MFnNumericData::kBoolean);
+    nAttr.setDefault(true);
+    addAttribute(s_visible_in_glossy);
+
+    s_visible_in_subsurface = nAttr.create("visibleInSubsurface", "visible_in_subsurface", MFnNumericData::kBoolean);
+    nAttr.setDefault(true);
+    addAttribute(s_visible_in_subsurface);
+
+    s_self_shadows = nAttr.create("selfShadows", "self_shadows", MFnNumericData::kBoolean);
+    nAttr.setDefault(true);
+    addAttribute(s_self_shadows);
 
     s_point_size = nAttr.create("pointSize", "point_size", MFnNumericData::kFloat);
     nAttr.setMin(1.0f);
