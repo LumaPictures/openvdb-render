@@ -8,28 +8,28 @@
 
 extern "C"
 {
-    DLLEXPORT void initializeExtension(CExtension& extension)
-    {
-        extension.Requires("openvdb_render");
+DLLEXPORT void initializeExtension(CExtension& extension)
+{
+    extension.Requires("openvdb_render");
 
-        extension.RegisterTranslator("vdb_visualizer",
-                                     "",
-                                     OpenvdbTranslator::creator);
+    extension.RegisterTranslator("vdb_visualizer",
+                                 "",
+                                 OpenvdbTranslator::creator);
 
-        extension.RegisterTranslator("vdb_sampler",
-                                     "",
-                                     SamplerTranslator::creator);
+    extension.RegisterTranslator("vdb_sampler",
+                                 "",
+                                 SamplerTranslator::creator);
 
-        extension.RegisterTranslator("vdb_shader",
-                                     "",
-                                     VDBShaderTranslator::creator);
+    extension.RegisterTranslator("vdb_shader",
+                                 "",
+                                 VDBShaderTranslator::creator);
 
-        extension.RegisterTranslator("vdb_simple_shader",
-                                     "",
-                                     VDBSimpleShaderTranslator::creator);
-    }
+    extension.RegisterTranslator("vdb_simple_shader",
+                                 "",
+                                 VDBSimpleShaderTranslator::creator);
+}
 
-    DLLEXPORT void deinitializeExtension(CExtension&)
-    {
-    }
+DLLEXPORT void deinitializeExtension(CExtension&)
+{
+}
 }

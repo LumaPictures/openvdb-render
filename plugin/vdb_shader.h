@@ -7,11 +7,13 @@
 
 #include "vdb_sampler.h"
 
-struct VDBShaderParams{
+struct VDBShaderParams {
     VDBShaderParams();
 
     void create_params();
+
     void affect_output(MObject& out_object);
+
     bool check_plug(const MPlug& plug);
 
     MObject scattering_source;
@@ -45,6 +47,7 @@ public:
     static void* creator();
 
     VDBShaderNode();
+
     ~VDBShaderNode();
 
     virtual MStatus compute(const MPlug& plug, MDataBlock& dataBlock);

@@ -17,7 +17,6 @@ VDBShaderParams VDBShaderNode::s_shader_params;
 VDBShaderParams::VDBShaderParams() : scattering_gradient("scattering"), attenuation_gradient("attenuation"),
                                      emission_gradient("emission")
 {
-
 }
 
 void VDBShaderParams::create_params()

@@ -22,35 +22,34 @@ MStatus initializePlugin(MObject obj)
                                   VDBVisualizerShape::creator, VDBVisualizerShape::initialize,
                                   VDBVisualizerShapeUI::creator, &VDBVisualizerShape::drawDbClassification);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error registering the VDBVisualizer Node.");
         return status;
     }
 
     status = plugin.registerNode(VDBSamplerNode::s_type_name, VDBSamplerNode::s_type_id,
-                                 VDBSamplerNode::creator, VDBSamplerNode::initialize, MPxNode::kDependNode, &VDBSamplerNode::s_classification);
+                                 VDBSamplerNode::creator, VDBSamplerNode::initialize, MPxNode::kDependNode,
+                                 &VDBSamplerNode::s_classification);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error registering the VDBSampler Node.");
         return status;
     }
 
     status = plugin.registerNode(VDBShaderNode::s_type_name, VDBShaderNode::s_type_id,
-                                 VDBShaderNode::creator, VDBShaderNode::initialize, MPxNode::kDependNode, &VDBShaderNode::s_classification);
+                                 VDBShaderNode::creator, VDBShaderNode::initialize, MPxNode::kDependNode,
+                                 &VDBShaderNode::s_classification);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error registering the VDBShader Node.");
         return status;
     }
 
     status = plugin.registerNode(VDBSimpleShaderNode::s_type_name, VDBSimpleShaderNode::s_type_id,
-                                 VDBSimpleShaderNode::creator, VDBSimpleShaderNode::initialize, MPxNode::kDependNode, &VDBSimpleShaderNode::s_classification);
+                                 VDBSimpleShaderNode::creator, VDBSimpleShaderNode::initialize, MPxNode::kDependNode,
+                                 &VDBSimpleShaderNode::s_classification);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error registering the VDBSimpleShader Node.");
         return status;
     }
@@ -61,8 +60,7 @@ MStatus initializePlugin(MObject obj)
         MHWRender::VDBSubSceneOverride::creator
     );
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error registering the VDBVisualizer Sub Scene Override.");
         return status;
     }
@@ -71,14 +69,15 @@ MStatus initializePlugin(MObject obj)
 
     status = plugin.registerCommand("vdb_query", VDBQueryCmd::creator, VDBQueryCmd::create_syntax);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error registering the VDBQuery Command.");
         return status;
     }
 
-    if (is_interactive)
-        MGlobal::executePythonCommand("import AEvdb_visualizerTemplate; import AEvdb_samplerTemplate; import AEvdb_shaderTemplate");
+    if (is_interactive) {
+        MGlobal::executePythonCommand(
+            "import AEvdb_visualizerTemplate; import AEvdb_samplerTemplate; import AEvdb_shaderTemplate");
+    }
 
     return status;
 }
@@ -91,51 +90,45 @@ MStatus uninitializePlugin(MObject obj)
 
     status = plugin.deregisterNode(VDBVisualizerShape::typeId);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error deregistering the VDBVisualizer Node.");
         return status;
     }
 
     status = plugin.deregisterNode(VDBSamplerNode::s_type_id);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error deregistering the VDBSampler Node.");
         return status;
     }
 
     status = plugin.deregisterNode(VDBShaderNode::s_type_id);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error deregistering the VDBShader Node.");
         return status;
     }
 
     status = plugin.deregisterNode(VDBSimpleShaderNode::s_type_id);
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error deregistering the VDBSimpleShader Node.");
         return status;
     }
 
     status = MHWRender::MDrawRegistry::deregisterSubSceneOverrideCreator(
-            VDBVisualizerShape::drawDbClassification,
-            MHWRender::VDBSubSceneOverride::registrantId
+        VDBVisualizerShape::drawDbClassification,
+        MHWRender::VDBSubSceneOverride::registrantId
     );
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error deregistering the VDBVisualizer Sub Scene Override.");
         return status;
     }
 
     status = plugin.deregisterCommand("vdb_query");
 
-    if (!status)
-    {
+    if (!status) {
         status.perror("[openvdb] Error deregistering the VDBQuery Command.");
         return status;
     }

@@ -9,12 +9,12 @@
 
 
 VDBSimpleShaderParams::VDBSimpleShaderParams() :
-position_offset(MObject::kNullObj),
-interpolation(MObject::kNullObj),
-compensate_scaling(MObject::kNullObj),
-smoke_gradient("simpleSmoke"),
-opacity_gradient("simpleOpacity"),
-fire_gradient("simpleFire")
+    position_offset(MObject::kNullObj),
+    interpolation(MObject::kNullObj),
+    compensate_scaling(MObject::kNullObj),
+    smoke_gradient("simpleSmoke"),
+    opacity_gradient("simpleOpacity"),
+    fire_gradient("simpleFire")
 {
 
 }
@@ -78,8 +78,7 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
     opacity_gradient.create_params();
     fire_gradient.create_params();
 
-    if (add_shared)
-    {
+    if (add_shared) {
         anisotropy = nAttr.create("anisotropy", "anisotropy", MFnNumericData::kFloat);
         nAttr.setDefault(0.0f);
         nAttr.setMin(-1.0f);
@@ -118,8 +117,7 @@ void VDBSimpleShaderParams::affect_output(MObject& out_object)
     MPxNode::attributeAffects(fire_channel, out_object);
     MPxNode::attributeAffects(fire_intensity, out_object);
 
-    if (position_offset != MObject::kNullObj)
-    {
+    if (position_offset != MObject::kNullObj) {
         MPxNode::attributeAffects(position_offset, out_object);
         MPxNode::attributeAffects(interpolation, out_object);
         MPxNode::attributeAffects(compensate_scaling, out_object);

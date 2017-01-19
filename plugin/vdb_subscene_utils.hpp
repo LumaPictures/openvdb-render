@@ -10,10 +10,12 @@ class RGBSampler {
     MFloatVector default_color;
 public:
     RGBSampler(const MFloatVector& dc = MFloatVector(1.0f, 1.0f, 1.0f)) : default_color(dc)
-    { }
+    {
+    }
 
     virtual ~RGBSampler()
-    { }
+    {
+    }
 
     virtual MFloatVector get_rgb(const openvdb::Vec3d&) const
     {
@@ -30,7 +32,8 @@ public:
     }
 
     ~FloatToRGBSampler()
-    { }
+    {
+    }
 
     MFloatVector get_rgb(const openvdb::Vec3d& wpos) const
     {
@@ -48,7 +51,8 @@ public:
     }
 
     ~Vec3SToRGBSampler()
-    { }
+    {
+    }
 
     MFloatVector get_rgb(const openvdb::Vec3d& wpos) const
     {
@@ -62,10 +66,12 @@ protected:
     size_t m_active_voxel_count;
 public:
     FloatVoxelIterator() : m_active_voxel_count(1)
-    { }
+    {
+    }
 
     virtual ~FloatVoxelIterator()
-    { }
+    {
+    }
 
     virtual bool is_valid() const
     {
@@ -73,7 +79,8 @@ public:
     }
 
     virtual void get_next()
-    { }
+    {
+    }
 
     virtual float get_value() const
     {
@@ -101,7 +108,8 @@ public:
     }
 
     ~FloatToFloatVoxelIterator()
-    { }
+    {
+    }
 
     bool is_valid() const
     {
@@ -134,7 +142,8 @@ public:
     }
 
     ~Vec3SToFloatVoxelIterator()
-    { }
+    {
+    }
 
     bool is_valid() const
     {
@@ -168,16 +177,16 @@ bool inline operator!=(const Gradient& a, const Gradient& b)
     return a.is_different(b);
 }
 
-template <typename T>
+template<typename T>
 inline bool setup_parameter(T& target, const T& source)
 {
-    if (target != source)
-    {
+    if (target != source) {
         target = source;
         return true;
     }
-    else
+    else {
         return false;
+    }
 }
 
 // this is not part of c++11
@@ -190,8 +199,7 @@ inline void set_bbox_indices(const unsigned int num_bboxes, MHWRender::MIndexBuf
 {
     unsigned int* indices = reinterpret_cast<unsigned int*>(bbox_indices->acquire(24 * num_bboxes, true));
     unsigned int id = 0;
-    for (unsigned int bbox = 0; bbox < num_bboxes; ++bbox)
-    {
+    for (unsigned int bbox = 0; bbox < num_bboxes; ++bbox) {
         const unsigned int bbox_base = bbox * 8;
         indices[id++] = bbox_base;
         indices[id++] = bbox_base + 1;

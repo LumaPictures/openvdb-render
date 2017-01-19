@@ -29,7 +29,7 @@ enum VDBShaderMode {
     SHADER_MODE_SIMPLE = 1
 };
 
-struct VDBVisualizerData{
+struct VDBVisualizerData {
     MBoundingBox bbox;
 
     MFloatVector scattering_color;
@@ -56,6 +56,7 @@ struct VDBVisualizerData{
     VDBShaderMode shader_mode;
 
     VDBVisualizerData();
+
     ~VDBVisualizerData();
 
     void clear(const MBoundingBox& bb = MBoundingBox());
@@ -64,14 +65,15 @@ struct VDBVisualizerData{
 class VDBVisualizerShapeUI : public MPxSurfaceShapeUI {
 public:
     VDBVisualizerShapeUI();
+
     ~VDBVisualizerShapeUI();
 
     static void* creator();
 
     virtual bool select(
-            MSelectInfo& selectInfo,
-            MSelectionList& selectionList,
-            MPointArray& worldSpaceSelectPts) const;
+        MSelectInfo& selectInfo,
+        MSelectionList& selectionList,
+        MPointArray& worldSpaceSelectPts) const;
 
     virtual bool canDrawUV() const;
 };
@@ -79,15 +81,19 @@ public:
 class VDBVisualizerShape : public MPxSurfaceShape {
 public:
     VDBVisualizerShape();
+
     ~VDBVisualizerShape();
 
     static void* creator();
 
     virtual bool isBounded() const;
+
     virtual MBoundingBox boundingBox() const;
 
     MStatus compute(const MPlug& plug, MDataBlock& dataBlock);
+
     static MStatus initialize();
+
     void postConstructor();
 
     static const MTypeId typeId;
@@ -144,6 +150,7 @@ public:
     static const boost::regex s_hash_expr;
 
     VDBVisualizerData* get_update();
+
 private:
 
     VDBVisualizerData m_vdb_data;

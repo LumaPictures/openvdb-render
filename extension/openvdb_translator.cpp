@@ -12,64 +12,69 @@ void* OpenvdbTranslator::creator()
 AtNode* OpenvdbTranslator::CreateArnoldNodes()
 {
     AtNode* volume = AddArnoldNode("volume");
-    if (!FindMayaPlug("overrideShader").asBool())
-    {
-        if (FindMayaPlug("shaderMode").asShort() == 0)
+    if (!FindMayaPlug("overrideShader").asBool()) {
+        if (FindMayaPlug("shaderMode").asShort() == 0) {
             AddArnoldNode("openvdb_shader", "shader");
-        else
+        }
+        else {
             AddArnoldNode("openvdb_simple_shader", "shader");
+        }
     }
     return volume;
 }
 
 void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, std::set<std::string>& out_grids)
 {
-    if (node == nullptr)
+    if (node == nullptr) {
         return;
+    }
 
-    if (checked_arnold_nodes.find(node) != checked_arnold_nodes.end())
+    if (checked_arnold_nodes.find(node) != checked_arnold_nodes.end()) {
         return;
+    }
 
     checked_arnold_nodes.insert(node);
 
     auto check_channel = [&](const char* channel) {
         const char* ch = AiNodeGetStr(node, channel);
-        if (ch != 0 && strlen(ch) > 0)
+        if (ch != 0 && strlen(ch) > 0) {
             out_grids.insert(std::string(ch));
+        }
     };
 
-    if (AiNodeIs(node, "volume_sample_float") || AiNodeIs(node, "volume_sample_rgb") || AiNodeIs(node, "openvdb_sampler"))
-    {
+    if (AiNodeIs(node, "volume_sample_float") || AiNodeIs(node, "volume_sample_rgb") ||
+        AiNodeIs(node, "openvdb_sampler")) {
         check_channel("channel");
     }
-    else if (AiNodeIs(node, "volume_collector") || AiNodeIs(node, "openvdb_shader"))
-    {
+    else if (AiNodeIs(node, "volume_collector") || AiNodeIs(node, "openvdb_shader")) {
         check_channel("scattering_channel");
         check_channel("attenuation_channel");
         check_channel("emission_channel");
     }
-    else if (AiNodeIs(node, "openvdb_simple_shader"))
-    {
+    else if (AiNodeIs(node, "openvdb_simple_shader")) {
         check_channel("smoke_channel");
         check_channel("opacity_channel");
         check_channel("fire_channel");
     }
 
     AtParamIterator* param_iter = AiNodeEntryGetParamIterator(AiNodeGetNodeEntry(node));
-    while (!AiParamIteratorFinished(param_iter))
-    {
+    while (!AiParamIteratorFinished(param_iter)) {
         const AtParamEntry* param_entry = AiParamIteratorGetNext(param_iter);
-        if (AiParamGetType(param_entry) == AI_TYPE_NODE)
-            check_arnold_nodes(reinterpret_cast<AtNode*>(AiNodeGetPtr(node, AiParamGetName(param_entry))), checked_arnold_nodes, out_grids);
-        else
+        if (AiParamGetType(param_entry) == AI_TYPE_NODE) {
+            check_arnold_nodes(reinterpret_cast<AtNode*>(AiNodeGetPtr(node, AiParamGetName(param_entry))),
+                               checked_arnold_nodes, out_grids);
+        }
+        else {
             check_arnold_nodes(AiNodeGetLink(node, AiParamGetName(param_entry)), checked_arnold_nodes, out_grids);
+        }
     }
     AiParamIteratorDestroy(param_iter);
 }
 
 void OpenvdbTranslator::Export(AtNode* volume)
 {
-    AiNodeSetStr(volume, "dso", (std::string(getenv("MTOA_PATH")) + std::string("procedurals/volume_openvdb.so")).c_str());
+    AiNodeSetStr(volume, "dso",
+                 (std::string(getenv("MTOA_PATH")) + std::string("procedurals/volume_openvdb.so")).c_str());
 
     ExportMatrix(volume, 0);
 
@@ -81,26 +86,24 @@ void OpenvdbTranslator::Export(AtNode* volume)
 
     AtNode* shader = nullptr;
 
-    if (FindMayaPlug("overrideShader").asBool())
-    {
+    if (FindMayaPlug("overrideShader").asBool()) {
         const int instanceNum = m_dagPath.isInstanced() ? m_dagPath.instanceNumber() : 0;
 
         MPlug shadingGroupPlug = GetNodeShadingGroup(m_dagPath.node(), instanceNum);
-        if (!shadingGroupPlug.isNull())
-        {
+        if (!shadingGroupPlug.isNull()) {
             shader = ExportNode(shadingGroupPlug);
-            if (shader != 0)
+            if (shader != 0) {
                 AiNodeSetPtr(volume, "shader", shader);
+            }
         }
     }
-    else
-    {
+    else {
         shader = GetArnoldNode("shader");
         AiNodeSetPtr(volume, "shader", shader);
-        if (FindMayaPlug("shaderMode").asShort() == 0)
+        if (FindMayaPlug("shaderMode").asShort() == 0) {
             ExportParams(shader);
-        else
-        {
+        }
+        else {
             ProcessParameter(shader, "smoke", AI_TYPE_RGB, "smoke");
             ProcessParameter(shader, "smoke_channel", AI_TYPE_STRING, "smokeChannel");
             ProcessParameter(shader, "smoke_intensity", AI_TYPE_FLOAT, "smokeIntensity");
@@ -130,18 +133,17 @@ void OpenvdbTranslator::Export(AtNode* volume)
     MStringArray additional_grids;
     additional_grids_string.split(' ', additional_grids);
     const unsigned int additional_grids_count = additional_grids.length();
-    for (unsigned int i = 0; i < additional_grids_count; ++i)
-    {
+    for (unsigned int i = 0; i < additional_grids_count; ++i) {
         const MString additional_grid = additional_grids[i];
-        if (additional_grid.length())
+        if (additional_grid.length()) {
             out_grids.insert(additional_grid.asChar());
+        }
     }
 
     AtArray* grid_names = AiArrayAllocate(static_cast<unsigned int>(out_grids.size()), 1, AI_TYPE_STRING);
 
     unsigned int id = 0;
-    for (const auto& out_grid : out_grids)
-    {
+    for (const auto& out_grid : out_grids) {
         AiArraySetStr(grid_names, id, out_grid.c_str());
         ++id;
     }
@@ -153,8 +155,7 @@ void OpenvdbTranslator::Export(AtNode* volume)
     MStringArray velocity_grids;
     velocity_grids_string.split(' ', velocity_grids);
     const unsigned int velocity_grids_count = velocity_grids.length();
-    if (velocity_grids_count > 0)
-    {
+    if (velocity_grids_count > 0) {
         AiNodeDeclare(volume, "velocity_grids", "constant ARRAY STRING");
         AtArray* velocity_grid_names = AiArrayAllocate(velocity_grids_count, 1, AI_TYPE_STRING);
         for (unsigned int i = 0; i < velocity_grids_count; ++i)

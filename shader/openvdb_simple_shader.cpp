@@ -3,7 +3,7 @@
 AI_SHADER_NODE_EXPORT_METHODS(openvdbSimpleShaderMethods);
 
 namespace {
-    struct ShaderData{
+    struct ShaderData {
         AtString smoke_channel;
         AtString opacity_channel;
         AtString fire_channel;
@@ -25,7 +25,8 @@ namespace {
             AiFree(d);
         }
 
-        ShaderData() : interpolation(0), sample_smoke(false), sample_opacity(false), sample_fire(false), compensate_scaling(true)
+        ShaderData() : interpolation(0), sample_smoke(false), sample_opacity(false), sample_fire(
+            false), compensate_scaling(true)
         {
 
         }
@@ -44,7 +45,7 @@ namespace {
         }
     };
 
-    enum{
+    enum {
         p_smoke,
         p_smoke_channel,
         p_smoke_intensity,
@@ -61,7 +62,7 @@ namespace {
         p_compensate_scaling
     };
 
-    const char* interpolations[] = { "closest", "trilinear", "tricubic", nullptr};
+    const char* interpolations[] = {"closest", "trilinear", "tricubic", nullptr};
 }
 
 node_parameters
@@ -109,24 +110,22 @@ shader_evaluate
     const ShaderData* data = reinterpret_cast<const ShaderData*>(AiNodeGetLocalData(node));
 
     float scale_factor = 1.0f;
-    if (data->compensate_scaling)
-    {
+    if (data->compensate_scaling) {
         AtVector scaled_dir;
         AiM4VectorByMatrixMult(&scaled_dir, sg->Minv, &sg->Rd);
         scale_factor = AiV3Length(scaled_dir);
     }
 
-    if (sg->Rt & AI_RAY_SHADOW)
-    {
+    if (sg->Rt & AI_RAY_SHADOW) {
         AtRGB opacity = AI_RGB_WHITE;
         if (data->sample_opacity)
             AiVolumeSampleRGB(data->opacity_channel, data->interpolation, &opacity);
-        opacity *= (AiShaderEvalParamRGB(p_opacity) * AiShaderEvalParamRGB(p_opacity_shadow)) * (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
+        opacity *= (AiShaderEvalParamRGB(p_opacity) * AiShaderEvalParamRGB(p_opacity_shadow)) *
+                   (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
         AiColorClipToZero(opacity);
         AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
     }
-    else
-    {
+    else {
         AtRGB opacity = AI_RGB_WHITE;
         if (data->sample_opacity)
             AiVolumeSampleRGB(data->opacity_channel, data->interpolation, &opacity);

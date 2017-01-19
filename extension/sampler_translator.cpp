@@ -39,29 +39,24 @@ void SamplerTranslator::Export(AtNode* shader)
 
     MStatus status = MS::kSuccess;
     MPlug plug = FindMayaPlug("baseFloatRamp", &status);
-    if (status && !plug.isNull())
-    {
+    if (status && !plug.isNull()) {
         MRampAttribute ramp_attr(plug);
         MFloatArray samples;
         ramp_attr.sampleValueRamp(num_ramp_samples, samples, &status);
-        if (status)
-        {
+        if (status) {
             AtArray* arr = AiArrayConvert(num_ramp_samples, 1, AI_TYPE_FLOAT, &samples[0]);
             AiNodeSetArray(shader, "base_float_ramp", arr);
         }
     }
 
     plug = FindMayaPlug("baseRgbRamp", &status);
-    if (status && !plug.isNull())
-    {
+    if (status && !plug.isNull()) {
         MRampAttribute ramp_attr(plug);
         MColorArray samples;
         ramp_attr.sampleColorRamp(num_ramp_samples, samples, &status);
-        if (status)
-        {
+        if (status) {
             AtArray* arr = AiArrayAllocate(num_ramp_samples, 1, AI_TYPE_RGB);
-            for (unsigned int i = 0; i < num_ramp_samples; ++i)
-            {
+            for (unsigned int i = 0; i < num_ramp_samples; ++i) {
                 const MColor& sample = samples[i];
                 AiArraySetRGB(arr, i, AiColorCreate(sample.r, sample.g, sample.b));
             }

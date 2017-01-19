@@ -6,11 +6,13 @@
 
 #include "vdb_sampler.h"
 
-struct VDBSimpleShaderParams{
+struct VDBSimpleShaderParams {
     VDBSimpleShaderParams();
 
     void create_params(bool add_shared);
+
     void affect_output(MObject& out_object);
+
     bool check_plug(MPlug& plug);
 
     MObject smoke;
@@ -39,6 +41,7 @@ public:
     static void* creator();
 
     VDBSimpleShaderNode();
+
     ~VDBSimpleShaderNode();
 
     virtual MStatus compute(const MPlug& plug, MDataBlock& dataBlock);

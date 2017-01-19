@@ -2,7 +2,7 @@
 
 **Coding Style**
 
-The code follows the Allman style, with underscore non-capitalized naming scheme and using four spaces to ident the code. You are allowed to name classes that interface with external applications in the style of that application's SDK. CMake formatting follows the same rules; function calls are non-capitalized.
+The code follows the K&R with 1TBS style, with underscore non-capitalized naming scheme and using four spaces to ident the code. You are allowed to name classes that interface with external applications in the style of that application's SDK. CMake formatting follows the same rules; function calls are non-capitalized.
 
 The docs subfolder includes a CLion code formatting preset, named luma_style.xml.
 

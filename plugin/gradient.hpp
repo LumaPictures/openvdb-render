@@ -9,18 +9,19 @@
 
 class Gradient : public GradientBase<MFloatVector> {
 public:
-    Gradient () : GradientBase<MFloatVector>()
-    { }
+    Gradient() : GradientBase<MFloatVector>()
+    {
+    }
 
     ~Gradient()
-    { }
+    {
+    }
 
     inline void update(const VDBGradientParams& params, const MObject& tmo)
     {
         m_channel_mode = MPlug(tmo, params.mode).asShort();
 
-        if (m_channel_mode > CHANNEL_MODE_RAW)
-        {
+        if (m_channel_mode > CHANNEL_MODE_RAW) {
             m_contrast = MPlug(tmo, params.contrast).asFloat();
             m_contrast_pivot = MPlug(tmo, params.contrast_pivot).asFloat();
             m_input_min = MPlug(tmo, params.input_min).asFloat();
@@ -42,35 +43,29 @@ public:
 
             const static unsigned int RAMP_SAMPLE_COUNT = 128;
 
-            if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP)
-            {
+            if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
                 MStatus status = MS::kSuccess;
                 MRampAttribute float_ramp(tmo, params.float_ramp);
                 MFloatArray float_array;
                 float_ramp.sampleValueRamp(RAMP_SAMPLE_COUNT, float_array, &status);
-                if (status)
-                {
+                if (status) {
                     m_float_ramp.resize(RAMP_SAMPLE_COUNT);
                     for (unsigned int i = 0; i < RAMP_SAMPLE_COUNT; ++i) {
                         m_float_ramp[i] = float_array[i];
                     }
                 }
             }
-            else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP)
-            {
+            else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP) {
                 MStatus status = MS::kSuccess;
                 MRampAttribute color_ramp(tmo, params.rgb_ramp);
                 MColorArray color_array;
                 color_ramp.sampleColorRamp(RAMP_SAMPLE_COUNT, color_array, &status);
-                if (status)
-                {
+                if (status) {
                     m_rgb_ramp.resize(RAMP_SAMPLE_COUNT);
-                    for (unsigned int i = 0; i < RAMP_SAMPLE_COUNT; ++i)
-                    {
+                    for (unsigned int i = 0; i < RAMP_SAMPLE_COUNT; ++i) {
                         MColor color = color_array[i];
                         m_rgb_ramp[i] = MFloatVector(color.r, color.g, color.b);
                     }
-
                 }
             }
 
@@ -79,37 +74,37 @@ public:
     }
 };
 
-template <>
+template<>
 inline float& GradientBase<MFloatVector>::color_r(MFloatVector& color) const
 {
     return color.x;
 }
 
-template <>
+template<>
 inline float& GradientBase<MFloatVector>::color_g(MFloatVector& color) const
 {
     return color.y;
 }
 
-template <>
+template<>
 inline float& GradientBase<MFloatVector>::color_b(MFloatVector& color) const
 {
     return color.z;
 }
 
-template <>
+template<>
 inline const float& GradientBase<MFloatVector>::color_r(const MFloatVector& color) const
 {
     return color.x;
 }
 
-template <>
+template<>
 inline const float& GradientBase<MFloatVector>::color_g(const MFloatVector& color) const
 {
     return color.y;
 }
 
-template <>
+template<>
 inline const float& GradientBase<MFloatVector>::color_b(const MFloatVector& color) const
 {
     return color.z;

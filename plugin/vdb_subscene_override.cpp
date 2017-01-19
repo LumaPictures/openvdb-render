@@ -438,7 +438,7 @@ namespace MHWRender {
                     }
                     if (data->attenuation_grid == nullptr ||
                         data->attenuation_grid->getName() != data->attenuation_channel) {
-                            data->attenuation_grid = data->vdb_file->readGrid(data->attenuation_channel);
+                        data->attenuation_grid = data->vdb_file->readGrid(data->attenuation_channel);
                     }
                 }
                 catch (...) {
@@ -546,7 +546,7 @@ namespace MHWRender {
                 try {
                     if (data->scattering_grid == nullptr ||
                         data->scattering_grid->getName() != data->scattering_channel) {
-                            data->scattering_grid = data->vdb_file->readGrid(data->scattering_channel);
+                        data->scattering_grid = data->vdb_file->readGrid(data->scattering_channel);
                     }
                 }
                 catch (...) {

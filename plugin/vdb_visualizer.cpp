@@ -109,17 +109,22 @@ namespace {
         {
             int code = OUTCODE_INSIDE;          // initialised as being inside of clip window
 
-            if (x < xmin)           // to the left of clip window
+            if (x < xmin) {           // to the left of clip window
                 code |= OUTCODE_LEFT;
-            else if (x > xmax)      // to the right of clip window
+            }
+            else if (x > xmax) {      // to the right of clip window
                 code |= OUTCODE_RIGHT;
-            if (y < ymin)           // below the clip window
+            }
+            if (y < ymin) {           // below the clip window
                 code |= OUTCODE_BOTTOM;
-            else if (y > ymax)      // above the clip window
+            }
+            else if (y > ymax) {      // above the clip window
                 code |= OUTCODE_TOP;
+            }
 
             return code;
         }
+
     public:
         SelectionRectangle(MSelectInfo& selectInfo)
         {
@@ -141,46 +146,40 @@ namespace {
             int outcode0 = compute_out_code(x0, y0);
             int outcode1 = compute_out_code(x1, y1);
 
-            while (true)
-            {
-                if (!(outcode0 | outcode1)) // Bitwise OR is 0. Trivially accept and get out of loop
+            while (true) {
+                if (!(outcode0 | outcode1)) { // Bitwise OR is 0. Trivially accept and get out of loop
                     return true;
-                else if (outcode0 & outcode1) // Bitwise AND is not 0. Trivially reject and get out of loop
+                }
+                else if (outcode0 & outcode1) { // Bitwise AND is not 0. Trivially reject and get out of loop
                     return false;
-                else
-                {
+                }
+                else {
                     float x = 0.0f;
                     float y = 0.0f;
                     const int outcode_out = outcode0 ? outcode0 : outcode1;
-                    if (outcode_out & OUTCODE_TOP)
-                    {
+                    if (outcode_out & OUTCODE_TOP) {
                         x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0);
                         y = ymax;
                     }
-                    else if (outcode_out & OUTCODE_BOTTOM)
-                    {
+                    else if (outcode_out & OUTCODE_BOTTOM) {
                         x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0);
                         y = ymin;
                     }
-                    else if (outcode_out & OUTCODE_RIGHT)
-                    {
+                    else if (outcode_out & OUTCODE_RIGHT) {
                         y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0);
                         x = xmax;
                     }
-                    else if (outcode_out & OUTCODE_LEFT)
-                    {
+                    else if (outcode_out & OUTCODE_LEFT) {
                         y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0);
                         x = xmin;
                     }
 
-                    if (outcode_out == outcode0)
-                    {
+                    if (outcode_out == outcode0) {
                         x0 = x;
                         y0 = y;
                         outcode0 = compute_out_code(x0, y0);
                     }
-                    else
-                    {
+                    else {
                         x1 = x;
                         y1 = y;
                         outcode1 = compute_out_code(x1, y1);
@@ -191,7 +190,9 @@ namespace {
     };
 }
 
-VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)), scattering_color(1.0f, 1.0f, 1.0f),
+VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)), scattering_color(1.0f,
+                                                                                                                 1.0f,
+                                                                                                                 1.0f),
                                          attenuation_color(1.0f, 1.0f, 1.0f), emission_color(1.0f, 1.0f, 1.0f),
                                          vdb_file(nullptr), point_size(2.0f), point_jitter(0.15f),
                                          point_skip(1), update_trigger(0), display_mode(DISPLAY_GRID_BBOX),
@@ -206,10 +207,10 @@ VDBVisualizerData::~VDBVisualizerData()
 
 void VDBVisualizerData::clear(const MBoundingBox& bb)
 {
-    if (vdb_file != nullptr)
-    {
-        if (vdb_file->isOpen())
+    if (vdb_file != nullptr) {
+        if (vdb_file->isOpen()) {
             vdb_file->close();
+        }
         delete vdb_file;
         vdb_file = nullptr;
     }
@@ -223,8 +224,9 @@ VDBVisualizerShape::VDBVisualizerShape()
 
 VDBVisualizerShape::~VDBVisualizerShape()
 {
-    if (MGlobal::mayaState() == MGlobal::kInteractive)
+    if (MGlobal::mayaState() == MGlobal::kInteractive) {
         MDGMessage::removeCallback(m_time_changed_id);
+    }
 }
 
 void* VDBVisualizerShape::creator()
@@ -236,53 +238,54 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
 {
     MStatus status = MS::kSuccess;
 
-    if (plug == s_out_vdb_path)
-    {
+    if (plug == s_out_vdb_path) {
         std::string vdb_path = dataBlock.inputValue(s_vdb_path).asString().asChar();
 
-        if (boost::regex_match(vdb_path, s_frame_expr))
-        {
+        if (boost::regex_match(vdb_path, s_frame_expr)) {
             const double cache_time = dataBlock.inputValue(s_cache_time).asTime().as(MTime::uiUnit());
-            const double cache_playback_offset = dataBlock.inputValue(s_cache_playback_offset).asTime().as(MTime::uiUnit());
+            const double cache_playback_offset = dataBlock.inputValue(s_cache_playback_offset).asTime().as(
+                MTime::uiUnit());
             int cache_frame = static_cast<int>(cache_time - cache_playback_offset);
             const int cache_playback_start = dataBlock.inputValue(s_cache_playback_start).asInt();
-            const int cache_playback_end = std::max(cache_playback_start, dataBlock.inputValue(s_cache_playback_end).asInt());
+            const int cache_playback_end = std::max(cache_playback_start,
+                                                    dataBlock.inputValue(s_cache_playback_end).asInt());
             bool frame_in_range = true;
-            if (cache_frame < cache_playback_start)
-            {
+            if (cache_frame < cache_playback_start) {
                 const short cache_before_mode = dataBlock.inputValue(s_cache_before_mode).asShort();
-                if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_NONE)
+                if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_NONE) {
                     frame_in_range = false;
-                else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_HOLD)
+                }
+                else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_HOLD) {
                     cache_frame = cache_playback_start;
-                else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT)
-                {
+                }
+                else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT) {
                     const int cache_playback_range = cache_playback_end - cache_playback_start;
-                    cache_frame = cache_playback_end - (cache_playback_start - cache_frame - 1) % (cache_playback_range + 1);
+                    cache_frame =
+                        cache_playback_end - (cache_playback_start - cache_frame - 1) % (cache_playback_range + 1);
                 }
             }
-            else if (cache_frame > cache_playback_end)
-            {
+            else if (cache_frame > cache_playback_end) {
                 const short cache_after_mode = dataBlock.inputValue(s_cache_after_mode).asShort();
-                if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_NONE)
+                if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_NONE) {
                     frame_in_range = false;
-                else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_HOLD)
+                }
+                else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_HOLD) {
                     cache_frame = cache_playback_end;
-                else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT)
-                {
+                }
+                else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT) {
                     const int cache_playback_range = cache_playback_end - cache_playback_start;
-                    cache_frame = cache_playback_start + (cache_frame - cache_playback_end - 1) % (cache_playback_range + 1);
+                    cache_frame =
+                        cache_playback_start + (cache_frame - cache_playback_end - 1) % (cache_playback_range + 1);
                 }
             }
             cache_frame = std::max(0, cache_frame);
 
-            if (frame_in_range)
-            {
+            if (frame_in_range) {
                 size_t hash_count = 0;
-                for (auto c : vdb_path)
-                {
-                    if (c == '#')
+                for (auto c : vdb_path) {
+                    if (c == '#') {
                         ++hash_count;
+                    }
                 }
                 std::stringstream ss;
                 ss.fill('0');
@@ -290,87 +293,82 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 ss << cache_frame;
                 vdb_path = boost::regex_replace(vdb_path, s_hash_expr, ss.str());
             }
-            else
+            else {
                 vdb_path = "";
+            }
         }
 
-        if (vdb_path != m_vdb_data.vdb_path)
-        {
+        if (vdb_path != m_vdb_data.vdb_path) {
 
             m_vdb_data.clear();
             m_vdb_data.vdb_path = vdb_path;
-            if (m_vdb_data.vdb_file != nullptr)
+            if (m_vdb_data.vdb_file != nullptr) {
                 delete m_vdb_data.vdb_file;
-            try{
+            }
+            try {
                 m_vdb_data.vdb_file = new openvdb::io::File(vdb_path.c_str());
                 m_vdb_data.vdb_file->open(false);
-                if (m_vdb_data.vdb_file->isOpen())
-                {
+                if (m_vdb_data.vdb_file->isOpen()) {
                     openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
-                    for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
-                    {
-                        if (openvdb::GridBase::ConstPtr grid = *it)
+                    for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it) {
+                        if (openvdb::GridBase::ConstPtr grid = *it) {
                             read_transformed_bounding_box(grid, m_vdb_data.bbox);
+                        }
                     }
                 }
-                else
+                else {
                     m_vdb_data.clear(MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)));
+                }
             }
-            catch(...)
-            {
+            catch (...) {
                 m_vdb_data.clear(MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)));
             }
         }
         MDataHandle out_vdb_path_handle = dataBlock.outputValue(s_out_vdb_path);
         out_vdb_path_handle.setString(vdb_path.c_str());
     }
-    else
-    {
+    else {
         dataBlock.inputValue(s_out_vdb_path).asString(); // trigger cache reload
-        if (plug == s_grid_names)
-        {
+        if (plug == s_grid_names) {
             MDataHandle grid_names_handle = dataBlock.outputValue(s_grid_names);
-            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen())
-            {
+            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen()) {
                 std::stringstream grid_names;
                 openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
-                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
-                {
-                    if (openvdb::GridBase::ConstPtr grid = *it)
+                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it) {
+                    if (openvdb::GridBase::ConstPtr grid = *it) {
                         grid_names << grid->getName() << " ";
+                    }
                 }
                 std::string grid_names_string = grid_names.str();
-                grid_names_handle.setString(grid_names_string.length() ? grid_names_string.substr(0, grid_names_string.length() - 1).c_str() : "");
+                grid_names_handle.setString(
+                    grid_names_string.length() ? grid_names_string.substr(0, grid_names_string.length() - 1).c_str()
+                                               : "");
             }
-            else
+            else {
                 grid_names_handle.setString("");
+            }
         }
-        else if (plug == s_update_trigger)
-        {
+        else if (plug == s_update_trigger) {
             MDataHandle update_trigger_handle = dataBlock.outputValue(s_update_trigger);
             update_trigger_handle.setInt(m_vdb_data.update_trigger + 1);
         }
-        else if (plug == s_bbox_min)
-        {
+        else if (plug == s_bbox_min) {
             // TODO : why the MDataBlock is buggy in this case?
             const MPoint mn = m_vdb_data.bbox.min();
             plug.child(0).setDouble(mn.x);
             plug.child(1).setDouble(mn.y);
             plug.child(2).setDouble(mn.z);
         }
-        else if (plug == s_bbox_max)
-        {
+        else if (plug == s_bbox_max) {
             // TODO : why the MDataBlock is buggy in this case?
             const MPoint mx = m_vdb_data.bbox.max();
             plug.child(0).setDouble(mx.x);
             plug.child(1).setDouble(mx.y);
             plug.child(2).setDouble(mx.z);
         }
-        else if (plug == s_channel_stats)
-        {
+        else if (plug == s_channel_stats) {
             std::stringstream ss;
-            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen())
-            {
+            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen()) {
                 ss << "Bounding box : " << "[ [";
                 ss << m_vdb_data.bbox.min().x << ", " << m_vdb_data.bbox.min().y << ", " << m_vdb_data.bbox.min().z;
                 ss << " ] [ ";
@@ -378,40 +376,41 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 ss << " ] ]" << std::endl;
                 ss << "Channels : " << std::endl;
                 openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
-                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
-                {
-                    if (openvdb::GridBase::ConstPtr grid = *it)
+                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it) {
+                    if (openvdb::GridBase::ConstPtr grid = *it) {
                         ss << " - " << grid->getName() << " (" << grid->valueType() << ")" << std::endl;
+                    }
                 }
             }
             dataBlock.outputValue(s_channel_stats).setString(ss.str().c_str());
         }
-        else if (plug == s_voxel_size)
-        {
+        else if (plug == s_voxel_size) {
             float voxel_size = std::numeric_limits<float>::max();
-            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen())
-            {
+            if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen()) {
                 openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
-                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it)
-                {
-                    if (openvdb::GridBase::ConstPtr grid = *it)
-                    {
+                for (openvdb::GridPtrVec::const_iterator it = grids->begin(); it != grids->end(); ++it) {
+                    if (openvdb::GridBase::ConstPtr grid = *it) {
                         openvdb::Vec3d vs = grid->voxelSize();
-                        if (vs.x() > 0.0)
+                        if (vs.x() > 0.0) {
                             voxel_size = std::min(static_cast<float>(vs.x()), voxel_size);
-                        if (vs.y() > 0.0)
+                        }
+                        if (vs.y() > 0.0) {
                             voxel_size = std::min(static_cast<float>(vs.y()), voxel_size);
-                        if (vs.z() > 0.0)
+                        }
+                        if (vs.z() > 0.0) {
                             voxel_size = std::min(static_cast<float>(vs.z()), voxel_size);
+                        }
                     }
                 }
             }
-            else
+            else {
                 voxel_size = 1.0f;
+            }
             dataBlock.outputValue(s_voxel_size).setFloat(voxel_size);
         }
-        else
+        else {
             return MStatus::kUnknownParameter;
+        }
     }
 
     dataBlock.setClean(plug);
@@ -443,7 +442,8 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setDefault(100);
     nAttr.setMin(0);
 
-    s_cache_playback_offset = uAttr.create("cachePlaybackOffset", "cache_playback_offset", MFnUnitAttribute::kTime, 0.0);
+    s_cache_playback_offset = uAttr.create("cachePlaybackOffset", "cache_playback_offset", MFnUnitAttribute::kTime,
+                                           0.0);
 
     s_cache_before_mode = eAttr.create("cacheBeforeMode", "cache_before_mode");
     eAttr.addField("None", CACHE_OUT_OF_RANGE_MODE_NONE);
@@ -515,15 +515,16 @@ MStatus VDBVisualizerShape::initialize()
         s_update_trigger, s_grid_names, s_out_vdb_path, s_bbox_min, s_bbox_max, s_channel_stats, s_voxel_size
     };
 
-    for (const auto& output_param : output_params)
+    for (const auto& output_param : output_params) {
         addAttribute(output_param);
+    }
 
-    for (const auto& input_param : input_params)
-    {
+    for (const auto& input_param : input_params) {
         addAttribute(input_param);
 
-        for (const auto& output_param : output_params)
+        for (const auto& output_param : output_params) {
             attributeAffects(input_param, output_param);
+        }
     }
 
     attributeAffects(s_display_mode, s_update_trigger);
@@ -576,7 +577,8 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setChannelBox(true);
     addAttribute(s_sampling_quality);
 
-    s_additional_channel_export = tAttr.create("additionalChannelExport", "additional_channel_export", MFnData::kString);
+    s_additional_channel_export = tAttr.create("additionalChannelExport", "additional_channel_export",
+                                               MFnData::kString);
     addAttribute(s_additional_channel_export);
 
     s_velocity_grids = tAttr.create("velocityGrids", "velocity_grids", MFnData::kString);
@@ -623,11 +625,10 @@ MStatus VDBVisualizerShape::initialize()
     s_simple_shader_params.create_params(false);
 
     MObject display_params[] = {
-            s_point_size, s_point_jitter, s_point_skip, s_override_shader, s_shader_mode
+        s_point_size, s_point_jitter, s_point_skip, s_override_shader, s_shader_mode
     };
 
-    for (const auto& shader_param : display_params)
-    {
+    for (const auto& shader_param : display_params) {
         addAttribute(shader_param);
         attributeAffects(shader_param, s_update_trigger);
     }
@@ -642,8 +643,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
 {
     const int update_trigger = MPlug(thisMObject(), s_update_trigger).asInt();
 
-    if (update_trigger != m_vdb_data.update_trigger)
-    {
+    if (update_trigger != m_vdb_data.update_trigger) {
         MObject tmo = thisMObject();
         m_vdb_data.display_mode = static_cast<VDBDisplayMode>(MPlug(tmo, s_display_mode).asShort());
         m_vdb_data.point_size = MPlug(tmo, s_point_size).asFloat();
@@ -651,12 +651,10 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
         m_vdb_data.point_skip = MPlug(tmo, s_point_skip).asInt();
         m_vdb_data.update_trigger = update_trigger;
 
-        if (m_vdb_data.display_mode >= DISPLAY_POINT_CLOUD)
-        {
+        if (m_vdb_data.display_mode >= DISPLAY_POINT_CLOUD) {
             const auto shader_mode = static_cast<VDBShaderMode>(MPlug(tmo, s_shader_mode).asShort());
             m_vdb_data.shader_mode = shader_mode;
-            if (shader_mode == SHADER_MODE_VOLUME_COLLECTOR)
-            {
+            if (shader_mode == SHADER_MODE_VOLUME_COLLECTOR) {
                 const short scattering_mode = MPlug(tmo, s_shader_params.scattering_source).asShort();
                 MPlug scattering_color_plug(tmo, s_shader_params.scattering_color);
                 const float scattering_intensity = MPlug(tmo, s_shader_params.scattering_intensity).asFloat();
@@ -664,10 +662,10 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 m_vdb_data.scattering_color.y = scattering_color_plug.child(1).asFloat() * scattering_intensity;
                 m_vdb_data.scattering_color.z = scattering_color_plug.child(2).asFloat() * scattering_intensity;
 
-                if (scattering_mode == 1)
+                if (scattering_mode == 1) {
                     m_vdb_data.scattering_channel = MPlug(tmo, s_shader_params.scattering_channel).asString().asChar();
-                else
-                {
+                }
+                else {
                     MPlug scattering_plug(tmo, s_shader_params.scattering);
                     if (!scattering_plug.isConnected()) // TODO: handle this
                     {
@@ -686,10 +684,11 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 m_vdb_data.attenuation_color.y = attenuation_color_plug.child(1).asFloat() * attenuation_intensity;
                 m_vdb_data.attenuation_color.z = attenuation_color_plug.child(2).asFloat() * attenuation_intensity;
 
-                if (attenuation_mode == 1)
-                    m_vdb_data.attenuation_channel = MPlug(tmo, s_shader_params.attenuation_channel).asString().asChar();
-                else if (attenuation_mode == 0)
-                {
+                if (attenuation_mode == 1) {
+                    m_vdb_data.attenuation_channel = MPlug(tmo,
+                                                           s_shader_params.attenuation_channel).asString().asChar();
+                }
+                else if (attenuation_mode == 0) {
                     MPlug attenuation_plug(tmo, s_shader_params.attenuation);
                     if (!attenuation_plug.isConnected()) // TODO: handle this
                     {
@@ -700,8 +699,9 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
 
                     m_vdb_data.attenuation_channel = "";
                 }
-                else
+                else {
                     m_vdb_data.attenuation_channel = m_vdb_data.scattering_channel;
+                }
 
                 const short emission_mode = MPlug(tmo, s_shader_params.emission_source).asShort();
                 MPlug emission_color_plug(tmo, s_shader_params.emission_color);
@@ -710,10 +710,10 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 m_vdb_data.emission_color.y = emission_color_plug.child(1).asFloat() * emission_intensity;
                 m_vdb_data.emission_color.z = emission_color_plug.child(2).asFloat() * emission_intensity;
 
-                if (emission_mode == 1)
+                if (emission_mode == 1) {
                     m_vdb_data.emission_channel = MPlug(tmo, s_shader_params.emission_channel).asString().asChar();
-                else
-                {
+                }
+                else {
                     MPlug emission_plug(tmo, s_shader_params.emission);
                     if (!emission_plug.isConnected()) // TODO: handle this
                     {
@@ -732,43 +732,42 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 m_vdb_data.attenuation_gradient.update(s_shader_params.attenuation_gradient, tmo);
                 m_vdb_data.emission_gradient.update(s_shader_params.emission_gradient, tmo);
             }
-            else if (shader_mode == SHADER_MODE_SIMPLE)
-            {
+            else if (shader_mode == SHADER_MODE_SIMPLE) {
                 m_vdb_data.scattering_channel = MPlug(tmo, s_simple_shader_params.smoke_channel).asString().asChar();
                 const float smoke_intensity = MPlug(tmo, s_simple_shader_params.smoke_intensity).asFloat();
                 MPlug smoke_plug(tmo, s_simple_shader_params.smoke);
-                if (!smoke_plug.isConnected())
-                {
+                if (!smoke_plug.isConnected()) {
                     m_vdb_data.scattering_color.x = smoke_plug.child(0).asFloat() * smoke_intensity;
                     m_vdb_data.scattering_color.y = smoke_plug.child(1).asFloat() * smoke_intensity;
                     m_vdb_data.scattering_color.z = smoke_plug.child(2).asFloat() * smoke_intensity;
                 }
-                else
+                else {
                     m_vdb_data.scattering_color.x = m_vdb_data.scattering_color.y = m_vdb_data.scattering_color.z = smoke_intensity;
+                }
 
                 m_vdb_data.attenuation_channel = MPlug(tmo, s_simple_shader_params.opacity_channel).asString().asChar();
                 const float opacity_intensity = MPlug(tmo, s_simple_shader_params.opacity_intensity).asFloat();
                 MPlug opacity_plug(tmo, s_simple_shader_params.opacity);
-                if (!opacity_plug.isConnected())
-                {
+                if (!opacity_plug.isConnected()) {
                     m_vdb_data.attenuation_color.x = opacity_plug.child(0).asFloat() * opacity_intensity;
                     m_vdb_data.attenuation_color.y = opacity_plug.child(1).asFloat() * opacity_intensity;
                     m_vdb_data.attenuation_color.z = opacity_plug.child(2).asFloat() * opacity_intensity;
                 }
-                else
+                else {
                     m_vdb_data.attenuation_color.x = m_vdb_data.attenuation_color.y = m_vdb_data.attenuation_color.z = opacity_intensity;
+                }
 
                 m_vdb_data.emission_channel = MPlug(tmo, s_simple_shader_params.fire_channel).asString().asChar();
                 const float fire_intensity = MPlug(tmo, s_simple_shader_params.fire_intensity).asFloat();
                 MPlug fire_plug(tmo, s_simple_shader_params.fire);
-                if (!fire_plug.isConnected())
-                {
+                if (!fire_plug.isConnected()) {
                     m_vdb_data.emission_color.x = fire_plug.child(0).asFloat() * fire_intensity;
                     m_vdb_data.emission_color.y = fire_plug.child(1).asFloat() * fire_intensity;
                     m_vdb_data.emission_color.z = fire_plug.child(2).asFloat() * fire_intensity;
                 }
-                else
+                else {
                     m_vdb_data.emission_color.x = m_vdb_data.emission_color.y = m_vdb_data.emission_color.z = fire_intensity;
+                }
 
                 m_vdb_data.scattering_gradient.clear();
                 m_vdb_data.attenuation_gradient.clear();
@@ -819,10 +818,10 @@ void* VDBVisualizerShapeUI::creator()
     return new VDBVisualizerShapeUI();
 }
 
-bool VDBVisualizerShapeUI::select(MSelectInfo& selectInfo, MSelectionList& selectionList, MPointArray& worldSpaceSelectPts) const
+bool VDBVisualizerShapeUI::select(MSelectInfo& selectInfo, MSelectionList& selectionList,
+                                  MPointArray& worldSpaceSelectPts) const
 {
-    if (!selectInfo.isRay())
-    {
+    if (!selectInfo.isRay()) {
         const MBoundingBox bbox = surfaceShape()->boundingBox();
 
         const MPoint min = bbox.min();
@@ -834,52 +833,55 @@ bool VDBVisualizerShapeUI::select(MSelectInfo& selectInfo, MSelectionList& selec
 
         SelectionRectangle rect(selectInfo);
 
-        auto convert_world_to_screen = [&] (MPoint point) -> std::pair<float, float> {
+        auto convert_world_to_screen = [&](MPoint point) -> std::pair<float, float> {
             point *= object_matrix;
-            short x_pos = 0; short y_pos = 0;
+            short x_pos = 0;
+            short y_pos = 0;
             view.worldToView(point, x_pos, y_pos);
             return std::make_pair(static_cast<float>(x_pos), static_cast<float>(y_pos));
         };
 
         const std::array<MPoint, 8> world_points = {
-                min,
-                MPoint(min.x, max.y, min.z),
-                MPoint(min.x, max.y, max.z),
-                MPoint(min.x, min.y, max.z),
-                MPoint(max.x, min.y, min.z),
-                MPoint(max.x, max.y, min.z),
-                max,
-                MPoint(max.x, min.y, max.z)
+            min,
+            MPoint(min.x, max.y, min.z),
+            MPoint(min.x, max.y, max.z),
+            MPoint(min.x, min.y, max.z),
+            MPoint(max.x, min.y, min.z),
+            MPoint(max.x, max.y, min.z),
+            max,
+            MPoint(max.x, min.y, max.z)
         };
 
         std::pair<float, float> points[8];
 
-        for (int i = 0; i < 8; ++i)
+        for (int i = 0; i < 8; ++i) {
             points[i] = convert_world_to_screen(world_points[i]);
+        }
 
 
         static const std::array<std::pair<int, int>, 12> line_array = {
-                std::make_pair(0, 1), std::make_pair(1, 2), std::make_pair(2, 3), std::make_pair(3, 0),
-                std::make_pair(4, 5), std::make_pair(5, 6), std::make_pair(6, 7), std::make_pair(7, 4),
-                std::make_pair(0, 4), std::make_pair(1, 5), std::make_pair(2, 6), std::make_pair(3, 7)
+            std::make_pair(0, 1), std::make_pair(1, 2), std::make_pair(2, 3), std::make_pair(3, 0),
+            std::make_pair(4, 5), std::make_pair(5, 6), std::make_pair(6, 7), std::make_pair(7, 4),
+            std::make_pair(0, 4), std::make_pair(1, 5), std::make_pair(2, 6), std::make_pair(3, 7)
         };
 
-        for (const auto& line : line_array)
-        {
+        for (const auto& line : line_array) {
             const auto& p0 = points[line.first];
             const auto& p1 = points[line.second];
-            if (rect.clip_line(p0.first, p0.second, p1.first, p1.second))
-            {
+            if (rect.clip_line(p0.first, p0.second, p1.first, p1.second)) {
                 MSelectionList item;
                 item.add(object_path);
-                selectInfo.addSelection(item, (world_points[line.first] + world_points[line.second]) * 0.5, selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
+                selectInfo.addSelection(item, (world_points[line.first] + world_points[line.second]) * 0.5,
+                                        selectionList, worldSpaceSelectPts, MSelectionMask::kSelectMeshes, false);
                 return true;
             }
         }
 
         return false;
     }
-    else return false;
+    else {
+        return false;
+    }
 }
 
 bool VDBVisualizerShapeUI::canDrawUV() const

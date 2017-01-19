@@ -3,12 +3,15 @@
 #include <maya/MPxNode.h>
 #include <maya/MString.h>
 
-struct VDBGradientParams{
+struct VDBGradientParams {
     VDBGradientParams(const char* _gradient_name);
 
     void create_params();
+
     void affect_output(MObject& out_object);
+
     void post_constructor(MObject tmo);
+
     bool check_plug(const MPlug& plug);
 
     MString gradient_name;
@@ -42,6 +45,7 @@ public:
     static void* creator();
 
     VDBSamplerNode();
+
     ~VDBSamplerNode();
 
     virtual MStatus compute(const MPlug& plug, MDataBlock& dataBlock);

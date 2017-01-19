@@ -10,7 +10,8 @@
 #include <maya/MFnDependencyNode.h>
 
 VDBGradientParams::VDBGradientParams(const char* _gradient_name) : gradient_name(_gradient_name)
-{ }
+{
+}
 
 void VDBGradientParams::create_params()
 {
@@ -32,7 +33,8 @@ void VDBGradientParams::create_params()
     nAttr.setConnectable(false);
     MPxNode::addAttribute(contrast);
 
-    contrast_pivot = nAttr.create(gradient_name + "ContrastPivot", gradient_name + "_contrast_pivot", MFnNumericData::kFloat);
+    contrast_pivot = nAttr.create(gradient_name + "ContrastPivot", gradient_name + "_contrast_pivot",
+                                  MFnNumericData::kFloat);
     nAttr.setDefault(0.5f);
     nAttr.setConnectable(false);
     MPxNode::addAttribute(contrast_pivot);
@@ -178,7 +180,7 @@ void VDBGradientParams::post_constructor(MObject tmo)
 bool VDBGradientParams::check_plug(const MPlug& plug)
 {
     return plug == mode || plug == contrast || plug == contrast_pivot || plug == input_min ||
-           plug == input_max ||   plug == bias || plug == gain || plug == output_min ||
+           plug == input_max || plug == bias || plug == gain || plug == output_min ||
            plug == output_max || plug == clamp_min || plug == clamp_max || plug == gamma ||
            plug == hue_shift || plug == saturation || plug == exposure || plug == multiply ||
            plug == add || plug == float_ramp || plug == rgb_ramp;

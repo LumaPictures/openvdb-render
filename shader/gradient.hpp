@@ -11,7 +11,8 @@
 class Gradient : public GradientBase<AtRGB> {
 public:
     Gradient() : GradientBase<AtRGB>()
-    { }
+    {
+    }
 
     ~Gradient()
     {
@@ -50,8 +51,9 @@ public:
         m_input_min = AiNodeGetFlt(node, (base + "_input_min").c_str());
         m_input_max = AiNodeGetFlt(node, (base + "_input_max").c_str());
         m_bias = AiNodeGetFlt(node, (base + "_bias").c_str());
-        if (m_bias < AI_EPSILON)
+        if (m_bias < AI_EPSILON) {
             m_bias = 0.5f;
+        }
         m_gain = AiNodeGetFlt(node, (base + "_gain").c_str());
         m_output_min = AiNodeGetFlt(node, (base + "_output_min").c_str());
         m_output_max = AiNodeGetFlt(node, (base + "_output_max").c_str());
@@ -65,45 +67,47 @@ public:
         m_clamp_min = AiNodeGetBool(node, (base + "_clamp_min").c_str());
         m_clamp_max = AiNodeGetBool(node, (base + "_clamp_max").c_str());
 
-        if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP)
-        {
+        if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
             AtArray* arr = AiNodeGetArray(node, (base + "_float_ramp").c_str());
-            if (arr != nullptr)
-            {
+            if (arr != nullptr) {
                 const unsigned int nelements = arr->nelements;
-                if (m_float_ramp.size() != nelements)
+                if (m_float_ramp.size() != nelements) {
                     std::vector<float>().swap(m_float_ramp);
-                else
+                }
+                else {
                     m_float_ramp.clear();
-                if (nelements > 0)
-                {
+                }
+                if (nelements > 0) {
                     m_float_ramp.reserve(nelements);
-                    for (unsigned int i = 0; i < nelements; ++i)
+                    for (unsigned int i = 0; i < nelements; ++i) {
                         m_float_ramp.push_back(AiArrayGetFlt(arr, i));
+                    }
                 }
             }
-            else
+            else {
                 std::vector<float>().swap(m_float_ramp);
+            }
         }
-        else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP)
-        {
+        else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP) {
             AtArray* arr = AiNodeGetArray(node, (base + "_rgb_ramp").c_str());
-            if (arr != nullptr)
-            {
+            if (arr != nullptr) {
                 const unsigned nelements = arr->nelements;
-                if (m_rgb_ramp.size() != nelements)
+                if (m_rgb_ramp.size() != nelements) {
                     std::vector<AtRGB>().swap(m_rgb_ramp);
-                else
+                }
+                else {
                     m_rgb_ramp.clear();
-                if (nelements > 0)
-                {
+                }
+                if (nelements > 0) {
                     m_rgb_ramp.reserve(nelements);
-                    for (unsigned int i = 0; i < nelements; ++i)
+                    for (unsigned int i = 0; i < nelements; ++i) {
                         m_rgb_ramp.push_back(AiArrayGetRGB(arr, i));
+                    }
                 }
             }
-            else
+            else {
                 std::vector<AtRGB>().swap(m_rgb_ramp);
+            }
         }
 
         GradientBase<AtRGB>::update();
@@ -117,7 +121,7 @@ public:
     }
 };
 
-template <>
+template<>
 inline AtRGB GradientBase<AtRGB>::make_color(float r, float g, float b) const
 {
     return AiColorCreate(r, g, b);

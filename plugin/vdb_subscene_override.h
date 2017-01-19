@@ -14,10 +14,13 @@ namespace MHWRender {
         static MPxSubSceneOverride* creator(const MObject& obj);
 
         VDBSubSceneOverride(const MObject& obj);
+
         virtual ~VDBSubSceneOverride();
 
         virtual MHWRender::DrawAPI supportedDrawAPIs() const;
+
         virtual void update(MSubSceneContainer& container, const MFrameContext& frameContext);
+
         virtual bool requiresUpdate(const MSubSceneContainer& container, const MFrameContext& frameContext) const;
 
         static MString registrantId;

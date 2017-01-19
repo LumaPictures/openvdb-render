@@ -3,7 +3,7 @@
 #include "gradient.hpp"
 
 namespace {
-    struct ShaderData{
+    struct ShaderData {
         Gradient gradient;
         AtString channel;
         int interpolation;
@@ -26,7 +26,7 @@ namespace {
         }
     };
 
-    const char* interpolations[] = { "closest", "trilinear", "tricubic", nullptr};
+    const char* interpolations[] = {"closest", "trilinear", "tricubic", nullptr};
 }
 
 AI_SHADER_NODE_EXPORT_METHODS(openvdbSamplerMethods);

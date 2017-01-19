@@ -8,8 +8,7 @@
 AI_SHADER_NODE_EXPORT_METHODS(openvdbShaderMethods);
 
 namespace {
-    enum VolumeCollectorParams
-    {
+    enum VolumeCollectorParams {
         p_scattering_source,
         p_scattering,
         p_scattering_channel,
@@ -32,27 +31,24 @@ namespace {
         p_compensate_scaling
     };
 
-    static const char* scattering_source_labels[] = { "parameter", "channel", NULL };
-    static const char* attenuation_source_labels[] = { "parameter", "channel", "scattering", NULL };
-    static const char* emission_source_labels[] = { "parameter", "channel", NULL };
-    static const char* attenuation_mode_labels[] = { "absorption", "extinction", NULL };
-    static const char* interpolation_labels[] = { "closest", "trilinear", "tricubic", NULL };
+    static const char* scattering_source_labels[] = {"parameter", "channel", NULL};
+    static const char* attenuation_source_labels[] = {"parameter", "channel", "scattering", NULL};
+    static const char* emission_source_labels[] = {"parameter", "channel", NULL};
+    static const char* attenuation_mode_labels[] = {"absorption", "extinction", NULL};
+    static const char* interpolation_labels[] = {"closest", "trilinear", "tricubic", NULL};
 
-    enum InputSource
-    {
+    enum InputSource {
         INPUT_SOURCE_PARAMETER,
         INPUT_SOURCE_CHANNEL,
         INPUT_SOURCE_SCATTERING,
     };
 
-    enum AttenuationMode
-    {
+    enum AttenuationMode {
         ATTENUATION_MODE_ABSORPTION,
         ATTENUATION_MODE_EXTINCTION,
     };
 
-    enum InputFrom
-    {
+    enum InputFrom {
         INPUT_FROM_NONE,
         INPUT_FROM_EVALUATE,
         INPUT_FROM_CACHE,
@@ -60,8 +56,7 @@ namespace {
         INPUT_FROM_SCATTERING,
     };
 
-    struct ShaderData
-    {
+    struct ShaderData {
         Gradient scattering_gradient;
         Gradient attenuation_gradient;
         Gradient emission_gradient;
@@ -125,12 +120,15 @@ namespace {
             // position offset
             position_offset = AiNodeGetVec(node, "position_offset");
 
-            if (AiNodeIsLinked(node, "position_offset"))
+            if (AiNodeIsLinked(node, "position_offset")) {
                 position_offset_from = INPUT_FROM_EVALUATE;
-            else if (position_offset != AI_V3_ZERO)
+            }
+            else if (position_offset != AI_V3_ZERO) {
                 position_offset_from = INPUT_FROM_CACHE;
-            else
+            }
+            else {
                 position_offset_from = INPUT_FROM_NONE;
+            }
 
             // get linked status
             scattering_is_linked = AiNodeIsLinked(node, "scattering");
@@ -171,8 +169,7 @@ namespace {
 
             compensate_scaling = AiNodeGetBool(node, "compensate_scaling");
 
-            switch (scattering_source)
-            {
+            switch (scattering_source) {
                 case INPUT_SOURCE_PARAMETER:
                     scattering_from = scattering_is_linked ? INPUT_FROM_EVALUATE : INPUT_FROM_CACHE;
                     break;
@@ -183,24 +180,27 @@ namespace {
                     assert("invalid value for scattering_source");
             }
 
-            switch (attenuation_source)
-            {
+            switch (attenuation_source) {
                 case INPUT_SOURCE_PARAMETER:
-                    if (attenuation_is_linked)
-                    {
-                        if (AiNodeGetLink(node, "attenuation") == AiNodeGetLink(node, "scattering"))
+                    if (attenuation_is_linked) {
+                        if (AiNodeGetLink(node, "attenuation") == AiNodeGetLink(node, "scattering")) {
                             attenuation_from = INPUT_FROM_SCATTERING;
-                        else
+                        }
+                        else {
                             attenuation_from = INPUT_FROM_EVALUATE;
+                        }
                     }
-                    else
+                    else {
                         attenuation_from = INPUT_FROM_CACHE;
+                    }
                     break;
                 case INPUT_SOURCE_CHANNEL:
-                    if (scattering_channel == attenuation_channel)
+                    if (scattering_channel == attenuation_channel) {
                         attenuation_from = INPUT_FROM_SCATTERING;
-                    else
+                    }
+                    else {
                         attenuation_from = INPUT_FROM_CHANNEL;
+                    }
                     break;
                 case INPUT_SOURCE_SCATTERING:
                     attenuation_from = INPUT_FROM_SCATTERING;
@@ -209,8 +209,7 @@ namespace {
                     assert("invalid value for attenuation_source");
             }
 
-            switch (emission_source)
-            {
+            switch (emission_source) {
                 case INPUT_SOURCE_PARAMETER:
                     emission_from = emission_is_linked ? INPUT_FROM_EVALUATE : INPUT_FROM_CACHE;
                     break;
@@ -223,22 +222,19 @@ namespace {
 
             // detect constant zero values for color and intensity
             if ((!scattering_intensity_is_linked && scattering_intensity == 0.0f) ||
-                (!scattering_color_is_linked && AiColorEqual(scattering_color, AI_RGB_BLACK)))
-            {
+                (!scattering_color_is_linked && AiColorEqual(scattering_color, AI_RGB_BLACK))) {
                 scattering_from = INPUT_FROM_CACHE;
                 scattering = AI_RGB_BLACK;
             }
 
             if ((!attenuation_intensity_is_linked && attenuation_intensity == 0.0f) ||
-                (!attenuation_color_is_linked && AiColorEqual(attenuation_color, AI_RGB_BLACK)))
-            {
+                (!attenuation_color_is_linked && AiColorEqual(attenuation_color, AI_RGB_BLACK))) {
                 attenuation_from = INPUT_FROM_CACHE;
                 attenuation = AI_RGB_BLACK;
             }
 
             if ((!emission_intensity_is_linked && emission_intensity == 0.0f) ||
-                (!emission_color_is_linked && AiColorEqual(emission_color, AI_RGB_BLACK)))
-            {
+                (!emission_color_is_linked && AiColorEqual(emission_color, AI_RGB_BLACK))) {
                 emission_from = INPUT_FROM_NONE;
                 emission = AI_RGB_BLACK;
             }
@@ -301,8 +297,7 @@ shader_evaluate
     // sampling position offset
     AtPoint Po_orig = AI_V3_ZERO;
 
-    switch (data->position_offset_from)
-    {
+    switch (data->position_offset_from) {
         case INPUT_FROM_EVALUATE:
             Po_orig = sg->Po;
             sg->Po += AiShaderEvalParamVec(p_position_offset);
@@ -318,7 +313,7 @@ shader_evaluate
 
     // the values storing the result of AiVolumeSampleRGB() need to be zeroed
     // or NaNs will occur in optimized builds (htoa#374)
-    AtColor scattering  = AI_RGB_BLACK;
+    AtColor scattering = AI_RGB_BLACK;
     AtColor attenuation = AI_RGB_BLACK;
 
     AtVector scaled_dir;
@@ -326,12 +321,12 @@ shader_evaluate
     const float scale_factor = AiV3Length(scaled_dir);
 
     // scattering
-    if (!(sg->Rt & AI_RAY_SHADOW) || (data->attenuation_from == INPUT_FROM_SCATTERING) || (data->attenuation_mode == ATTENUATION_MODE_ABSORPTION))
-    {
-        switch (data->scattering_from)
-        {
+    if (!(sg->Rt & AI_RAY_SHADOW) || (data->attenuation_from == INPUT_FROM_SCATTERING) ||
+        (data->attenuation_mode == ATTENUATION_MODE_ABSORPTION)) {
+        switch (data->scattering_from) {
             case INPUT_FROM_CHANNEL:
-                scattering = data->scattering_gradient.evaluate_arnold(sg, data->scattering_channel, data->interpolation);
+                scattering = data->scattering_gradient.evaluate_arnold(sg, data->scattering_channel,
+                                                                       data->interpolation);
                 break;
             case INPUT_FROM_EVALUATE:
                 scattering = AiShaderEvalParamRGB(p_scattering);
@@ -344,26 +339,29 @@ shader_evaluate
                 break;
         }
 
-        if (!(sg->Rt & AI_RAY_SHADOW) || (data->attenuation_mode == ATTENUATION_MODE_ABSORPTION))
-        {
+        if (!(sg->Rt & AI_RAY_SHADOW) || (data->attenuation_mode == ATTENUATION_MODE_ABSORPTION)) {
             // color, intensity, anisotropy and clipping
-            const AtRGB scattering_color= data->scattering_color_is_linked     ? AiShaderEvalParamRGB(p_scattering_color)     : data->scattering_color;
-            const float scattering_intensity = data->scattering_intensity_is_linked ? AiShaderEvalParamFlt(p_scattering_intensity) : data->scattering_intensity;
-            const float anisotropy = data->anisotropy_is_linked           ? AiShaderEvalParamFlt(p_anisotropy)           : data->anisotropy;
+            const AtRGB scattering_color = data->scattering_color_is_linked ? AiShaderEvalParamRGB(p_scattering_color)
+                                                                            : data->scattering_color;
+            const float scattering_intensity = data->scattering_intensity_is_linked ? AiShaderEvalParamFlt(
+                p_scattering_intensity) : data->scattering_intensity;
+            const float anisotropy = data->anisotropy_is_linked ? AiShaderEvalParamFlt(p_anisotropy) : data->anisotropy;
 
             AtRGB scattering_result = scattering * scattering_color * scattering_intensity;
             AiColorClipToZero(scattering_result);
 
             // update volume shader globals
-            AiShaderGlobalsSetVolumeScattering(sg, scattering_result * (((data->attenuation_mode == ATTENUATION_MODE_ABSORPTION) && data->compensate_scaling) ? scale_factor : 1.0f), anisotropy);
+            AiShaderGlobalsSetVolumeScattering(sg, scattering_result *
+                                                   (((data->attenuation_mode == ATTENUATION_MODE_ABSORPTION) &&
+                                                     data->compensate_scaling) ? scale_factor : 1.0f), anisotropy);
         }
     }
 
     // attenuation
-    switch (data->attenuation_from)
-    {
+    switch (data->attenuation_from) {
         case INPUT_FROM_CHANNEL:
-            attenuation = data->attenuation_gradient.evaluate_arnold(sg, data->attenuation_channel, data->interpolation);
+            attenuation = data->attenuation_gradient.evaluate_arnold(sg, data->attenuation_channel,
+                                                                     data->interpolation);
             break;
         case INPUT_FROM_EVALUATE:
             attenuation = AiShaderEvalParamRGB(p_attenuation);
@@ -374,34 +372,36 @@ shader_evaluate
         case INPUT_FROM_SCATTERING:
             attenuation = scattering;
             break;
-        default: assert("invalid value for data->attenuation_from"); break;
+        default:
+            assert("invalid value for data->attenuation_from");
+            break;
     }
 
     // color, intensity and clipping
-    const AtRGB attenuation_color = data->attenuation_color_is_linked ? AiShaderEvalParamRGB(p_attenuation_color) : data->attenuation_color;
-    const float attenuation_intensity = data->attenuation_intensity_is_linked ? AiShaderEvalParamFlt(p_attenuation_intensity) : data->attenuation_intensity;
+    const AtRGB attenuation_color = data->attenuation_color_is_linked ? AiShaderEvalParamRGB(p_attenuation_color)
+                                                                      : data->attenuation_color;
+    const float attenuation_intensity = data->attenuation_intensity_is_linked ? AiShaderEvalParamFlt(
+        p_attenuation_intensity) : data->attenuation_intensity;
     attenuation *= attenuation_color * attenuation_intensity;
     AiColorClipToZero(attenuation);
 
     // update volume shader globals
-    switch (data->attenuation_mode)
-    {
+    switch (data->attenuation_mode) {
         case ATTENUATION_MODE_ABSORPTION:
             AiShaderGlobalsSetVolumeAbsorption(sg, attenuation * (data->compensate_scaling ? scale_factor : 1.0f));
             break;
         case ATTENUATION_MODE_EXTINCTION:
             AiShaderGlobalsSetVolumeAttenuation(sg, attenuation * (data->compensate_scaling ? scale_factor : 1.0f));
             break;
-        default: assert("Invalid attenuation mode!");
+        default:
+            assert("Invalid attenuation mode!");
     }
 
     // emission
-    if (!(sg->Rt & AI_RAY_SHADOW) && (data->emission_from != INPUT_FROM_NONE))
-    {
+    if (!(sg->Rt & AI_RAY_SHADOW) && (data->emission_from != INPUT_FROM_NONE)) {
         AtColor emission = AI_RGB_BLACK;
 
-        switch (data->emission_from)
-        {
+        switch (data->emission_from) {
             case INPUT_FROM_CHANNEL:
                 emission = data->emission_gradient.evaluate_arnold(sg, data->emission_channel, data->interpolation);
                 break;
@@ -411,21 +411,26 @@ shader_evaluate
             case INPUT_FROM_CACHE:
                 emission = data->emission;
                 break;
-            default: assert("invalid value for data->emission_from");
+            default:
+                assert("invalid value for data->emission_from");
         }
 
         // color, intensity and clipping
-        const AtRGB emission_color = data->emission_color_is_linked ? AiShaderEvalParamRGB(p_emission_color) : data->emission_color;
-        const float emission_intensity = data->emission_intensity_is_linked ? AiShaderEvalParamFlt(p_emission_intensity) : data->emission_intensity;
+        const AtRGB emission_color = data->emission_color_is_linked ? AiShaderEvalParamRGB(p_emission_color)
+                                                                    : data->emission_color;
+        const float emission_intensity = data->emission_intensity_is_linked ? AiShaderEvalParamFlt(p_emission_intensity)
+                                                                            : data->emission_intensity;
         emission *= emission_color * emission_intensity;
         AiColorClipToZero(emission);
 
         // update volume shader globals
-        if (!AiColorIsZero(emission))
+        if (!AiColorIsZero(emission)) {
             AiShaderGlobalsSetVolumeEmission(sg, emission);
+        }
     }
 
     // restore sampling position
-    if (data->position_offset_from != INPUT_FROM_NONE)
+    if (data->position_offset_from != INPUT_FROM_NONE) {
         sg->Po = Po_orig;
+    }
 }
