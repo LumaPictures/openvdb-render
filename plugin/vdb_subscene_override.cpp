@@ -2,6 +2,8 @@
 
 #include "vdb_maya_utils.hpp"
 
+#include <maya/MGlobal.h>
+
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
 
@@ -199,7 +201,9 @@ namespace MHWRender {
             data_has_changed |= setup_parameter(point_skip, data->point_skip);
 
             point_size = data->point_size;
-            point_jitter = data->point_jitter; // We can jitter in the vertex shader. Hopefully
+            // point_jitter = data->point_jitter;
+            // TODO: do the jittering in the vertex shader!
+            data_has_changed |= setup_parameter(point_jitter, data->point_jitter);
 
             return data_has_changed | matrix_changed;
         }
@@ -227,7 +231,7 @@ namespace MHWRender {
             if (p_point_cloud_shader != nullptr)
                 p_point_cloud_shader->setIsTransparent(true);
             else
-                std::cerr << "Point cloud shader is zero!" << std::endl;
+                MGlobal::displayError(MString("[vdb_subscene_override] Error compiling point cloud shader!"));
         }
     }
 
