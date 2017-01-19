@@ -301,6 +301,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl("anisotropy", label="Anisotropy")
         self.create_gradient_params("simpleSmoke", node_name)
         self.endLayout()
+
         self.beginLayout("Opacity", collapse=False)
         self.addControl("opacity", label="Opacity")
         self.callCustom(self.create_opacity_channel, self.update_opacity_channel, "opacity_channel")
@@ -308,6 +309,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl("opacityShadow", label="Shadow Multiplier")
         self.create_gradient_params("simpleOpacity", node_name)
         self.endLayout()
+
         self.beginLayout("Emission", collapse=False)
         self.endLayout()
         self.addControl("fire", label="Emission")
