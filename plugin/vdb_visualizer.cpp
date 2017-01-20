@@ -550,9 +550,9 @@ MStatus VDBVisualizerShape::initialize()
     addAttribute(s_self_shadows);
 
     s_point_size = nAttr.create("pointSize", "point_size", MFnNumericData::kFloat);
-    nAttr.setMin(1.0f);
+    nAttr.setMin(0.01f);
     nAttr.setSoftMax(10.0f);
-    nAttr.setDefault(2.0f);
+    nAttr.setDefault(1.0f);
     nAttr.setChannelBox(true);
 
     s_point_jitter = nAttr.create("pointJitter", "point_jitter", MFnNumericData::kFloat);

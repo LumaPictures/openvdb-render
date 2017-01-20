@@ -4,6 +4,7 @@
 
 #include <maya/MGlobal.h>
 #include <maya/MFnDagNode.h>
+#include <maya/MDrawContext.h>
 
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
@@ -22,12 +23,12 @@ namespace {
     // Awesome, right?
 
     // For random numbers : http://www.reedbeta.com/blog/quick-and-easy-gpu-random-numbers-in-d3d11/
-
     const char* point_cloud_technique = R"ogsfx(
-uniform mat4 wvp : WorldViewProjection;
-uniform mat4 vp_mat : ViewProjection;
-uniform mat4 w_mat : World;
+uniform mat4 wv_mat : WorldView;
+uniform mat4 p_mat : Projection;
 uniform float point_size;
+uniform float voxel_size;
+uniform float half_viewport_size;
 uniform vec3 jitter_size;
 uniform int vertex_count;
 
@@ -59,12 +60,14 @@ GLSLShader VS
 
     void main()
     {
-        vec3 pos = in_position;
+        vec4 pos = vec4(in_position, 1.0);
         pos.x += jitter_size.x * 2.0 * rand_xorshift(uint(gl_VertexID)) - jitter_size.x;
         pos.y += jitter_size.y * 2.0 * rand_xorshift(uint(gl_VertexID + vertex_count)) - jitter_size.y;
         pos.z += jitter_size.z * 2.0 * rand_xorshift(uint(gl_VertexID + vertex_count * 2)) - jitter_size.z;
-        gl_Position = vp_mat * w_mat * vec4(pos, 1.0);
-        gl_PointSize = point_size;
+        pos = wv_mat * pos;
+        vec4 proj_pos = p_mat * vec4(pos.x + point_size * voxel_size, pos.y, pos.z, pos.w);
+        gl_Position = p_mat * pos;
+        gl_PointSize = abs(proj_pos.x / proj_pos.w - gl_Position.x / gl_Position.w) * half_viewport_size;
         vsOut.point_color = in_color;
     }
 }
@@ -106,10 +109,16 @@ technique Main
     // We expect maya not to run other draw calls between the pre and post renders
     bool point_size_enabled = false;
 
-    void pre_point_cloud_render(MHWRender::MDrawContext& /*context*/,
+    void pre_point_cloud_render(MHWRender::MDrawContext& context,
                                 const MHWRender::MRenderItemList& /*renderItemList*/,
-                                MHWRender::MShaderInstance* /*shaderInstance*/)
+                                MHWRender::MShaderInstance* shaderInstance)
     {
+        int origin_x = 0;
+        int origin_y = 0;
+        int width = 0;
+        int height = 0;
+        context.getViewportDimensions(origin_x, origin_y, width, height);
+        shaderInstance->setParameter("half_viewport_size", static_cast<float>(width) * 0.5f);
         point_size_enabled = glIsEnabled(GL_VERTEX_PROGRAM_POINT_SIZE) != 0;
         if (!point_size_enabled) {
             glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
@@ -677,7 +686,9 @@ namespace MHWRender {
                 }
             }
             p_point_cloud_shader->setParameter("vertex_count", data->vertex_count);
-
+            p_point_cloud_shader->setParameter("voxel_size",
+                                               std::max(data->voxel_size.x(),
+                                                        std::max(data->voxel_size.y(), data->voxel_size.z())));
             data->data_has_changed = false;
         }
 
