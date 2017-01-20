@@ -25,6 +25,8 @@ namespace {
 
     const char* point_cloud_technique = R"ogsfx(
 uniform mat4 wvp : WorldViewProjection;
+uniform mat4 vp_mat : ViewProjection;
+uniform mat4 w_mat : World;
 uniform float point_size;
 uniform vec3 jitter_size;
 uniform int vertex_count;
@@ -61,7 +63,7 @@ GLSLShader VS
         pos.x += jitter_size.x * 2.0 * rand_xorshift(uint(gl_VertexID)) - jitter_size.x;
         pos.y += jitter_size.y * 2.0 * rand_xorshift(uint(gl_VertexID + vertex_count)) - jitter_size.y;
         pos.z += jitter_size.z * 2.0 * rand_xorshift(uint(gl_VertexID + vertex_count * 2)) - jitter_size.z;
-        gl_Position = wvp * vec4(pos, 1.0);
+        gl_Position = vp_mat * w_mat * vec4(pos, 1.0);
         gl_PointSize = point_size;
         vsOut.point_color = in_color;
     }
@@ -178,7 +180,7 @@ namespace MHWRender {
             vertex_count(0), point_skip(-1), update_trigger(-1),
             display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_VOLUME_COLLECTOR),
             data_has_changed(false), shader_has_changed(false), visible(true),
-            old_bounding_box_enabled(false), old_point_cloud_enabled(false)
+            old_bounding_box_enabled(true), old_point_cloud_enabled(true)
         {
             for (unsigned int x = 0; x < 4; ++x) {
                 for (unsigned int y = 0; y < 4; ++y) {
@@ -395,7 +397,6 @@ namespace MHWRender {
         bounding_box->setMatrix(&data->world_matrix);
         point_cloud->setMatrix(&data->world_matrix);
 
-
         if (data->data_has_changed) {
             const bool file_exists = data->vdb_file != nullptr;
 
@@ -405,6 +406,8 @@ namespace MHWRender {
             if (!file_exists || data->display_mode <= DISPLAY_GRID_BBOX) {
                 point_cloud->enable(false);
                 bounding_box->enable(true);
+                data->old_point_cloud_enabled = false;
+                data->old_bounding_box_enabled = true;
 
                 MVertexBufferArray vertex_buffers;
                 p_bbox_position.reset(new MVertexBuffer(position_buffer_desc));
@@ -470,6 +473,7 @@ namespace MHWRender {
                 setGeometryForRenderItem(*bounding_box, vertex_buffers, *p_bbox_indices.get(), &data->bbox);
             }
             else {
+                data->old_bounding_box_enabled = false;
                 bounding_box->enable(false);
                 if (data->display_mode == DISPLAY_POINT_CLOUD) {
                     try {
@@ -488,6 +492,7 @@ namespace MHWRender {
                         return;
                     }
 
+                    data->old_point_cloud_enabled = true;
                     point_cloud->enable(true);
 
                     data->voxel_size = data->attenuation_grid->voxelSize();
