@@ -8,9 +8,11 @@
 
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
+#include <tbb/parallel_sort.h>
 
 #include <new>
 #include <random>
+#include <algorithm>
 
 namespace {
     // We have to options to code shaders, either cgfx, which is deprecated since 2012
@@ -68,7 +70,7 @@ GLSLShader VS
         vec4 proj_pos = p_mat * vec4(pos.x + point_size * voxel_size, pos.y, pos.z, pos.w);
         gl_Position = p_mat * pos;
         gl_PointSize = abs(proj_pos.x / proj_pos.w - gl_Position.x / gl_Position.w) * half_viewport_size;
-        vsOut.point_color = in_color;
+        vsOut.point_color = vec4(in_color.xyz, in_color.w * voxel_size);
     }
 }
 
@@ -144,10 +146,27 @@ namespace MHWRender {
         }
     }
 
+    // we are storing an extra float here to have better memory alignment
+    struct PointCloudVertex {
+        MFloatPoint position;
+        MColor color;
+
+        PointCloudVertex() : position(0.0f, 0.0f, 0.0f, 0.0f), color(0.0f, 0.0f, 0.0f, 0.0f) {
+
+        }
+
+        PointCloudVertex(const MFloatPoint& p) : position(p), color(0.0f, 0.0f, 0.0f, 0.0f) {
+
+        }
+    };
+
     struct VDBSubSceneOverrideData {
         MBoundingBox bbox;
 
         MMatrix world_matrix;
+        MMatrix camera_matrix;
+
+        std::vector<PointCloudVertex> point_cloud_data;
 
         MFloatVector scattering_color;
         MFloatVector attenuation_color;
@@ -179,6 +198,7 @@ namespace MHWRender {
 
         bool data_has_changed;
         bool shader_has_changed;
+        bool camera_has_changed;
         bool visible;
         bool old_bounding_box_enabled;
         bool old_point_cloud_enabled;
@@ -188,12 +208,18 @@ namespace MHWRender {
             point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
             vertex_count(0), point_skip(-1), update_trigger(-1),
             display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_VOLUME_COLLECTOR),
-            data_has_changed(false), shader_has_changed(false), visible(true),
-            old_bounding_box_enabled(true), old_point_cloud_enabled(true)
+            data_has_changed(false), shader_has_changed(false), camera_has_changed(false),
+            visible(true), old_bounding_box_enabled(true), old_point_cloud_enabled(true)
         {
             for (unsigned int x = 0; x < 4; ++x) {
                 for (unsigned int y = 0; y < 4; ++y) {
                     world_matrix(x, y) = std::numeric_limits<float>::infinity();
+                }
+            }
+
+            for (unsigned int x = 0; x < 4; ++x) {
+                for (unsigned int y = 0; y < 4; ++y) {
+                    camera_matrix(x, y) = std::numeric_limits<float>::infinity();
                 }
             }
         }
@@ -211,13 +237,21 @@ namespace MHWRender {
             vdb_file.reset();
         }
 
-        bool update(const VDBVisualizerData* data, const MObject& obj)
+        bool update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context)
         {
             MDagPath dg = MDagPath::getAPathTo(obj);
-            const MMatrix inc_world_matrix = dg.inclusiveMatrix();
-            const bool matrix_changed = world_matrix != inc_world_matrix;
-            if (matrix_changed) {
+            const auto inc_world_matrix = dg.inclusiveMatrix();
+            const auto inc_camera_matrix = frame_context.getMatrix(MFrameContext::kViewMtx);
+            bool matrix_changed = false;
+            if (world_matrix != inc_world_matrix) {
                 world_matrix = inc_world_matrix;
+                matrix_changed = true;
+            }
+
+            if (camera_matrix != inc_camera_matrix) {
+                camera_has_changed = true;
+                camera_matrix = inc_camera_matrix;
+                matrix_changed = true;
             }
             // TODO: we can limit some of the comparisons to the display mode
             // ie, we don't need to compare certain things if we are using the bounding
@@ -331,7 +365,7 @@ namespace MHWRender {
 #endif
     }
 
-    void VDBSubSceneOverride::update(MSubSceneContainer& container, const MFrameContext& /*frameContext*/)
+    void VDBSubSceneOverride::update(MSubSceneContainer& container, const MFrameContext& frameContext)
     {
         VDBSubSceneOverrideData* data = p_data.get();
 
@@ -407,6 +441,7 @@ namespace MHWRender {
         point_cloud->setMatrix(&data->world_matrix);
 
         if (data->data_has_changed) {
+            std::vector<PointCloudVertex>().swap(data->point_cloud_data);
             const bool file_exists = data->vdb_file != nullptr;
 
             const static MVertexBufferDescriptor position_buffer_desc("", MGeometry::kPosition, MGeometry::kFloat, 3);
@@ -521,8 +556,7 @@ namespace MHWRender {
                     }
 
                     // setting up vertex buffers
-                    std::vector<MFloatVector> vertices;
-                    vertices.reserve(iter->get_active_voxels());
+                    data->point_cloud_data.reserve(iter->get_active_voxels());
                     const openvdb::math::Transform attenuation_transform = data->attenuation_grid->transform();
 
                     std::mt19937 mt_generator;
@@ -534,13 +568,13 @@ namespace MHWRender {
                             continue;
                         }
                         openvdb::Vec3f vdb_pos = attenuation_transform.indexToWorld(iter->get_coord());
-                        vertices.push_back(
+                        data->point_cloud_data.emplace_back(
                             MFloatVector(vdb_pos.x(), vdb_pos.y(),
                                          vdb_pos.z()));
                     }
 
-                    vertices.shrink_to_fit();
-                    const unsigned int vertex_count = static_cast<unsigned int>(vertices.size());
+                    data->point_cloud_data.shrink_to_fit();
+                    const unsigned int vertex_count = static_cast<unsigned int>(data->point_cloud_data.size());
 
                     if (vertex_count == 0) {
                         return;
@@ -551,26 +585,6 @@ namespace MHWRender {
                     delete iter;
 
                     tbb::task_scheduler_init task_init;
-
-                    p_index_buffer.reset(new MIndexBuffer(MGeometry::kUnsignedInt32));
-                    unsigned int* indices = reinterpret_cast<unsigned int*>(p_index_buffer->acquire(vertex_count,
-                                                                                                    true));
-                    for (unsigned int i = 0; i < vertex_count; ++i) {
-                        indices[i] = i;
-                    }
-                    p_index_buffer->commit(indices);
-
-
-                    p_position_buffer.reset(new MVertexBuffer(position_buffer_desc));
-                    MFloatVector* pc_vertices = reinterpret_cast<MFloatVector*>(p_position_buffer->acquire(
-                        static_cast<unsigned int>(vertices.size()), true));
-
-                    tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count),
-                                      [&](const tbb::blocked_range<unsigned int>& r) {
-                                          memcpy(&pc_vertices[r.begin()], &vertices[r.begin()],
-                                                 (r.end() - r.begin()) * sizeof(MFloatVector));
-                                      });
-                    p_position_buffer->commit(pc_vertices);
 
                     // setting up color buffers
 
@@ -648,32 +662,63 @@ namespace MHWRender {
                             MFloatVector(1.0f, 1.0f, 1.0f));
                     }
 
-                    p_color_buffer.reset(new MVertexBuffer(color_buffer_desc));
-                    MColor* colors = reinterpret_cast<MColor*>(p_color_buffer->acquire(vertex_count, true));
                     tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count),
                                       [&](const tbb::blocked_range<unsigned int>& r) {
                                           for (unsigned int i = r.begin(); i < r.end(); ++i) {
-                                              const MFloatVector& v = vertices[i];
-                                              const openvdb::Vec3d pos(v.x, v.y, v.z);
-                                              MColor& color = colors[i];
+                                              auto& vertex = data->point_cloud_data[i];
+                                              const openvdb::Vec3d pos(vertex.position.x, vertex.position.y, vertex.position.z);
                                               const MFloatVector scattering_color = data->scattering_gradient.evaluate(
                                                   scattering_sampler->get_rgb(pos));
                                               const MFloatVector emission_color = data->emission_gradient.evaluate(
                                                   emission_sampler->get_rgb(pos));
                                               const MFloatVector attenuation_color = data->attenuation_gradient.evaluate(
                                                   attenuation_sampler->get_rgb(pos));
-                                              color.r = scattering_color.x * data->scattering_color.x +
-                                                        emission_color.x * data->emission_color.x;
-                                              color.g = scattering_color.y * data->scattering_color.y +
-                                                        emission_color.y * data->emission_color.y;
-                                              color.b = scattering_color.z * data->scattering_color.z +
-                                                        emission_color.z * data->emission_color.z;
-                                              color.a = (attenuation_color.x * data->attenuation_color.x +
-                                                         attenuation_color.y * data->attenuation_color.y +
-                                                         attenuation_color.z * data->attenuation_color.z) / 3.0f;
+                                              vertex.color.r = scattering_color.x * data->scattering_color.x +
+                                                               emission_color.x * data->emission_color.x;
+                                              vertex.color.g = scattering_color.y * data->scattering_color.y +
+                                                               emission_color.y * data->emission_color.y;
+                                              vertex.color.b = scattering_color.z * data->scattering_color.z +
+                                                               emission_color.z * data->emission_color.z;
+                                              vertex.color.a = (attenuation_color.x * data->attenuation_color.x +
+                                                                attenuation_color.y * data->attenuation_color.y +
+                                                                attenuation_color.z * data->attenuation_color.z) / 3.0f;
                                           }
                                       });
+
+                    const auto camera_matrix = frameContext.getMatrix(MFrameContext::kViewInverseMtx);
+
+                    MFloatPoint camera_pos = MPoint(0.0f, 0.0f, 0.0f, 1.0f) * (camera_matrix * data->world_matrix.inverse());
+
+                    tbb::parallel_sort(data->point_cloud_data.begin(), data->point_cloud_data.end(), [camera_pos](
+                        const PointCloudVertex& a, const PointCloudVertex& b
+                    ) -> bool{
+                        return camera_pos.distanceTo(a.position) > camera_pos.distanceTo(b.position);
+                    });
+
+                    // TODO: unify these two buffers!
+                    p_color_buffer.reset(new MVertexBuffer(color_buffer_desc));
+                    MColor* colors = reinterpret_cast<MColor*>(p_color_buffer->acquire(vertex_count, true));
+
+                    tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count),
+                                      [&](const tbb::blocked_range<unsigned int>& r) {
+                                          for (auto i = r.begin(); i != r.end(); ++i) {
+                                              colors[i] = data->point_cloud_data[i].color;
+                                          }
+                                      });
+
                     p_color_buffer->commit(colors);
+
+                    p_position_buffer.reset(new MVertexBuffer(position_buffer_desc));
+                    MFloatVector* pc_vertices = reinterpret_cast<MFloatVector*>(p_position_buffer->acquire(
+                        vertex_count, true));
+
+                    tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count),
+                                      [&](const tbb::blocked_range<unsigned int>& r) {
+                                          for (auto i = r.begin(); i != r.end(); ++i) {
+                                              pc_vertices[i] = data->point_cloud_data[i].position;
+                                          }
+                                      });
+                    p_position_buffer->commit(pc_vertices);
 
                     scattering_sampler->~RGBSampler();
                     emission_sampler->~RGBSampler();
@@ -682,7 +727,9 @@ namespace MHWRender {
                     MVertexBufferArray vertex_buffers;
                     vertex_buffers.addBuffer("", p_position_buffer.get());
                     vertex_buffers.addBuffer("", p_color_buffer.get());
-                    setGeometryForRenderItem(*point_cloud, vertex_buffers, *p_index_buffer.get(), &data->bbox);
+                    MIndexBuffer index_buffer(MGeometry::kUnsignedInt32);
+                    setGeometryForRenderItem(*point_cloud, vertex_buffers, index_buffer, &data->bbox);
+                    data->camera_has_changed = false;
                 }
             }
             p_point_cloud_shader->setParameter("vertex_count", data->vertex_count);
@@ -699,12 +746,15 @@ namespace MHWRender {
                 data->voxel_size.x(), data->voxel_size.y(), data->voxel_size.y()) * data->point_jitter);
             data->shader_has_changed = false;
         }
+
+        if ((data->camera_has_changed && data->display_mode == DISPLAY_POINT_CLOUD)) {
+            data->camera_has_changed = false;
+        }
     }
 
     bool VDBSubSceneOverride::requiresUpdate(const MSubSceneContainer& /*container*/,
-                                             const MFrameContext& /*frameContext*/) const
+                                             const MFrameContext& frameContext) const
     {
-
-        return p_data->update(p_vdb_visualizer->get_update(), m_object);
+        return p_data->update(p_vdb_visualizer->get_update(), m_object, frameContext);
     }
 }

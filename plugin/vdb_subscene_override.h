@@ -34,7 +34,6 @@ namespace MHWRender {
 
         std::unique_ptr<MVertexBuffer> p_position_buffer;
         std::unique_ptr<MVertexBuffer> p_color_buffer;
-        std::unique_ptr<MIndexBuffer> p_index_buffer;
 
         struct shader_instance_deleter {
             void operator()(MShaderInstance* p);
