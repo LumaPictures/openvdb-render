@@ -64,6 +64,7 @@ MObject VDBVisualizerShape::s_self_shadows;
 MObject VDBVisualizerShape::s_point_size;
 MObject VDBVisualizerShape::s_point_jitter;
 MObject VDBVisualizerShape::s_point_skip;
+MObject VDBVisualizerShape::s_point_sort;
 
 MObject VDBVisualizerShape::s_override_shader;
 MObject VDBVisualizerShape::s_sampling_quality;
@@ -566,6 +567,13 @@ MStatus VDBVisualizerShape::initialize()
     nAttr.setDefault(10);
     nAttr.setChannelBox(true);
 
+    s_point_sort = eAttr.create("pointSort", "point_sort");
+    eAttr.addField("Disabled", POINT_SORT_DISABLED);
+    eAttr.addField("CPU and GPU", POINT_SORT_GPU_CPU);
+    eAttr.addField("GPU Only", POINT_SORT_GPU);
+    eAttr.setDefault(POINT_SORT_DEFAULT);
+    addAttribute(s_point_sort);
+
     s_override_shader = nAttr.create("overrideShader", "override_shader", MFnNumericData::kBoolean);
     nAttr.setDefault(false);
     nAttr.setChannelBox(true);
@@ -618,7 +626,7 @@ MStatus VDBVisualizerShape::initialize()
     s_shader_mode = eAttr.create("shaderMode", "shader_mode");
     eAttr.addField("Arnold Volume Collector", SHADER_MODE_VOLUME_COLLECTOR);
     eAttr.addField("Simple Shader", SHADER_MODE_SIMPLE);
-    eAttr.setDefault(0);
+    eAttr.setDefault(SHADER_MODE_DEFAULT);
     addAttribute(s_shader_mode);
 
     s_shader_params.create_params();

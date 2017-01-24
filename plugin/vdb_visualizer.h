@@ -17,16 +17,24 @@
 
 enum VDBDisplayMode {
     DISPLAY_AXIS_ALIGNED_BBOX = 0,
-    DISPLAY_GRID_BBOX,
-    DISPLAY_POINT_CLOUD,
-    DISPLAY_NON_SHADED,
-    DISPLAY_SHADED,
-    DISPLAY_MESH
+    DISPLAY_GRID_BBOX = 1,
+    DISPLAY_POINT_CLOUD = 2,
+    DISPLAY_NON_SHADED = 3,
+    DISPLAY_SHADED = 4,
+    DISPLAY_MESH = 5
 };
 
 enum VDBShaderMode {
     SHADER_MODE_VOLUME_COLLECTOR = 0,
-    SHADER_MODE_SIMPLE = 1
+    SHADER_MODE_SIMPLE = 1,
+    SHADER_MODE_DEFAULT = SHADER_MODE_SIMPLE
+};
+
+enum VDBPointSort {
+    POINT_SORT_DISABLED = 0,
+    POINT_SORT_GPU_CPU = 1,
+    POINT_SORT_GPU = 2,
+    POINT_SORT_DEFAULT = POINT_SORT_GPU
 };
 
 struct VDBVisualizerData {
@@ -126,6 +134,7 @@ public:
     static MObject s_point_size;
     static MObject s_point_jitter;
     static MObject s_point_skip;
+    static MObject s_point_sort;
 
     static MObject s_override_shader;
     static MObject s_sampling_quality;

@@ -25,6 +25,8 @@ namespace MHWRender {
 
         static MString registrantId;
     private:
+        void setup_point_cloud(MRenderItem* point_cloud, const MFloatPoint& camera_pos);
+
         MObject m_object;
         VDBVisualizerShape* p_vdb_visualizer;
         std::unique_ptr<VDBSubSceneOverrideData> p_data;
