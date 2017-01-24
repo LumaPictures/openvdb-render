@@ -746,29 +746,21 @@ namespace MHWRender {
         const auto vertex_count = static_cast<unsigned int>(data->point_cloud_data.size());
 
         p_position_buffer.reset(new MVertexBuffer(position_buffer_desc));
-        MFloatVector* pc_vertices = reinterpret_cast<MFloatVector*>(p_position_buffer->acquire(
-                vertex_count, true));
-
-        tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count),
-                          [&](const tbb::blocked_range<unsigned int>& r) {
-                              for (auto i = r.begin(); i != r.end(); ++i) {
-                                  pc_vertices[i] = data->point_cloud_data[i].position;
-                              }
-                          });
-
-        p_position_buffer->commit(pc_vertices);
-
         p_color_buffer.reset(new MVertexBuffer(color_buffer_desc));
+
+        MFloatVector* vertices = reinterpret_cast<MFloatVector*>(p_position_buffer->acquire(
+            vertex_count, true));
         MColor* colors = reinterpret_cast<MColor*>(p_color_buffer->acquire(vertex_count, true));
 
-
         tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count),
                           [&](const tbb::blocked_range<unsigned int>& r) {
                               for (auto i = r.begin(); i != r.end(); ++i) {
+                                  vertices[i] = data->point_cloud_data[i].position;
                                   colors[i] = data->point_cloud_data[i].color;
                               }
                           });
 
+        p_position_buffer->commit(vertices);
         p_color_buffer->commit(colors);
 
         MVertexBufferArray vertex_buffers;
