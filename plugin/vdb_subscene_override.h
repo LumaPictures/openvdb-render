@@ -24,6 +24,8 @@ namespace MHWRender {
         virtual bool requiresUpdate(const MSubSceneContainer& container, const MFrameContext& frameContext) const;
 
         static MString registrantId;
+
+        static void init_gpu();
     private:
         void setup_point_cloud(MRenderItem* point_cloud, const MFloatPoint& camera_pos);
 

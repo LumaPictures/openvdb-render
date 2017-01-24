@@ -66,6 +66,7 @@ MStatus initializePlugin(MObject obj)
     }
 
     openvdb::initialize();
+    MHWRender::VDBSubSceneOverride::init_gpu();
 
     status = plugin.registerCommand("vdb_query", VDBQueryCmd::creator, VDBQueryCmd::create_syntax);
 

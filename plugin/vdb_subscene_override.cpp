@@ -1,6 +1,7 @@
 #include "vdb_subscene_override.h"
 
 #include "vdb_maya_utils.hpp"
+#include "point_sorter.h"
 
 #include <maya/MGlobal.h>
 #include <maya/MFnDagNode.h>
@@ -106,6 +107,8 @@ technique Main
 
         return shader_manager;
     }
+
+    bool cuda_enabled = false;
 
     // This is a hacky workaround for having a callback specific dataset
     // We expect maya not to run other draw calls between the pre and post renders
@@ -722,6 +725,12 @@ namespace MHWRender {
         }
     }
 
+    bool VDBSubSceneOverride::requiresUpdate(const MSubSceneContainer& /*container*/,
+                                             const MFrameContext& frameContext) const
+    {
+        return p_data->update(p_vdb_visualizer->get_update(), m_object, frameContext);
+    }
+
     void VDBSubSceneOverride::setup_point_cloud(MRenderItem* point_cloud, const MFloatPoint& camera_pos)
     {
         const static MVertexBufferDescriptor position_buffer_desc("", MGeometry::kPosition, MGeometry::kFloat, 3);
@@ -770,9 +779,7 @@ namespace MHWRender {
         setGeometryForRenderItem(*point_cloud, vertex_buffers, index_buffer, &data->bbox);
     }
 
-    bool VDBSubSceneOverride::requiresUpdate(const MSubSceneContainer& /*container*/,
-                                             const MFrameContext& frameContext) const
-    {
-        return p_data->update(p_vdb_visualizer->get_update(), m_object, frameContext);
+    void VDBSubSceneOverride::init_gpu() {
+        cuda_enabled = cuda_available();
     }
 }

@@ -2,6 +2,7 @@ set(PLUGIN_NAME openvdb_render)
 
 add_definitions(-DLINUX -D_BOOL -DREQUIRE_IOSTREAM -pthread)
 
+find_package(CUDA)
 find_package(Maya)
 find_package(Boost COMPONENTS regex)
 
@@ -25,6 +26,12 @@ find_library(OPENVDB_STATIC_LIBRARY NAMES libopenvdb.a)
 
 file(GLOB SRC *.cpp)
 
+find_library(CUDA_STATIC_LIBRARIES libcudart_static.a
+        HINT $ENV{CUDA_HOME}/lib64)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --compiler-options -fPIC -O3 -std=c++11) # pass fpic to the host compiler
+cuda_compile(point_sorter point_sorter.cu)
+set(SRC ${SRC} ${point_sorter})
+
 if (INCLUDE_HEADERS_IN_BUILD)
     file(GLOB HDR *.hpp *.h ../util/*.hpp ../util/*.h)
     set(SRC ${SRC} ${HDR})
@@ -35,7 +42,7 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
 if (WIN32)
     set_target_properties(${PLUGIN_NAME} PROPERTIES SUFFIX ".mll")
 endif ()
-target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES} ${CUDA_STATIC_LIBRARIES})
 
 install(TARGETS ${PLUGIN_NAME}
         DESTINATION plug-ins)
