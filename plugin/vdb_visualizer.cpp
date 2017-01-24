@@ -569,7 +569,8 @@ MStatus VDBVisualizerShape::initialize()
 
     s_point_sort = eAttr.create("pointSort", "point_sort");
     eAttr.addField("Disabled", POINT_SORT_DISABLED);
-    eAttr.addField("CPU and GPU", POINT_SORT_GPU_CPU);
+    eAttr.addField("CPU only", POINT_SORT_CPU);
+    eAttr.addField("GPU and CPU", POINT_SORT_GPU_CPU);
     eAttr.addField("GPU Only", POINT_SORT_GPU);
     eAttr.setDefault(POINT_SORT_DEFAULT);
     addAttribute(s_point_sort);

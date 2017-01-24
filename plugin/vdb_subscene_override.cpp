@@ -163,6 +163,8 @@ namespace MHWRender {
         }
     };
 
+    static_assert(sizeof(PointCloudVertex) == sizeof(PointData), "CPU and GPU data structures differ in size for point clouds!");
+
     struct VDBSubSceneOverrideData {
         MBoundingBox bbox;
 
@@ -744,12 +746,29 @@ namespace MHWRender {
 
         const auto sorting_mode = MPlug(p_vdb_visualizer->thisMObject(), VDBVisualizerShape::s_point_sort).asShort();
 
-        if (sorting_mode == POINT_SORT_GPU_CPU) {
-            tbb::parallel_sort(data->point_cloud_data.begin(), data->point_cloud_data.end(), [camera_pos](
-                const PointCloudVertex& a, const PointCloudVertex& b
-            ) -> bool{
-                return camera_pos.distanceTo(a.position) > camera_pos.distanceTo(b.position);
-            });
+        const auto sorting_function = [camera_pos](const PointCloudVertex& a, const PointCloudVertex& b) -> bool {
+            const float distance_a[3] = {
+                a.position.x - camera_pos.x, a.position.y - camera_pos.y, a.position.z - camera_pos.z
+            };
+            const float distance_b[3] = {
+                b.position.x - camera_pos.x, b.position.y - camera_pos.y, b.position.z - camera_pos.z
+            };
+            return (distance_a[0] * distance_a[0] + distance_a[1] * distance_a[1] + distance_a[2] * distance_a[2]) >
+                   (distance_b[0] * distance_b[0] + distance_b[1] * distance_b[1] + distance_b[2] * distance_b[2]);
+        };
+
+        if (sorting_mode == POINT_SORT_CPU) {
+            tbb::parallel_sort(data->point_cloud_data.begin(), data->point_cloud_data.end(), sorting_function);
+        } else if (sorting_mode == POINT_SORT_GPU_CPU) {
+            if (cuda_enabled) {
+                sort_points(reinterpret_cast<PointData*>(data->point_cloud_data.data()), data->point_cloud_data.size(), &camera_pos.x);
+            } else {
+                tbb::parallel_sort(data->point_cloud_data.begin(), data->point_cloud_data.end(), sorting_function);
+            }
+        } else if (sorting_mode == POINT_SORT_GPU) {
+            if (cuda_enabled) {
+                sort_points(reinterpret_cast<PointData*>(data->point_cloud_data.data()), data->point_cloud_data.size(), &camera_pos.x);
+            }
         }
 
         const auto vertex_count = static_cast<unsigned int>(data->point_cloud_data.size());

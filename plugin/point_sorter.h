@@ -8,4 +8,4 @@ struct PointData {
 };
 
 bool cuda_available();
-void sort_points(PointData* data, size_t point_count);
+void sort_points(PointData* data, size_t point_count, const float* camera_position);

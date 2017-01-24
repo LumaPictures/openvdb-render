@@ -30,6 +30,8 @@ find_library(CUDA_STATIC_LIBRARIES libcudart_static.a
         HINT $ENV{CUDA_HOME}/lib64)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --compiler-options -fPIC -O3 -std=c++11) # pass fpic to the host compiler
 cuda_compile(point_sorter point_sorter.cu)
+cuda_include_directories($ENV{THRUST_ROOT})
+include_directories($ENV{THRUST_ROOT}) # this probably helps clion intellisense
 set(SRC ${SRC} ${point_sorter})
 
 if (INCLUDE_HEADERS_IN_BUILD)
