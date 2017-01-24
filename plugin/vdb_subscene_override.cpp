@@ -204,7 +204,8 @@ namespace MHWRender {
         bool old_point_cloud_enabled;
 
         VDBSubSceneOverrideData() :
-            voxel_size(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity()),
+            voxel_size(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(),
+                       std::numeric_limits<float>::infinity()),
             point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
             vertex_count(0), point_skip(-1), update_trigger(-1),
             display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_VOLUME_COLLECTOR),
@@ -295,11 +296,9 @@ namespace MHWRender {
             if (filename.empty()) {
                 data_has_changed |= true;
                 clear();
-            }
-            else if (vdb_file == nullptr) {
+            } else if (vdb_file == nullptr) {
                 open_file();
-            }
-            else if (filename != vdb_file->filename()) {
+            } else if (filename != vdb_file->filename()) {
                 open_file();
             }
 
@@ -345,8 +344,7 @@ namespace MHWRender {
 
             if (p_point_cloud_shader != nullptr) {
                 p_point_cloud_shader->setIsTransparent(true);
-            }
-            else {
+            } else {
                 MGlobal::displayError(MString("[vdb_subscene_override] Error compiling point cloud shader!"));
             }
         }
@@ -410,7 +408,8 @@ namespace MHWRender {
                                                          false);
             point_cloud->enable(false);
             point_cloud->setDrawMode(MGeometry::kAll);
-            point_cloud->depthPriority(MRenderItem::sDormantPointDepthPriority);
+            point_cloud->depthPriority(MRenderItem::sActivePointDepthPriority);
+            point_cloud->setSupportsAdvancedTransparency(true);
 
             if (p_point_cloud_shader == nullptr) {
                 MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
@@ -418,8 +417,7 @@ namespace MHWRender {
                 if (shader) {
                     point_cloud->setShader(shader);
                 }
-            }
-            else {
+            } else {
                 point_cloud->setShader(p_point_cloud_shader.get());
             }
 
@@ -471,8 +469,7 @@ namespace MHWRender {
                     bbox_vertices[7] = MFloatVector(max.x, min.y, max.z);
                     p_bbox_position->commit(bbox_vertices);
                     set_bbox_indices(1, p_bbox_indices.get());
-                }
-                else if (data->display_mode == DISPLAY_GRID_BBOX) {
+                } else if (data->display_mode == DISPLAY_GRID_BBOX) {
                     try {
                         if (!data->vdb_file->isOpen()) {
                             data->vdb_file->open(false);
@@ -515,8 +512,7 @@ namespace MHWRender {
 
                 vertex_buffers.addBuffer("", p_bbox_position.get());
                 setGeometryForRenderItem(*bounding_box, vertex_buffers, *p_bbox_indices.get(), &data->bbox);
-            }
-            else {
+            } else {
                 data->old_bounding_box_enabled = false;
                 bounding_box->enable(false);
                 if (data->display_mode == DISPLAY_POINT_CLOUD) {
@@ -546,12 +542,10 @@ namespace MHWRender {
                     if (data->attenuation_grid->valueType() == "float") {
                         iter = new FloatToFloatVoxelIterator(
                             openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->attenuation_grid));
-                    }
-                    else if (data->attenuation_grid->valueType() == "vec3s") {
+                    } else if (data->attenuation_grid->valueType() == "vec3s") {
                         iter = new Vec3SToFloatVoxelIterator(
                             openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->attenuation_grid));
-                    }
-                    else {
+                    } else {
                         iter = new FloatVoxelIterator();
                     }
 
@@ -602,17 +596,14 @@ namespace MHWRender {
 
                     if (data->scattering_grid == nullptr) {
                         scattering_sampler = new(m_scattering_sampler.data()) RGBSampler();
-                    }
-                    else {
+                    } else {
                         if (data->scattering_grid->valueType() == "float") {
                             scattering_sampler = new(m_scattering_sampler.data()) FloatToRGBSampler(
                                 openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->scattering_grid));
-                        }
-                        else if (data->scattering_grid->valueType() == "vec3s") {
+                        } else if (data->scattering_grid->valueType() == "vec3s") {
                             scattering_sampler = new(m_scattering_sampler.data()) Vec3SToRGBSampler(
                                 openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->scattering_grid));
-                        }
-                        else {
+                        } else {
                             scattering_sampler = new(m_scattering_sampler.data()) RGBSampler();
                         }
                     }
@@ -631,17 +622,14 @@ namespace MHWRender {
 
                     if (data->emission_grid == nullptr) {
                         emission_sampler = new(m_emission_sampler.data()) RGBSampler(MFloatVector(0.0f, 0.0f, 0.0f));
-                    }
-                    else {
+                    } else {
                         if (data->emission_grid->valueType() == "float") {
                             emission_sampler = new(m_emission_sampler.data()) FloatToRGBSampler(
                                 openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->emission_grid));
-                        }
-                        else if (data->emission_grid->valueType() == "vec3s") {
+                        } else if (data->emission_grid->valueType() == "vec3s") {
                             emission_sampler = new(m_emission_sampler.data()) Vec3SToRGBSampler(
                                 openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->emission_grid));
-                        }
-                        else {
+                        } else {
                             emission_sampler = new(m_emission_sampler.data()) RGBSampler(
                                 MFloatVector(0.0f, 0.0f, 0.0f));
                         }
@@ -652,12 +640,10 @@ namespace MHWRender {
                     if (data->attenuation_grid->valueType() == "float") {
                         attenuation_sampler = new(m_attenuation_sampler.data()) FloatToRGBSampler(
                             openvdb::gridConstPtrCast<openvdb::FloatGrid>(data->attenuation_grid));
-                    }
-                    else if (data->attenuation_grid->valueType() == "vec3s") {
+                    } else if (data->attenuation_grid->valueType() == "vec3s") {
                         attenuation_sampler = new(m_attenuation_sampler.data()) Vec3SToRGBSampler(
                             openvdb::gridConstPtrCast<openvdb::Vec3SGrid>(data->attenuation_grid));
-                    }
-                    else {
+                    } else {
                         attenuation_sampler = new(m_attenuation_sampler.data()) RGBSampler(
                             MFloatVector(1.0f, 1.0f, 1.0f));
                     }
@@ -666,7 +652,8 @@ namespace MHWRender {
                                       [&](const tbb::blocked_range<unsigned int>& r) {
                                           for (unsigned int i = r.begin(); i < r.end(); ++i) {
                                               auto& vertex = data->point_cloud_data[i];
-                                              const openvdb::Vec3d pos(vertex.position.x, vertex.position.y, vertex.position.z);
+                                              const openvdb::Vec3d pos(vertex.position.x, vertex.position.y,
+                                                                       vertex.position.z);
                                               const MFloatVector scattering_color = data->scattering_gradient.evaluate(
                                                   scattering_sampler->get_rgb(pos));
                                               const MFloatVector emission_color = data->emission_gradient.evaluate(
