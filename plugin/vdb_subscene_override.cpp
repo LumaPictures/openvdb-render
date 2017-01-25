@@ -451,6 +451,7 @@ namespace MHWRender {
         }
 
         if (data->data_has_changed) {
+            data->data_has_changed = false;
             std::vector<PointCloudVertex>().swap(data->point_cloud_data);
             const bool file_exists = data->vdb_file != nullptr;
 
@@ -582,13 +583,13 @@ namespace MHWRender {
                     data->point_cloud_data.shrink_to_fit();
                     const unsigned int vertex_count = static_cast<unsigned int>(data->point_cloud_data.size());
 
+                    delete iter;
+
                     if (vertex_count == 0) {
                         return;
                     }
 
                     data->vertex_count = static_cast<int>(vertex_count);
-
-                    delete iter;
 
                     // setting up color buffers
 
@@ -691,13 +692,13 @@ namespace MHWRender {
                     setup_point_cloud(point_cloud, camera_pos);
                     data->camera_has_changed = false;
                     data->world_has_changed = false;
+
+                    p_point_cloud_shader->setParameter("vertex_count", data->vertex_count);
+                    p_point_cloud_shader->setParameter("voxel_size",
+                                                       std::max(data->voxel_size.x(),
+                                                                std::max(data->voxel_size.y(), data->voxel_size.z())));
                 }
             }
-            p_point_cloud_shader->setParameter("vertex_count", data->vertex_count);
-            p_point_cloud_shader->setParameter("voxel_size",
-                                               std::max(data->voxel_size.x(),
-                                                        std::max(data->voxel_size.y(), data->voxel_size.z())));
-            data->data_has_changed = false;
         }
 
         // Setting up shader parameters
