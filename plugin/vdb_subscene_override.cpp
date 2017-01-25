@@ -697,6 +697,8 @@ namespace MHWRender {
                     p_point_cloud_shader->setParameter("voxel_size",
                                                        std::max(data->voxel_size.x(),
                                                                 std::max(data->voxel_size.y(), data->voxel_size.z())));
+                    p_point_cloud_shader->setParameter("jitter_size", MFloatVector(
+                        data->voxel_size.x(), data->voxel_size.y(), data->voxel_size.y()) * data->point_jitter);
                 }
             }
         }
