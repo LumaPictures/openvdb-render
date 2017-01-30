@@ -15,8 +15,7 @@ AtNode* OpenvdbTranslator::CreateArnoldNodes()
     if (!FindMayaPlug("overrideShader").asBool()) {
         if (FindMayaPlug("shaderMode").asShort() == 0) {
             AddArnoldNode("openvdb_shader", "shader");
-        }
-        else {
+        } else {
             AddArnoldNode("openvdb_simple_shader", "shader");
         }
     }
@@ -45,13 +44,11 @@ void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, s
     if (AiNodeIs(node, "volume_sample_float") || AiNodeIs(node, "volume_sample_rgb") ||
         AiNodeIs(node, "openvdb_sampler")) {
         check_channel("channel");
-    }
-    else if (AiNodeIs(node, "volume_collector") || AiNodeIs(node, "openvdb_shader")) {
+    } else if (AiNodeIs(node, "volume_collector") || AiNodeIs(node, "openvdb_shader")) {
         check_channel("scattering_channel");
         check_channel("attenuation_channel");
         check_channel("emission_channel");
-    }
-    else if (AiNodeIs(node, "openvdb_simple_shader")) {
+    } else if (AiNodeIs(node, "openvdb_simple_shader")) {
         check_channel("smoke_channel");
         check_channel("opacity_channel");
         check_channel("fire_channel");
@@ -63,8 +60,7 @@ void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, s
         if (AiParamGetType(param_entry) == AI_TYPE_NODE) {
             check_arnold_nodes(reinterpret_cast<AtNode*>(AiNodeGetPtr(node, AiParamGetName(param_entry))),
                                checked_arnold_nodes, out_grids);
-        }
-        else {
+        } else {
             check_arnold_nodes(AiNodeGetLink(node, AiParamGetName(param_entry)), checked_arnold_nodes, out_grids);
         }
     }
@@ -96,31 +92,13 @@ void OpenvdbTranslator::Export(AtNode* volume)
                 AiNodeSetPtr(volume, "shader", shader);
             }
         }
-    }
-    else {
+    } else {
         shader = GetArnoldNode("shader");
         AiNodeSetPtr(volume, "shader", shader);
         if (FindMayaPlug("shaderMode").asShort() == 0) {
-            ExportParams(shader);
-        }
-        else {
-            ProcessParameter(shader, "smoke", AI_TYPE_RGB, "smoke");
-            ProcessParameter(shader, "smoke_channel", AI_TYPE_STRING, "smokeChannel");
-            ProcessParameter(shader, "smoke_intensity", AI_TYPE_FLOAT, "smokeIntensity");
-            ProcessParameter(shader, "anisotropy", AI_TYPE_FLOAT, "anisotropy");
-
-            ProcessParameter(shader, "opacity", AI_TYPE_RGB, "opacity");
-            ProcessParameter(shader, "opacity_channel", AI_TYPE_STRING, "opacityChannel");
-            ProcessParameter(shader, "opacity_intensity", AI_TYPE_FLOAT, "opacityIntensity");
-            ProcessParameter(shader, "opacity_shadow", AI_TYPE_RGB, "opacityShadow");
-
-            ProcessParameter(shader, "fire", AI_TYPE_RGB, "fire");
-            ProcessParameter(shader, "fire_channel", AI_TYPE_STRING, "fireChannel");
-            ProcessParameter(shader, "fire_intensity", AI_TYPE_FLOAT, "fireIntensity");
-
-            ProcessParameter(shader, "position_offset", AI_TYPE_VECTOR, "positionOffset");
-            ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
-            ProcessParameter(shader, "compensate_scaling", AI_TYPE_BOOLEAN, "compensateScaling");
+            ExportArnoldParams(shader);
+        } else {
+            ExportSimpleParams(shader);
         }
     }
 

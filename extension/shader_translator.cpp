@@ -12,5 +12,5 @@ AtNode* VDBShaderTranslator::CreateArnoldNodes()
 
 void VDBShaderTranslator::Export(AtNode* volume)
 {
-    ExportParams(volume);
+    ExportArnoldParams(volume);
 }

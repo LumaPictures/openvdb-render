@@ -1,8 +1,8 @@
 #pragma once
 
-#include <translators/shader/ShaderTranslator.h>
+#include "shader_params_translator.h"
 
-class VDBSimpleShaderTranslator : public CShaderTranslator {
+class VDBSimpleShaderTranslator : public VDBShaderParamsTranslator<CShaderTranslator> {
 public:
     static void* creator();
 

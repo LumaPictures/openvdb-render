@@ -1,9 +1,15 @@
 #include <ai.h>
 
+#include "gradient.hpp"
+
 AI_SHADER_NODE_EXPORT_METHODS(openvdbSimpleShaderMethods);
 
 namespace {
     struct ShaderData {
+        Gradient smoke_gradient;
+        Gradient opacity_gradient;
+        Gradient fire_gradient;
+
         AtString smoke_channel;
         AtString opacity_channel;
         AtString fire_channel;
@@ -31,7 +37,7 @@ namespace {
 
         }
 
-        void update(AtNode* node, AtParamValue*)
+        void update(AtNode* node, AtParamValue* params)
         {
             smoke_channel = AtString(AiNodeGetStr(node, "smoke_channel"));
             opacity_channel = AtString(AiNodeGetStr(node, "opacity_channel"));
@@ -42,6 +48,10 @@ namespace {
             sample_fire = fire_channel.length() > 0;
 
             interpolation = AiNodeGetInt(node, "interpolation");
+
+            smoke_gradient.update("smoke", node, params);
+            opacity_gradient.update("opacity", node, params);
+            fire_gradient.update("fire", node, params);
         }
     };
 
@@ -85,6 +95,10 @@ node_parameters
     AiParameterEnum("interpolation", 0, interpolations);
     AiParameterBool("compensate_scaling", true);
 
+    Gradient::parameters("smoke", params, mds);
+    Gradient::parameters("opacity", params, mds);
+    Gradient::parameters("fire", params, mds);
+
     AiMetaDataSetBool(mds, 0, "maya.hide", true);
 }
 
@@ -124,8 +138,7 @@ shader_evaluate
                    (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
         AiColorClipToZero(opacity);
         AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
-    }
-    else {
+    } else {
         AtRGB opacity = AI_RGB_WHITE;
         if (data->sample_opacity)
             AiVolumeSampleRGB(data->opacity_channel, data->interpolation, &opacity);
