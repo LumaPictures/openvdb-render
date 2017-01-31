@@ -122,7 +122,7 @@ public:
         this->ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
         this->ProcessParameter(shader, "compensate_scaling", AI_TYPE_BOOLEAN, "compensateScaling");
 
-        std::array<std::string, 3> gradient_names = {"smoke", "opacity", "fire"};
+        std::array<std::string, 3> gradient_names = {"simpleSmoke", "simpleOpacity", "simpleFire"};
         export_gradients<3>(shader, gradient_names);
     }
 };

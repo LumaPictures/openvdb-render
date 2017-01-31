@@ -49,9 +49,9 @@ namespace {
 
             interpolation = AiNodeGetInt(node, "interpolation");
 
-            smoke_gradient.update("smoke", node, params);
-            opacity_gradient.update("opacity", node, params);
-            fire_gradient.update("fire", node, params);
+            smoke_gradient.update("simpleSmoke", node, params);
+            opacity_gradient.update("simpleOpacity", node, params);
+            fire_gradient.update("simpleFire", node, params);
         }
     };
 
@@ -95,9 +95,9 @@ node_parameters
     AiParameterEnum("interpolation", 0, interpolations);
     AiParameterBool("compensate_scaling", true);
 
-    Gradient::parameters("smoke", params, mds);
-    Gradient::parameters("opacity", params, mds);
-    Gradient::parameters("fire", params, mds);
+    Gradient::parameters("simpleSmoke", params, mds);
+    Gradient::parameters("simpleOpacity", params, mds);
+    Gradient::parameters("simpleFire", params, mds);
 
     AiMetaDataSetBool(mds, 0, "maya.hide", true);
 }
