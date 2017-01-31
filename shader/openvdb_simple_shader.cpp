@@ -140,18 +140,21 @@ shader_evaluate
         AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
     } else {
         AtRGB opacity = AI_RGB_WHITE;
-        if (data->sample_opacity)
-            AiVolumeSampleRGB(data->opacity_channel, data->interpolation, &opacity);
+        if (data->sample_opacity) {
+            opacity = data->opacity_gradient.evaluate_arnold(sg, data->opacity_channel, data->interpolation);
+        }
         opacity *= AiShaderEvalParamRGB(p_opacity) * (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
 
         AtRGB smoke = AI_RGB_WHITE;
-        if (data->sample_smoke)
-            AiVolumeSampleRGB(data->smoke_channel, data->interpolation, &smoke);
+        if (data->sample_smoke) {
+            smoke = data->smoke_gradient.evaluate_arnold(sg, data->smoke_channel, data->interpolation);
+        }
         smoke *= opacity * AiShaderEvalParamRGB(p_smoke) * AiShaderEvalParamFlt(p_smoke_intensity);
 
         AtRGB fire = AI_RGB_WHITE;
-        if (data->sample_fire)
-            AiVolumeSampleRGB(data->fire_channel, data->interpolation, &fire);
+        if (data->sample_fire) {
+            fire = data->fire_gradient.evaluate_arnold(sg, data->fire_channel, data->interpolation);
+        }
         fire *= opacity * AiShaderEvalParamRGB(p_fire) * AiShaderEvalParamFlt(p_fire_intensity);
 
         AiColorClipToZero(smoke);
