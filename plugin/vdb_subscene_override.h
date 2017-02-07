@@ -44,6 +44,8 @@ namespace MHWRender {
         };
 
         std::unique_ptr<MShaderInstance, shader_instance_deleter> p_point_cloud_shader;
+        std::unique_ptr<MShaderInstance, shader_instance_deleter> p_green_wire_shader;
+        std::unique_ptr<MShaderInstance, shader_instance_deleter> p_red_wire_shader;
         // max is not constexpr
         static constexpr size_t sampler_mem_size = sizeof(FloatToRGBSampler) > sizeof(Vec3SToRGBSampler)
                                                    ? sizeof(FloatToRGBSampler) : sizeof(Vec3SToRGBSampler);

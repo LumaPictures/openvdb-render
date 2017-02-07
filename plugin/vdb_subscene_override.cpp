@@ -355,6 +355,22 @@ namespace MHWRender {
             } else {
                 MGlobal::displayError(MString("[vdb_subscene_override] Error compiling point cloud shader!"));
             }
+
+            p_green_wire_shader.reset(shmgr->getStockShader(
+                MHWRender::MShaderManager::k3dSolidShader, nullptr, nullptr));
+            if (p_green_wire_shader) {
+                // Set the color on the shader instance using the parameter interface
+                static const float color[] = {0.0f, 1.0f, 0.0f, 1.0f};
+                p_green_wire_shader->setParameter("solidColor", color);
+            }
+
+            p_red_wire_shader.reset(shmgr->getStockShader(
+                MHWRender::MShaderManager::k3dDashLineShader, nullptr, nullptr));
+            if (p_red_wire_shader) {
+                // Set the color on the shader instance using the parameter interface
+                static const float color[] = {1.0f, 0.0f, 0.0f, 1.0f};
+                p_red_wire_shader->setParameter("solidColor", color);
+            }
         }
     }
 
@@ -394,15 +410,8 @@ namespace MHWRender {
             bounding_box->setDrawMode(MGeometry::kAll);
             bounding_box->depthPriority(MRenderItem::sDormantWireDepthPriority);
 
-            MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
-                MHWRender::MShaderManager::k3dSolidShader, nullptr, nullptr);
-            if (shader) {
-                // Set the color on the shader instance using the parameter interface
-                static const float color[] = {0.0f, 1.0f, 0.0f, 1.0f};
-                shader->setParameter("solidColor", color);
-
-                // Assign the shader to the custom render item
-                bounding_box->setShader(shader);
+            if (p_green_wire_shader) {
+                bounding_box->setShader(p_green_wire_shader.get());
             }
 
             container.add(bounding_box);
@@ -451,6 +460,29 @@ namespace MHWRender {
         }
 
         if (data->data_has_changed) {
+            auto setup_bounding_box = [this, &data]() -> bool {
+                MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(this->p_bbox_position->acquire(8, true));
+                MFloatVector min = data->bbox.min();
+                MFloatVector max = data->bbox.max();
+                bool ret = true;
+                if (min.length() < 0.0001f && max.length() < 0.0001f) { // if the bbox is empty, we consider it invalid
+                    min.x = min.y = min.z = -1.0f;
+                    max.x = max.y = max.z = 1.0f;
+                    ret = false;
+                }
+                bbox_vertices[0] = MFloatVector(min.x, min.y, min.z);
+                bbox_vertices[1] = MFloatVector(min.x, max.y, min.z);
+                bbox_vertices[2] = MFloatVector(min.x, max.y, max.z);
+                bbox_vertices[3] = MFloatVector(min.x, min.y, max.z);
+                bbox_vertices[4] = MFloatVector(max.x, min.y, min.z);
+                bbox_vertices[5] = MFloatVector(max.x, max.y, min.z);
+                bbox_vertices[6] = MFloatVector(max.x, max.y, max.z);
+                bbox_vertices[7] = MFloatVector(max.x, min.y, max.z);
+                this->p_bbox_position->commit(bbox_vertices);
+                set_bbox_indices(1, this->p_bbox_indices.get());
+                return ret;
+            };
+
             data->data_has_changed = false;
             std::vector<PointCloudVertex>().swap(data->point_cloud_data);
             const bool file_exists = data->vdb_file != nullptr;
@@ -469,19 +501,11 @@ namespace MHWRender {
                 p_bbox_indices.reset(new MIndexBuffer(MGeometry::kUnsignedInt32));
 
                 if ((data->display_mode == DISPLAY_AXIS_ALIGNED_BBOX) || !file_exists) {
-                    MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(p_bbox_position->acquire(8, true));
-                    MFloatVector min = data->bbox.min();
-                    MFloatVector max = data->bbox.max();
-                    bbox_vertices[0] = MFloatVector(min.x, min.y, min.z);
-                    bbox_vertices[1] = MFloatVector(min.x, max.y, min.z);
-                    bbox_vertices[2] = MFloatVector(min.x, max.y, max.z);
-                    bbox_vertices[3] = MFloatVector(min.x, min.y, max.z);
-                    bbox_vertices[4] = MFloatVector(max.x, min.y, min.z);
-                    bbox_vertices[5] = MFloatVector(max.x, max.y, min.z);
-                    bbox_vertices[6] = MFloatVector(max.x, max.y, max.z);
-                    bbox_vertices[7] = MFloatVector(max.x, min.y, max.z);
-                    p_bbox_position->commit(bbox_vertices);
-                    set_bbox_indices(1, p_bbox_indices.get());
+                    if (!setup_bounding_box() || !file_exists) {
+                        bounding_box->setShader(p_red_wire_shader.get());
+                    } else {
+                        bounding_box->setShader(p_green_wire_shader.get());
+                    }
                 } else if (data->display_mode == DISPLAY_GRID_BBOX) {
                     try {
                         if (!data->vdb_file->isOpen()) {
@@ -489,7 +513,7 @@ namespace MHWRender {
                         }
                         openvdb::GridPtrVecPtr grids = data->vdb_file->readAllGridMetadata();
                         if (grids->size() == 0) {
-                            return;
+                            throw std::exception();
                         }
                         std::vector<MFloatVector> vertices;
                         vertices.reserve(grids->size() * 8);
@@ -517,9 +541,15 @@ namespace MHWRender {
                             }
                             p_bbox_position->commit(bbox_vertices);
                             set_bbox_indices(vertex_count / 8, p_bbox_indices.get());
+                        } else {
+                            throw std::exception();
                         }
+
+                        bounding_box->setShader(p_green_wire_shader.get());
                     }
                     catch (...) {
+                        setup_bounding_box();
+                        bounding_box->setShader(p_red_wire_shader.get());
                     }
                 }
 
@@ -528,6 +558,8 @@ namespace MHWRender {
             } else {
                 data->old_bounding_box_enabled = false;
                 bounding_box->enable(false);
+                data->old_point_cloud_enabled = false;
+                point_cloud->enable(false);
                 if (data->display_mode == DISPLAY_POINT_CLOUD) {
                     try {
                         if (!data->vdb_file->isOpen()) {
@@ -542,6 +574,16 @@ namespace MHWRender {
                         data->attenuation_grid = nullptr;
                         data->scattering_grid = nullptr;
                         data->emission_grid = nullptr;
+                        data->old_bounding_box_enabled = true;
+                        bounding_box->enable(true);
+
+                        MVertexBufferArray vertex_buffers;
+                        p_bbox_position.reset(new MVertexBuffer(position_buffer_desc));
+                        p_bbox_indices.reset(new MIndexBuffer(MGeometry::kUnsignedInt32));
+                        setup_bounding_box();
+                        vertex_buffers.addBuffer("", p_bbox_position.get());
+                        setGeometryForRenderItem(*bounding_box, vertex_buffers, *p_bbox_indices.get(), &data->bbox);
+                        bounding_box->setShader(p_red_wire_shader.get());
                         return;
                     }
 

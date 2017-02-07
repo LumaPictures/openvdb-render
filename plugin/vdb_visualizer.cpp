@@ -112,14 +112,12 @@ namespace {
 
             if (x < xmin) {           // to the left of clip window
                 code |= OUTCODE_LEFT;
-            }
-            else if (x > xmax) {      // to the right of clip window
+            } else if (x > xmax) {      // to the right of clip window
                 code |= OUTCODE_RIGHT;
             }
             if (y < ymin) {           // below the clip window
                 code |= OUTCODE_BOTTOM;
-            }
-            else if (y > ymax) {      // above the clip window
+            } else if (y > ymax) {      // above the clip window
                 code |= OUTCODE_TOP;
             }
 
@@ -150,27 +148,22 @@ namespace {
             while (true) {
                 if (!(outcode0 | outcode1)) { // Bitwise OR is 0. Trivially accept and get out of loop
                     return true;
-                }
-                else if (outcode0 & outcode1) { // Bitwise AND is not 0. Trivially reject and get out of loop
+                } else if (outcode0 & outcode1) { // Bitwise AND is not 0. Trivially reject and get out of loop
                     return false;
-                }
-                else {
+                } else {
                     float x = 0.0f;
                     float y = 0.0f;
                     const int outcode_out = outcode0 ? outcode0 : outcode1;
                     if (outcode_out & OUTCODE_TOP) {
                         x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0);
                         y = ymax;
-                    }
-                    else if (outcode_out & OUTCODE_BOTTOM) {
+                    } else if (outcode_out & OUTCODE_BOTTOM) {
                         x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0);
                         y = ymin;
-                    }
-                    else if (outcode_out & OUTCODE_RIGHT) {
+                    } else if (outcode_out & OUTCODE_RIGHT) {
                         y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0);
                         x = xmax;
-                    }
-                    else if (outcode_out & OUTCODE_LEFT) {
+                    } else if (outcode_out & OUTCODE_LEFT) {
                         y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0);
                         x = xmin;
                     }
@@ -179,8 +172,7 @@ namespace {
                         x0 = x;
                         y0 = y;
                         outcode0 = compute_out_code(x0, y0);
-                    }
-                    else {
+                    } else {
                         x1 = x;
                         y1 = y;
                         outcode1 = compute_out_code(x1, y1);
@@ -191,9 +183,8 @@ namespace {
     };
 }
 
-VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)), scattering_color(1.0f,
-                                                                                                                 1.0f,
-                                                                                                                 1.0f),
+VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)),
+                                         scattering_color(1.0f, 1.0f, 1.0f),
                                          attenuation_color(1.0f, 1.0f, 1.0f), emission_color(1.0f, 1.0f, 1.0f),
                                          vdb_file(nullptr), point_size(2.0f), point_jitter(0.15f),
                                          point_skip(1), update_trigger(0), display_mode(DISPLAY_GRID_BBOX),
@@ -255,25 +246,20 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 const short cache_before_mode = dataBlock.inputValue(s_cache_before_mode).asShort();
                 if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_NONE) {
                     frame_in_range = false;
-                }
-                else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_HOLD) {
+                } else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_HOLD) {
                     cache_frame = cache_playback_start;
-                }
-                else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT) {
+                } else if (cache_before_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT) {
                     const int cache_playback_range = cache_playback_end - cache_playback_start;
                     cache_frame =
                         cache_playback_end - (cache_playback_start - cache_frame - 1) % (cache_playback_range + 1);
                 }
-            }
-            else if (cache_frame > cache_playback_end) {
+            } else if (cache_frame > cache_playback_end) {
                 const short cache_after_mode = dataBlock.inputValue(s_cache_after_mode).asShort();
                 if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_NONE) {
                     frame_in_range = false;
-                }
-                else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_HOLD) {
+                } else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_HOLD) {
                     cache_frame = cache_playback_end;
-                }
-                else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT) {
+                } else if (cache_after_mode == CACHE_OUT_OF_RANGE_MODE_REPEAT) {
                     const int cache_playback_range = cache_playback_end - cache_playback_start;
                     cache_frame =
                         cache_playback_start + (cache_frame - cache_playback_end - 1) % (cache_playback_range + 1);
@@ -293,8 +279,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 ss.width(hash_count);
                 ss << cache_frame;
                 vdb_path = boost::regex_replace(vdb_path, s_hash_expr, ss.str());
-            }
-            else {
+            } else {
                 vdb_path = "";
             }
         }
@@ -316,8 +301,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                             read_transformed_bounding_box(grid, m_vdb_data.bbox);
                         }
                     }
-                }
-                else {
+                } else {
                     m_vdb_data.clear(MBoundingBox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)));
                 }
             }
@@ -327,8 +311,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
         }
         MDataHandle out_vdb_path_handle = dataBlock.outputValue(s_out_vdb_path);
         out_vdb_path_handle.setString(vdb_path.c_str());
-    }
-    else {
+    } else {
         dataBlock.inputValue(s_out_vdb_path).asString(); // trigger cache reload
         if (plug == s_grid_names) {
             MDataHandle grid_names_handle = dataBlock.outputValue(s_grid_names);
@@ -344,30 +327,25 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 grid_names_handle.setString(
                     grid_names_string.length() ? grid_names_string.substr(0, grid_names_string.length() - 1).c_str()
                                                : "");
-            }
-            else {
+            } else {
                 grid_names_handle.setString("");
             }
-        }
-        else if (plug == s_update_trigger) {
+        } else if (plug == s_update_trigger) {
             MDataHandle update_trigger_handle = dataBlock.outputValue(s_update_trigger);
             update_trigger_handle.setInt(m_vdb_data.update_trigger + 1);
-        }
-        else if (plug == s_bbox_min) {
+        } else if (plug == s_bbox_min) {
             // TODO : why the MDataBlock is buggy in this case?
             const MPoint mn = m_vdb_data.bbox.min();
             plug.child(0).setDouble(mn.x);
             plug.child(1).setDouble(mn.y);
             plug.child(2).setDouble(mn.z);
-        }
-        else if (plug == s_bbox_max) {
+        } else if (plug == s_bbox_max) {
             // TODO : why the MDataBlock is buggy in this case?
             const MPoint mx = m_vdb_data.bbox.max();
             plug.child(0).setDouble(mx.x);
             plug.child(1).setDouble(mx.y);
             plug.child(2).setDouble(mx.z);
-        }
-        else if (plug == s_channel_stats) {
+        } else if (plug == s_channel_stats) {
             std::stringstream ss;
             if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen()) {
                 ss << "Bounding box : " << "[ [";
@@ -384,8 +362,7 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                 }
             }
             dataBlock.outputValue(s_channel_stats).setString(ss.str().c_str());
-        }
-        else if (plug == s_voxel_size) {
+        } else if (plug == s_voxel_size) {
             float voxel_size = std::numeric_limits<float>::max();
             if (m_vdb_data.vdb_file != nullptr && m_vdb_data.vdb_file->isOpen()) {
                 openvdb::GridPtrVecPtr grids = m_vdb_data.vdb_file->readAllGridMetadata();
@@ -403,13 +380,11 @@ MStatus VDBVisualizerShape::compute(const MPlug& plug, MDataBlock& dataBlock)
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 voxel_size = 1.0f;
             }
             dataBlock.outputValue(s_voxel_size).setFloat(voxel_size);
-        }
-        else {
+        } else {
             return MStatus::kUnknownParameter;
         }
     }
@@ -673,8 +648,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
 
                 if (scattering_mode == 1) {
                     m_vdb_data.scattering_channel = MPlug(tmo, s_shader_params.scattering_channel).asString().asChar();
-                }
-                else {
+                } else {
                     MPlug scattering_plug(tmo, s_shader_params.scattering);
                     if (!scattering_plug.isConnected()) // TODO: handle this
                     {
@@ -696,8 +670,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 if (attenuation_mode == 1) {
                     m_vdb_data.attenuation_channel = MPlug(tmo,
                                                            s_shader_params.attenuation_channel).asString().asChar();
-                }
-                else if (attenuation_mode == 0) {
+                } else if (attenuation_mode == 0) {
                     MPlug attenuation_plug(tmo, s_shader_params.attenuation);
                     if (!attenuation_plug.isConnected()) // TODO: handle this
                     {
@@ -707,8 +680,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                     }
 
                     m_vdb_data.attenuation_channel = "";
-                }
-                else {
+                } else {
                     m_vdb_data.attenuation_channel = m_vdb_data.scattering_channel;
                 }
 
@@ -721,8 +693,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
 
                 if (emission_mode == 1) {
                     m_vdb_data.emission_channel = MPlug(tmo, s_shader_params.emission_channel).asString().asChar();
-                }
-                else {
+                } else {
                     MPlug emission_plug(tmo, s_shader_params.emission);
                     if (!emission_plug.isConnected()) // TODO: handle this
                     {
@@ -740,8 +711,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                 m_vdb_data.scattering_gradient.update(s_shader_params.scattering_gradient, tmo);
                 m_vdb_data.attenuation_gradient.update(s_shader_params.attenuation_gradient, tmo);
                 m_vdb_data.emission_gradient.update(s_shader_params.emission_gradient, tmo);
-            }
-            else if (shader_mode == SHADER_MODE_SIMPLE) {
+            } else if (shader_mode == SHADER_MODE_SIMPLE) {
                 m_vdb_data.scattering_channel = MPlug(tmo, s_simple_shader_params.smoke_channel).asString().asChar();
                 const float smoke_intensity = MPlug(tmo, s_simple_shader_params.smoke_intensity).asFloat();
                 MPlug smoke_plug(tmo, s_simple_shader_params.smoke);
@@ -749,8 +719,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                     m_vdb_data.scattering_color.x = smoke_plug.child(0).asFloat() * smoke_intensity;
                     m_vdb_data.scattering_color.y = smoke_plug.child(1).asFloat() * smoke_intensity;
                     m_vdb_data.scattering_color.z = smoke_plug.child(2).asFloat() * smoke_intensity;
-                }
-                else {
+                } else {
                     m_vdb_data.scattering_color.x = m_vdb_data.scattering_color.y = m_vdb_data.scattering_color.z = smoke_intensity;
                 }
 
@@ -761,8 +730,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                     m_vdb_data.attenuation_color.x = opacity_plug.child(0).asFloat() * opacity_intensity;
                     m_vdb_data.attenuation_color.y = opacity_plug.child(1).asFloat() * opacity_intensity;
                     m_vdb_data.attenuation_color.z = opacity_plug.child(2).asFloat() * opacity_intensity;
-                }
-                else {
+                } else {
                     m_vdb_data.attenuation_color.x = m_vdb_data.attenuation_color.y = m_vdb_data.attenuation_color.z = opacity_intensity;
                 }
 
@@ -773,8 +741,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
                     m_vdb_data.emission_color.x = fire_plug.child(0).asFloat() * fire_intensity;
                     m_vdb_data.emission_color.y = fire_plug.child(1).asFloat() * fire_intensity;
                     m_vdb_data.emission_color.z = fire_plug.child(2).asFloat() * fire_intensity;
-                }
-                else {
+                } else {
                     m_vdb_data.emission_color.x = m_vdb_data.emission_color.y = m_vdb_data.emission_color.z = fire_intensity;
                 }
 
@@ -887,8 +854,7 @@ bool VDBVisualizerShapeUI::select(MSelectInfo& selectInfo, MSelectionList& selec
         }
 
         return false;
-    }
-    else {
+    } else {
         return false;
     }
 }
