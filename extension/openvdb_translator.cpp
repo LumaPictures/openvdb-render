@@ -41,14 +41,6 @@ void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, s
         }
     };
 
-    if (AiNodeIs(node, "volume_sample_float") || AiNodeIs(node, "volume_sample_rgb")) {
-        check_channel("channel");
-    } else if (AiNodeIs(node, "volume_collector")) {
-        check_channel("scattering_channel");
-        check_channel("attenuation_channel");
-        check_channel("emission_channel");
-    }
-
     const auto* node_entry = AiNodeGetNodeEntry(node);
     auto* param_iter = AiNodeEntryGetParamIterator(node_entry);
     while (!AiParamIteratorFinished(param_iter)) {
