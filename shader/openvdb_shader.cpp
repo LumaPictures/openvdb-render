@@ -270,6 +270,9 @@ node_parameters
     Gradient::parameters("emission", params, mds);
 
     AiMetaDataSetBool(mds, 0, "maya.hide", true);
+    AiMetaDataSetBool(mds, "scattering_channel", "volume_sample", true);
+    AiMetaDataSetBool(mds, "attenuation_channel", "volume_sample", true);
+    AiMetaDataSetBool(mds, "emission_channel", "volume_sample", true);
 }
 
 static void Initialize(AtNode* node, AtParamValue*)

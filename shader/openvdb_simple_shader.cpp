@@ -100,6 +100,9 @@ node_parameters
     Gradient::parameters("simpleFire", params, mds);
 
     AiMetaDataSetBool(mds, 0, "maya.hide", true);
+    AiMetaDataSetBool(mds, "smoke_channel", "volume_sample", true);
+    AiMetaDataSetBool(mds, "opacity_channel", "volume_sample", true);
+    AiMetaDataSetBool(mds, "fire_channel", "volume_sample", true);
 }
 
 //node_initialize

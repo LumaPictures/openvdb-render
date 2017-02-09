@@ -40,6 +40,7 @@ node_parameters
     Gradient::parameters("base", params, mds);
 
     AiMetaDataSetBool(mds, 0, "maya.hide", true);
+    AiMetaDataSetBool(mds, "channel", "volume_sample", true);
 }
 
 static void Initialize(AtNode* node, AtParamValue*)

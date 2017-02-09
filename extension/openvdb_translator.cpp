@@ -41,26 +41,31 @@ void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, s
         }
     };
 
-    if (AiNodeIs(node, "volume_sample_float") || AiNodeIs(node, "volume_sample_rgb") ||
-        AiNodeIs(node, "openvdb_sampler")) {
+    if (AiNodeIs(node, "volume_sample_float") || AiNodeIs(node, "volume_sample_rgb")) {
         check_channel("channel");
-    } else if (AiNodeIs(node, "volume_collector") || AiNodeIs(node, "openvdb_shader")) {
+    } else if (AiNodeIs(node, "volume_collector")) {
         check_channel("scattering_channel");
         check_channel("attenuation_channel");
         check_channel("emission_channel");
-    } else if (AiNodeIs(node, "openvdb_simple_shader")) {
-        check_channel("smoke_channel");
-        check_channel("opacity_channel");
-        check_channel("fire_channel");
     }
 
-    AtParamIterator* param_iter = AiNodeEntryGetParamIterator(AiNodeGetNodeEntry(node));
+    const auto* node_entry = AiNodeGetNodeEntry(node);
+    auto* param_iter = AiNodeEntryGetParamIterator(node_entry);
     while (!AiParamIteratorFinished(param_iter)) {
-        const AtParamEntry* param_entry = AiParamIteratorGetNext(param_iter);
+        const auto* param_entry = AiParamIteratorGetNext(param_iter);
         if (AiParamGetType(param_entry) == AI_TYPE_NODE) {
             check_arnold_nodes(reinterpret_cast<AtNode*>(AiNodeGetPtr(node, AiParamGetName(param_entry))),
                                checked_arnold_nodes, out_grids);
         } else {
+            if (AiParamGetType(param_entry) == AI_TYPE_STRING) {
+                auto volume_sample = false;
+                constexpr auto volume_sample_name = "volume_sample";
+                if (AiMetaDataGetBool(node_entry, AiParamGetName(param_entry), volume_sample_name, &volume_sample) &&
+                    volume_sample) {
+                    check_channel(AiParamGetName(param_entry));
+                }
+            }
+            // TODO: check for sub connections
             check_arnold_nodes(AiNodeGetLink(node, AiParamGetName(param_entry)), checked_arnold_nodes, out_grids);
         }
     }
