@@ -34,9 +34,9 @@ void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, s
 
     checked_arnold_nodes.insert(node);
 
-    auto check_channel = [&](const char* channel) {
+    auto check_channel = [&node, &out_grids](const char* channel) {
         const char* ch = AiNodeGetStr(node, channel);
-        if (ch != 0 && strlen(ch) > 0) {
+        if (ch != nullptr && strlen(ch) > 0) {
             out_grids.insert(std::string(ch));
         }
     };
