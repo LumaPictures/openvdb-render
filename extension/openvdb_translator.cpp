@@ -49,17 +49,17 @@ void iterate_param_links(AtNode* node, const char* param_name, int param_type, l
     func(AiNodeGetLink(node, param_name));
     switch (param_type) {
         case AI_TYPE_RGB:
-            iterate_param_elems<3>(node, param_name, rgb_elems, func);
+            iterate_param_elems<rgb_elems.size()>(node, param_name, rgb_elems, func);
             break;
         case AI_TYPE_RGBA:
-            iterate_param_elems<4>(node, param_name, rgba_elems, func);
+            iterate_param_elems<rgba_elems.size()>(node, param_name, rgba_elems, func);
             break;
         case AI_TYPE_VECTOR:
         case AI_TYPE_POINT:
-            iterate_param_elems<3>(node, param_name, vec_elems, func);
+            iterate_param_elems<vec_elems.size()>(node, param_name, vec_elems, func);
             break;
         case AI_TYPE_POINT2:
-            iterate_param_elems<2>(node, param_name, vec2_elems, func);
+            iterate_param_elems<vec2_elems.size()>(node, param_name, vec2_elems, func);
             break;
         default:
             return;
