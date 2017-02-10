@@ -1,6 +1,8 @@
 #include "openvdb_translator.h"
 
 #include <set>
+#include <functional>
+#include <array>
 
 #include "shader_translator.h"
 
@@ -22,6 +24,50 @@ AtNode* OpenvdbTranslator::CreateArnoldNodes()
     return volume;
 }
 
+using link_function_t = std::function<void(AtNode*)>;
+template <unsigned num_elems>
+using elems_name_t = std::array<const char*, num_elems>;
+
+template <unsigned num_elems> inline
+void iterate_param_elems(AtNode* node, const char* param_name, const elems_name_t<num_elems>& elems, const link_function_t& func) {
+    // We could use a thread local vector here, and copy things there
+    // but that's a bit too much to do.
+    const std::string param_name_str(param_name);
+    for (auto elem : elems) {
+        auto query_name = param_name_str;
+        query_name += elem;
+        func(AiNodeGetLink(node, query_name.c_str()));
+    }
+}
+
+inline
+void iterate_param_links(AtNode* node, const char* param_name, int param_type, link_function_t func) {
+    constexpr static elems_name_t<3> rgb_elems = {"r", "g", "b"};
+    constexpr static elems_name_t<4> rgba_elems = {"r", "g", "b", "a"};
+    constexpr static elems_name_t<3> vec_elems = {"x", "y", "z"};
+    constexpr static elems_name_t<2> vec2_elems = {"x", "y"};
+    func(AiNodeGetLink(node, param_name));
+    switch (param_type) {
+        case AI_TYPE_RGB:
+            iterate_param_elems<3>(node, param_name, rgb_elems, func);
+            break;
+        case AI_TYPE_RGBA:
+            iterate_param_elems<4>(node, param_name, rgba_elems, func);
+            break;
+        case AI_TYPE_VECTOR:
+        case AI_TYPE_POINT:
+            iterate_param_elems<3>(node, param_name, vec_elems, func);
+            break;
+        case AI_TYPE_POINT2:
+            iterate_param_elems<2>(node, param_name, vec2_elems, func);
+            break;
+        default:
+            return;
+    }
+}
+
+
+inline
 void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, std::set<std::string>& out_grids)
 {
     if (node == nullptr) {
@@ -45,20 +91,19 @@ void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, s
     auto* param_iter = AiNodeEntryGetParamIterator(node_entry);
     while (!AiParamIteratorFinished(param_iter)) {
         const auto* param_entry = AiParamIteratorGetNext(param_iter);
-        if (AiParamGetType(param_entry) == AI_TYPE_NODE) {
-            check_arnold_nodes(reinterpret_cast<AtNode*>(AiNodeGetPtr(node, AiParamGetName(param_entry))),
-                               checked_arnold_nodes, out_grids);
-        } else {
-            if (AiParamGetType(param_entry) == AI_TYPE_STRING) {
-                auto volume_sample = false;
-                constexpr auto volume_sample_name = "volume_sample";
-                if (AiMetaDataGetBool(node_entry, AiParamGetName(param_entry), volume_sample_name, &volume_sample) &&
-                    volume_sample) {
-                    check_channel(AiParamGetName(param_entry));
-                }
+        auto param_name = AiParamGetName(param_entry);
+        const auto param_type = AiParamGetType(param_entry);
+        if (param_type == AI_TYPE_STRING) {
+            auto volume_sample = false;
+            constexpr auto volume_sample_name = "volume_sample";
+            if (AiMetaDataGetBool(node_entry, AiParamGetName(param_entry), volume_sample_name, &volume_sample) &&
+                volume_sample) {
+                check_channel(AiParamGetName(param_entry));
             }
-            // TODO: check for sub connections
-            check_arnold_nodes(AiNodeGetLink(node, AiParamGetName(param_entry)), checked_arnold_nodes, out_grids);
+        } else {
+            iterate_param_links(node, param_name, param_type, [&checked_arnold_nodes, &out_grids] (AtNode* link) {
+                check_arnold_nodes(link, checked_arnold_nodes, out_grids);
+            });
         }
     }
     AiParamIteratorDestroy(param_iter);
