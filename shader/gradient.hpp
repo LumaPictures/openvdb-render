@@ -19,9 +19,16 @@ public:
 
     }
 
-    static void parameters(const std::string& base, AtList* params, AtMetaDataStore*)
+    enum InterpolationType {
+        INTERPOLATION_LINEAR = 0,
+        INTERPOLATION_CATMULL_ROM,
+        INTERPOLATION_BSPLINE
+    };
+
+    static void parameters(const std::string& base, AtList* params, AtMetaDataStore* mds)
     {
         static const char* gradient_types[] = {"Raw", "Float", "RGB", "Float Ramp", "RGB Ramp", nullptr};
+        static const char* ramp_types[] = {"linear", "catmull-rom", "bspline", nullptr};
 
         AiParameterEnum((base + "_channel_mode").c_str(), CHANNEL_MODE_RAW, gradient_types);
         AiParameterFlt((base + "_contrast").c_str(), 1.0f);
@@ -40,8 +47,21 @@ public:
         AiParameterFlt((base + "_exposure").c_str(), 0.0f);
         AiParameterFlt((base + "_multiply").c_str(), 1.0f);
         AiParameterFlt((base + "_add").c_str(), 0.0f);
-        AiParameterArray((base + "_float_ramp").c_str(), AiArray(2, 1, AI_TYPE_FLOAT, 0.0f, 1.0f));
-        AiParameterArray((base + "_rgb_ramp").c_str(), AiArray(2, 1, AI_TYPE_RGB, AI_RGB_BLACK, AI_RGB_WHITE));
+
+        AiParameterInt((base + "_float_ramp").c_str(), 4);
+        AiParameterEnum((base + "_float_ramp_Interpolation").c_str(), INTERPOLATION_LINEAR, ramp_types);
+        AiParameterArray((base + "_float_ramp_Knots").c_str(),
+                         AiArray(4, 1, AI_TYPE_FLOAT, 0.0f, 0.0f, 1.0f, 1.0f));
+        AiParameterArray((base + "_float_ramp_Floats").c_str(),
+                         AiArray(4, 1, AI_TYPE_FLOAT, 0.0f, 0.0f, 1.0f, 1.0f));
+
+        AiParameterInt((base + "_rgb_ramp").c_str(), 4);
+        AiParameterEnum((base + "_rgb_ramp_Interpolation").c_str(), INTERPOLATION_LINEAR, ramp_types);
+        AiParameterArray((base + "_rgb_ramp_Knots").c_str(),
+                         AiArray(4, 1, AI_TYPE_FLOAT, 0.0f, 0.0f, 1.0f, 1.0f));
+        AiParameterArray((base + "_rgb_ramp_Colors").c_str(),
+                         AiArray(4, 1, AI_TYPE_RGB, AI_RGB_BLACK, AI_RGB_BLACK, AI_RGB_WHITE, AI_RGB_WHITE));
+        AiMetaDataSetBool(mds, (base + "_rgb_ramp_Colors").c_str(), "always_linear", true);
     }
 
     void update(const std::string& base, AtNode* node, AtParamValue*)
@@ -68,13 +88,12 @@ public:
         m_clamp_max = AiNodeGetBool(node, (base + "_clamp_max").c_str());
 
         if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
-            AtArray* arr = AiNodeGetArray(node, (base + "_float_ramp").c_str());
+            AtArray* arr = AiNodeGetArray(node, (base + "_float_ramp_Floats").c_str());
             if (arr != nullptr) {
                 const unsigned int nelements = arr->nelements;
                 if (m_float_ramp.size() != nelements) {
                     std::vector<float>().swap(m_float_ramp);
-                }
-                else {
+                } else {
                     m_float_ramp.clear();
                 }
                 if (nelements > 0) {
@@ -83,19 +102,16 @@ public:
                         m_float_ramp.push_back(AiArrayGetFlt(arr, i));
                     }
                 }
-            }
-            else {
+            } else {
                 std::vector<float>().swap(m_float_ramp);
             }
-        }
-        else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP) {
-            AtArray* arr = AiNodeGetArray(node, (base + "_rgb_ramp").c_str());
+        } else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP) {
+            AtArray* arr = AiNodeGetArray(node, (base + "_rgb_ramp_Colors").c_str());
             if (arr != nullptr) {
                 const unsigned nelements = arr->nelements;
                 if (m_rgb_ramp.size() != nelements) {
                     std::vector<AtRGB>().swap(m_rgb_ramp);
-                }
-                else {
+                } else {
                     m_rgb_ramp.clear();
                 }
                 if (nelements > 0) {
@@ -104,8 +120,7 @@ public:
                         m_rgb_ramp.push_back(AiArrayGetRGB(arr, i));
                     }
                 }
-            }
-            else {
+            } else {
                 std::vector<AtRGB>().swap(m_rgb_ramp);
             }
         }

@@ -50,7 +50,7 @@ public:
                 ramp_attr.sampleValueRamp(num_ramp_samples, samples, &status);
                 if (status) {
                     AtArray* arr = AiArrayConvert(num_ramp_samples, 1, AI_TYPE_FLOAT, &samples[0]);
-                    AiNodeSetArray(shader, (gradient + "_float_ramp").c_str(), arr);
+                    AiNodeSetArray(shader, (gradient + "_float_ramp_Floats").c_str(), arr);
                 }
             }
 
@@ -65,7 +65,7 @@ public:
                         const MColor& sample = samples[i];
                         AiArraySetRGB(arr, i, AiColorCreate(sample.r, sample.g, sample.b));
                     }
-                    AiNodeSetArray(shader, (gradient + "_rgb_ramp").c_str(), arr);
+                    AiNodeSetArray(shader, (gradient + "_rgb_ramp_Colors").c_str(), arr);
                 }
             }
         }
