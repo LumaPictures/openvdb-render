@@ -8,6 +8,21 @@
 
 #include "../util/gradient_base.hpp"
 
+template <typename arnold_t> inline
+arnold_t get_array_elem(AtArray* arr, unsigned int i) {
+    return arnold_t();
+}
+
+template <> inline
+float get_array_elem<float>(AtArray* arr, unsigned int i) {
+    return AiArrayGetFlt(arr, i);
+}
+
+template <> inline
+AtRGB get_array_elem<AtRGB>(AtArray* arr, unsigned int i) {
+    return AiArrayGetRGB(arr, i);
+}
+
 class Gradient : public GradientBase<AtRGB> {
 public:
     Gradient() : GradientBase<AtRGB>()
@@ -64,6 +79,31 @@ public:
         AiMetaDataSetBool(mds, (base + "_rgb_ramp_Colors").c_str(), "always_linear", true);
     }
 
+    template <typename arnold_t> inline
+    arnold_t interpolate_value(unsigned int num_knots, AtArray* knots, AtArray* values, float k) {
+        if (k <= AI_EPSILON) {
+            return get_array_elem<arnold_t>(values, 0);
+        } else if (k >= (1.0f - AI_EPSILON)) {
+            return get_array_elem<arnold_t>(values, num_knots - 1);
+        } else {
+            for (auto i = 1; i < (num_knots - 1); ++i) {
+                const auto k1 = AiArrayGetFlt(knots, i);
+                if (k <= k1) {
+                    const auto k0 = AiArrayGetFlt(knots, i - 1);
+                    const auto v0 = get_array_elem<arnold_t>(values, i - 1);
+                    const auto v1 = get_array_elem<arnold_t>(values, i);
+                    const auto kd = k1 - k0;
+                    if (kd < AI_EPSILON) {
+                        return v0;
+                    }
+                    const auto t = (k - k0) / kd;
+                    return LERP(t, v0, v1);
+                }
+            }
+            return get_array_elem<arnold_t>(values, num_knots - 1);
+        }
+    }
+
     void update(const std::string& base, AtNode* node, AtParamValue*)
     {
         m_contrast = AiNodeGetFlt(node, (base + "_contrast").c_str());
@@ -87,38 +127,30 @@ public:
         m_clamp_min = AiNodeGetBool(node, (base + "_clamp_min").c_str());
         m_clamp_max = AiNodeGetBool(node, (base + "_clamp_max").c_str());
 
+        static constexpr unsigned int bake_size = 512;
+
         if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
-            AtArray* arr = AiNodeGetArray(node, (base + "_float_ramp_Floats").c_str());
-            if (arr != nullptr) {
-                const unsigned int nelements = arr->nelements;
-                if (m_float_ramp.size() != nelements) {
-                    std::vector<float>().swap(m_float_ramp);
-                } else {
-                    m_float_ramp.clear();
-                }
-                if (nelements > 0) {
-                    m_float_ramp.reserve(nelements);
-                    for (unsigned int i = 0; i < nelements; ++i) {
-                        m_float_ramp.push_back(AiArrayGetFlt(arr, i));
-                    }
+            m_float_ramp.resize(bake_size);
+            const unsigned int num_knots = static_cast<unsigned int>(AiNodeGetInt(node, (base + "_float_ramp").c_str()));
+            AtArray* knots_arr = AiNodeGetArray(node, (base + "_float_ramp_Knots").c_str());
+            AtArray* value_arr = AiNodeGetArray(node, (base + "_float_ramp_Floats").c_str());
+            if (num_knots >= 2 && knots_arr != nullptr && value_arr != nullptr) {
+                for (auto i = 0u; i < bake_size; ++i) {
+                    const float v = static_cast<float>(i + 1) / static_cast<float>(bake_size);
+                    m_float_ramp[i] = interpolate_value<float>(num_knots, knots_arr, value_arr, v);
                 }
             } else {
                 std::vector<float>().swap(m_float_ramp);
             }
         } else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP) {
-            AtArray* arr = AiNodeGetArray(node, (base + "_rgb_ramp_Colors").c_str());
-            if (arr != nullptr) {
-                const unsigned nelements = arr->nelements;
-                if (m_rgb_ramp.size() != nelements) {
-                    std::vector<AtRGB>().swap(m_rgb_ramp);
-                } else {
-                    m_rgb_ramp.clear();
-                }
-                if (nelements > 0) {
-                    m_rgb_ramp.reserve(nelements);
-                    for (unsigned int i = 0; i < nelements; ++i) {
-                        m_rgb_ramp.push_back(AiArrayGetRGB(arr, i));
-                    }
+            m_rgb_ramp.resize(bake_size);
+            const unsigned int num_knots = static_cast<unsigned int>(AiNodeGetInt(node, (base + "_rgb_ramp").c_str()));
+            AtArray* knots_arr = AiNodeGetArray(node, (base + "_rgb_ramp_Knots").c_str());
+            AtArray* value_arr = AiNodeGetArray(node, (base + "_rgb_ramp_Colors").c_str());
+            if (num_knots >= 2 && knots_arr != nullptr && value_arr != nullptr) {
+                for (auto i = 0u; i < bake_size; ++i) {
+                    const float v = static_cast<float>(i + 1) / static_cast<float>(bake_size);
+                    m_rgb_ramp[i] = interpolate_value<AtRGB>(num_knots, knots_arr, value_arr, v);
                 }
             } else {
                 std::vector<AtRGB>().swap(m_rgb_ramp);

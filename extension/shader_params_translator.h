@@ -63,10 +63,10 @@ public:
             AiNodeSetInt(shader, float_ramp_interp_name.c_str(), 0);
             AtArray* knots_arr = AiArrayAllocate(indexes_size + 2, 1, AI_TYPE_FLOAT);
             AtArray* values_arr = AiArrayAllocate(indexes_size + 2, 1, arnold_value_enum);
-            AiArraySetFlt(knots_arr, 0, sorted_values.front().first);
-            AiArraySetFlt(knots_arr, indexes_size + 1, sorted_values.back().first);
-            set_arnold_arr_elem(values_arr, 0, 0.0f);
-            set_arnold_arr_elem(values_arr, indexes_size + 1, 1.0f);
+            AiArraySetFlt(knots_arr, 0, 0.0f);
+            AiArraySetFlt(knots_arr, indexes_size + 1, 1.0f);
+            set_arnold_arr_elem(values_arr, 0, sorted_values.front().second);
+            set_arnold_arr_elem(values_arr, indexes_size + 1, sorted_values.back().second);
             for (auto i = 0u; i < indexes_size; ++i) {
                 AiArraySetFlt(knots_arr, i + 1, sorted_values[i].first);
                 set_arnold_arr_elem(values_arr, i + 1, sorted_values[i].second);
