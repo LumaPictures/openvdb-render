@@ -2,7 +2,9 @@
 
 #include <translators/shader/ShaderTranslator.h>
 
-class SamplerTranslator : public CShaderTranslator {
+#include "shader_translator.h"
+
+class SamplerTranslator : public VDBShaderParamsTranslator<CShaderTranslator>{
 public:
     static void* creator();
 

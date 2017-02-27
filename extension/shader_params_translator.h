@@ -2,15 +2,83 @@
 
 #include <translators/shader/ShaderTranslator.h>
 
+#include <algorithm>
+
+template <typename T, typename H> inline void
+convert_maya_to_arnold(T& trg, const H& src) {
+    trg = src;
+};
+
+template <> inline void
+convert_maya_to_arnold<AtRGB, MColor>(AtRGB& trg, const MColor& src) {
+    trg.r = src.r;
+    trg.g = src.g;
+    trg.b = src.b;
+};
+
+template <typename T> inline void
+set_arnold_arr_elem(AtArray* arr, unsigned int a_i, T st) {
+
+}
+
+template <> inline void
+set_arnold_arr_elem<float>(AtArray* arr, unsigned int a_i, float st) {
+    AiArraySetFlt(arr, a_i, st);
+}
+
+template <> inline void
+set_arnold_arr_elem<AtRGB>(AtArray* arr, unsigned int a_i, AtRGB st) {
+    AiArraySetRGB(arr, a_i, st);
+}
+
 template<typename translator_class>
 class VDBShaderParamsTranslator : public translator_class {
 public:
-    template <unsigned num_gradients>
-    void export_gradients(AtNode* shader, const std::array<std::string, num_gradients>& gradient_names)
+    template <typename value_array_t, typename arnold_type_t>
+    void export_gradient(AtNode* shader, const std::string& ramp_name, const std::string& type_name, int arnold_value_enum, MPlug plug) {
+        MRampAttribute ramp_attr(plug);
+        MIntArray indexes;
+        MFloatArray positions;
+        value_array_t values;
+        MIntArray interps;
+        ramp_attr.getEntries(indexes, positions, values, interps);
+        const auto indexes_size = indexes.length();
+        if (indexes_size > 0) {
+            const auto float_ramp_interp_name = ramp_name + "_Interpolation";
+            const auto float_ramp_knots_name = ramp_name + "_Knots";
+            const auto float_ramp_floats_name = ramp_name + "_" + type_name;
+
+            using pair_t = std::pair<float, arnold_type_t>;
+            std::vector<pair_t> sorted_values;
+            sorted_values.resize(indexes_size);
+            for (auto i = 0u; i < indexes_size; ++i) {
+                sorted_values[i].first = CLAMP(positions[i], 0.0f, 1.0f);
+                convert_maya_to_arnold(sorted_values[i].second, values[i]);
+            }
+            std::sort(sorted_values.begin(), sorted_values.end(), [](const pair_t& a, const pair_t& b) {
+                return a.first < b.first;
+            });
+
+            AiNodeSetInt(shader, ramp_name.c_str(), indexes_size + 2);
+            AiNodeSetInt(shader, float_ramp_interp_name.c_str(), 0);
+            AtArray* knots_arr = AiArrayAllocate(indexes_size + 2, 1, AI_TYPE_FLOAT);
+            AtArray* values_arr = AiArrayAllocate(indexes_size + 2, 1, arnold_value_enum);
+            AiArraySetFlt(knots_arr, 0, sorted_values.front().first);
+            AiArraySetFlt(knots_arr, indexes_size + 1, sorted_values.back().first);
+            set_arnold_arr_elem(values_arr, 0, 0.0f);
+            set_arnold_arr_elem(values_arr, indexes_size + 1, 1.0f);
+            for (auto i = 0u; i < indexes_size; ++i) {
+                AiArraySetFlt(knots_arr, i + 1, sorted_values[i].first);
+                set_arnold_arr_elem(values_arr, i + 1, sorted_values[i].second);
+            }
+            AiNodeSetArray(shader, float_ramp_knots_name.c_str(), knots_arr);
+            AiNodeSetArray(shader, float_ramp_floats_name.c_str(), values_arr);
+        }
+    }
+
+    void export_gradients(AtNode* shader, const std::vector<std::string>& gradient_names)
     {
         for (const auto& gradient : gradient_names) {
-            const unsigned int num_ramp_samples = 256;
-
             this->ProcessParameter(shader, (gradient + "_channel_mode").c_str(), AI_TYPE_INT,
                                    (gradient + "ChannelMode").c_str());
             this->ProcessParameter(shader, (gradient + "_contrast").c_str(), AI_TYPE_FLOAT,
@@ -45,28 +113,12 @@ public:
             MStatus status = MS::kSuccess;
             MPlug plug = this->FindMayaPlug((gradient + "FloatRamp").c_str(), &status);
             if (status && !plug.isNull()) {
-                MRampAttribute ramp_attr(plug);
-                MFloatArray samples;
-                ramp_attr.sampleValueRamp(num_ramp_samples, samples, &status);
-                if (status) {
-                    AtArray* arr = AiArrayConvert(num_ramp_samples, 1, AI_TYPE_FLOAT, &samples[0]);
-                    AiNodeSetArray(shader, (gradient + "_float_ramp_Floats").c_str(), arr);
-                }
+                export_gradient<MFloatArray, float>(shader, gradient + "_float_ramp", "Floats", AI_TYPE_FLOAT, plug);
             }
 
             plug = this->FindMayaPlug((gradient + "RgbRamp").c_str(), &status);
             if (status && !plug.isNull()) {
-                MRampAttribute ramp_attr(plug);
-                MColorArray samples;
-                ramp_attr.sampleColorRamp(num_ramp_samples, samples, &status);
-                if (status) {
-                    AtArray* arr = AiArrayAllocate(num_ramp_samples, 1, AI_TYPE_RGB);
-                    for (unsigned int i = 0; i < num_ramp_samples; ++i) {
-                        const MColor& sample = samples[i];
-                        AiArraySetRGB(arr, i, AiColorCreate(sample.r, sample.g, sample.b));
-                    }
-                    AiNodeSetArray(shader, (gradient + "_rgb_ramp_Colors").c_str(), arr);
-                }
+                export_gradient<MColorArray, AtRGB>(shader, gradient + "_rgb_ramp", "Colors", AI_TYPE_RGB, plug);
             }
         }
     }
@@ -97,8 +149,8 @@ public:
         this->ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
         this->ProcessParameter(shader, "compensate_scaling", AI_TYPE_BOOLEAN, "compensateScaling");
 
-        std::array<std::string, 3> gradient_names = {"scattering", "attenuation", "emission"};
-        export_gradients<3>(shader, gradient_names);
+        std::vector<std::string> gradient_names = {"scattering", "attenuation", "emission"};
+        export_gradients(shader, gradient_names);
     }
 
     inline void ExportSimpleParams(AtNode* shader)
@@ -122,7 +174,7 @@ public:
         this->ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
         this->ProcessParameter(shader, "compensate_scaling", AI_TYPE_BOOLEAN, "compensateScaling");
 
-        std::array<std::string, 3> gradient_names = {"simpleSmoke", "simpleOpacity", "simpleFire"};
-        export_gradients<3>(shader, gradient_names);
+        std::vector<std::string> gradient_names = {"simpleSmoke", "simpleOpacity", "simpleFire"};
+        export_gradients(shader, gradient_names);
     }
 };
