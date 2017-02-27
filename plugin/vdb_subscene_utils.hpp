@@ -183,8 +183,7 @@ inline bool setup_parameter(T& target, const T& source)
     if (target != source) {
         target = source;
         return true;
-    }
-    else {
+    } else {
         return false;
     }
 }

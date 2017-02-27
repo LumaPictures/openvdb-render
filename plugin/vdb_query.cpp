@@ -62,8 +62,7 @@ namespace {
                 ss << frame;
                 out_paths.push_back(boost::regex_replace(path, VDBVisualizerShape::s_hash_expr, ss.str()));
             }
-        }
-        else {
+        } else {
             out_paths.push_back(path);
         }
     }
@@ -126,42 +125,36 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
 
         if (arg_data.isFlagSet(current_frame_short_flag)) {
             vdb_paths.push_back(MPlug(node, VDBVisualizerShape::s_out_vdb_path).asString().asChar());
-        }
-        else {
+        } else {
             build_file_list(MPlug(node, VDBVisualizerShape::s_vdb_path).asString().asChar(),
                             MPlug(node, VDBVisualizerShape::s_cache_playback_start).asInt(),
                             MPlug(node, VDBVisualizerShape::s_cache_playback_end).asInt(),
                             vdb_paths);
         }
-    }
-    else if (arg_data.isFlagSet(file_short_flag)) {
+    } else if (arg_data.isFlagSet(file_short_flag)) {
         MString vdb_path;
         arg_data.getFlagArgument(file_short_flag, 0, vdb_path);
         if (arg_data.isFlagSet(current_frame_short_flag)) {
             const int current_frame = static_cast<int>(MAnimControl::currentTime().as(MTime::uiUnit()));
             build_file_list(vdb_path.asChar(), current_frame, current_frame, vdb_paths);
-        }
-        else {
+        } else {
             int start_frame = 0;
             int end_frame = 0;
             if (arg_data.isFlagSet(start_frame_short_flag)) {
                 arg_data.getFlagArgument(start_frame_short_flag, 0, start_frame);
-            }
-            else {
+            } else {
                 start_frame = static_cast<int>(MAnimControl::animationStartTime().as(MTime::uiUnit()));
             }
 
             if (arg_data.isFlagSet(end_frame_short_flag)) {
                 arg_data.getFlagArgument(end_frame_short_flag, 0, end_frame);
-            }
-            else {
+            } else {
                 end_frame = static_cast<int>(MAnimControl::animationEndTime().as(MTime::uiUnit()));
             }
 
             build_file_list(vdb_path.asChar(), start_frame, end_frame, vdb_paths);
         }
-    }
-    else {
+    } else {
         MGlobal::displayError("[openvdb] No cache was passed to the command, use the -file(f) or the -node(n) flags");
         return MS::kFailure;
     }
@@ -177,8 +170,7 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
     MString query_type = "";
     if (arg_data.isFlagSet(query_short_flag)) {
         arg_data.getFlagArgument(query_short_flag, 0, query_type);
-    }
-    else {
+    } else {
         MGlobal::displayError("[openvdb] No query is specified.");
         return MS::kFailure;
     }
@@ -190,17 +182,13 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
             MStringArray flags;
             if (flag_data.index(',')) {
                 flag_data.split(',', flags);
-            }
-            else if (flag_data.index(';')) {
+            } else if (flag_data.index(';')) {
                 flag_data.split(';', flags);
-            }
-            else if (flag_data.index(':')) {
+            } else if (flag_data.index(':')) {
                 flag_data.split(':', flags);
-            }
-            else if (flag_data.index(' ')) {
+            } else if (flag_data.index(' ')) {
                 flag_data.split(' ', flags);
-            }
-            else {
+            } else {
                 flags.append(flag_data);
             }
 
@@ -225,8 +213,7 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
         vdb_file->open(false);
         if (vdb_file->isOpen()) {
             vdb_files.push_back(vdb_file);
-        }
-        else {
+        } else {
             delete vdb_file;
         }
     }
@@ -247,8 +234,7 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
     auto grid_required = [&](openvdb::GridBase::ConstPtr grid) -> bool {
         if (all_grids) {
             return true;
-        }
-        else {
+        } else {
             return std::find(grid_names.begin(), grid_names.end(), grid->getName()) != grid_names.end() ||
                    std::find(grid_types.begin(), grid_types.end(), grid->valueType()) != grid_types.end();
         }
@@ -275,8 +261,7 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
             appendToResult(max.x);
             appendToResult(max.y);
             appendToResult(max.z);
-        }
-        else if (query == query_type_min_max) {
+        } else if (query == query_type_min_max) {
             std::vector<double> mins;
             std::vector<double> maxs;
             for (auto vdb_file : vdb_files) {
@@ -301,8 +286,7 @@ MStatus VDBQueryCmd::doIt(const MArgList& args)
                                     mins[0] = std::min(mins[0], value);
                                     maxs[0] = std::max(maxs[0], value);
                                 }
-                            }
-                            else if (grid->valueType() == "vec3s") {
+                            } else if (grid->valueType() == "vec3s") {
                                 if (mins.size() < 3) {
                                     mins.resize(3, std::numeric_limits<double>::max());
                                 }

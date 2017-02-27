@@ -79,8 +79,7 @@ protected:
     {
         if (value < 0.5f) {
             return bias(value * 2.0f) * 0.5f;
-        }
-        else {
+        } else {
             return bias(value * 2.0f - 1.0f) * 0.5f + 0.5f;
         }
     }
@@ -95,11 +94,9 @@ protected:
         value = apply_float_range(value);
         if (value < 0.0001f) {
             return m_float_ramp.front();
-        }
-        else if (value > 0.9999f) {
+        } else if (value > 0.9999f) {
             return m_float_ramp.back();
-        }
-        else {
+        } else {
             const size_t elem_count = m_float_ramp.size();
             const float sample_f = value * static_cast<float>(elem_count);
             const float sample_f_floor = floorf(sample_f);
@@ -136,11 +133,9 @@ protected:
         value = apply_float_range(value);
         if (value < 0.0001f) {
             return m_rgb_ramp.front();
-        }
-        else if (value > 0.9999f) {
+        } else if (value > 0.9999f) {
             return m_rgb_ramp.back();
-        }
-        else {
+        } else {
             const size_t elem_count = m_rgb_ramp.size();
             const float sample_f = value * static_cast<float>(elem_count);
             const float sample_f_floor = floorf(sample_f);
@@ -199,8 +194,7 @@ protected:
 
         if (hue6 > 4.0f) {
             hue2 -= 4.0f;
-        }
-        else if (hue6 > 2.0f) {
+        } else if (hue6 > 2.0f) {
             hue2 -= 2.0f;
         }
 
@@ -211,20 +205,15 @@ protected:
         Color rgb = make_color(0.0f, 0.0f, 0.0f);
         if (hue6 < 1) {
             rgb = make_color(chroma, component, 0.0f);
-        }
-        else if (hue6 < 2) {
+        } else if (hue6 < 2) {
             rgb = make_color(component, chroma, 0.0f);
-        }
-        else if (hue6 < 3) {
+        } else if (hue6 < 3) {
             rgb = make_color(0.0f, chroma, component);
-        }
-        else if (hue6 < 4) {
+        } else if (hue6 < 4) {
             rgb = make_color(0.0f, component, chroma);
-        }
-        else if (hue6 < 5) {
+        } else if (hue6 < 5) {
             rgb = make_color(component, 0.0f, chroma);
-        }
-        else {
+        } else {
             rgb = make_color(chroma, 0.0f, component);
         }
 
@@ -252,14 +241,11 @@ protected:
         float hue = 0.0f;
         if (chroma == 0.0f) {
             hue = 0.0f;
-        }
-        else if (cmax == color_r(color)) {
+        } else if (cmax == color_r(color)) {
             hue = (color_g(color) - color_b(color)) / chroma;
-        }
-        else if (cmax == color_g(color)) {
+        } else if (cmax == color_g(color)) {
             hue = (color_b(color) - color_r(color)) / chroma + 2.0f;
-        }
-        else {
+        } else {
             hue = (color_r(color) - color_g(color)) / chroma + 4.0f;
         }
 
@@ -336,17 +322,13 @@ public:
     {
         if (m_channel_mode == CHANNEL_MODE_RAW) {
             return make_color(v, v, v);
-        }
-        else if (m_channel_mode == CHANNEL_MODE_FLOAT) {
+        } else if (m_channel_mode == CHANNEL_MODE_FLOAT) {
             return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_range(v));
-        }
-        else if (m_channel_mode == CHANNEL_MODE_RGB) {
+        } else if (m_channel_mode == CHANNEL_MODE_RGB) {
             return apply_rgb_controls(make_color(v, v, v));
-        }
-        else if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
+        } else if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
             return make_color(1.0f, 1.0f, 1.0f) * apply_float_controls(apply_float_gradient(v));
-        }
-        else {
+        } else {
             return apply_rgb_controls(apply_rgb_gradient(v));
         }
     }
@@ -355,19 +337,15 @@ public:
     {
         if (m_channel_mode == CHANNEL_MODE_RAW) {
             return v;
-        }
-        else if (m_channel_mode == CHANNEL_MODE_FLOAT) {
+        } else if (m_channel_mode == CHANNEL_MODE_FLOAT) {
             return make_color(1.0f, 1.0f, 1.0f) *
                    apply_float_controls(apply_float_range((color_r(v) + color_g(v) + color_b(v)) / 3.0f));
-        }
-        else if (m_channel_mode == CHANNEL_MODE_RGB) {
+        } else if (m_channel_mode == CHANNEL_MODE_RGB) {
             return apply_rgb_controls(v);
-        }
-        else if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
+        } else if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
             return make_color(1.0f, 1.0f, 1.0f) *
                    apply_float_controls(apply_float_gradient((color_r(v) + color_g(v) + color_b(v)) / 3.0f));
-        }
-        else {
+        } else {
             return apply_rgb_controls(apply_rgb_gradient((color_r(v) + color_g(v) + color_b(v)) / 3.0f));
         }
     }

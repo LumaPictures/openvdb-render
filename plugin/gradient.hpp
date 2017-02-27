@@ -41,7 +41,7 @@ public:
             m_clamp_min = MPlug(tmo, params.clamp_min).asBool();
             m_clamp_max = MPlug(tmo, params.clamp_max).asBool();
 
-            const static unsigned int RAMP_SAMPLE_COUNT = 128;
+            static constexpr unsigned int RAMP_SAMPLE_COUNT = 128;
 
             if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
                 MStatus status = MS::kSuccess;
@@ -54,8 +54,7 @@ public:
                         m_float_ramp[i] = float_array[i];
                     }
                 }
-            }
-            else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP) {
+            } else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP) {
                 MStatus status = MS::kSuccess;
                 MRampAttribute color_ramp(tmo, params.rgb_ramp);
                 MColorArray color_array;
