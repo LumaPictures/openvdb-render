@@ -181,7 +181,7 @@ protected:
         }
 
         if (m_add != 0.0f) {
-            color = make_color(m_add, m_add, m_add);
+            color += make_color(m_add, m_add, m_add);
         }
 
         return color;
