@@ -21,4 +21,7 @@ if (BUILD_ARNOLD_SHADER)
 endif ()
 
 install(FILES README.md
-	    DESTINATION docs/)
+		DESTINATION docs/)
+
+install(DIRECTORY katana
+		DESTINATION .)
