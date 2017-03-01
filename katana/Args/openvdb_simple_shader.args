@@ -1,0 +1,440 @@
+<args format="1.0">
+    <help>Volumetric shader using a FumeFX-style control set.</help>
+    <page name="Smoke">
+        <!-- Base controls -->
+        <param name="smoke"/>
+        <param name="smoke_intensity" slider="True" max="4" slidermax="4"/>
+        <param name="anisotropy" slider="True" min="-0.999" max="0.999" slidermin="-0.999" slidermax="0.999"/>
+        <param name="smoke_channel"/>
+        <param name="simpleSmoke_channel_mode"/>
+        <!-- Float ramp -->
+        <param name="simpleSmoke_float_ramp" widget="floatRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="3"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_float_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleSmoke_float_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleSmoke_float_ramp_Floats" default="0,0,1,1" size="4" widget="null"/>
+        <!-- Float/float ramp -->
+        <param name="simpleSmoke_input_min" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_input_max" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_bias" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_gain" slider="True" max="2" slidermax="2">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_output_min" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_output_max" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_clamp_min">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_clamp_max">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <!-- RGB ramp -->
+        <param name="simpleSmoke_rgb_ramp" widget="colorRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="4"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleSmoke_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleSmoke_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
+        <!-- RGB/RGB ramp -->
+        <param name="simpleSmoke_gamma" slider="True" min="0.1" max="4" slidermin="0.1" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_hue_shift" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_saturation" slider="True" max="2" slidermax="2">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_exposure" slider="True" min="-5" max="5" slidermin="-5" slidermax="5">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_multiply" slider="True" max="4" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_add" slider="True" min="-1" max="1" slidermin="-1" slidermax="1">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <!-- Non-raw -->
+        <param name="simpleSmoke_contrast" slider="True" max="4" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|2|3|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_contrast_pivot" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|2|3|4"/>
+            </hintdict>
+        </param>
+    </page>
+    <page name="Opacity">
+        <!-- Base controls -->
+        <param name="opacity"/>
+        <param name="opacity_intensity" slider="True" slidermax="4"/>
+        <param name="opacity_shadow"/>
+        <param name="opacity_channel"/>
+        <param name="simpleOpacity_channel_mode"/>
+                <!-- Float ramp -->
+        <param name="simpleOpacity_float_ramp" widget="floatRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="3"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_float_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleOpacity_float_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleOpacity_float_ramp_Floats" default="0,0,1,1" size="4" widget="null"/>
+        <!-- Float/float ramp -->
+        <param name="simpleOpacity_input_min" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_input_max" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_bias" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_gain" slider="True" max="2" slidermax="2">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_output_min">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_output_max">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_clamp_min">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_clamp_max">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <!-- RGB ramp -->
+        <param name="simpleOpacity_rgb_ramp" widget="colorRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="4"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleOpacity_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleOpacity_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
+        <!-- RGB/RGB ramp -->
+        <param name="simpleOpacity_gamma" slider="True" min="0.1" max="4" slidermin="0.1" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_hue_shift" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_saturation" slider="True" max="2" slidermax="2">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_exposure" slider="True" min="-5" max="5" slidermin="-5" slidermax="5">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_multiply" slider="True" max="4" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_add" slider="True" min="-1" max="1" slidermin="-1" slidermax="1">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <!-- Non-raw -->
+        <param name="simpleOpacity_contrast" slider="True" max="4" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|2|3|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_contrast_pivot" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|2|3|4"/>
+            </hintdict>
+        </param>
+    </page>
+    <page name="Fire">
+        <!-- Base controls -->
+        <param name="fire"/>
+        <param name="fire_intensity" slider="True" slidermax="4"/>
+        <param name="fire_channel"/>
+        <param name="simpleFire_channel_mode"/>
+                <!-- Float ramp -->
+        <param name="simpleFire_float_ramp" widget="floatRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="3"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_float_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleFire_float_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleFire_float_ramp_Floats" default="0,0,1,1" size="4" widget="null"/>
+        <!-- Float/float ramp -->
+        <param name="simpleFire_input_min" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_input_max" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_bias" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_gain" slider="True" max="2" slidermax="2">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_output_min">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_output_max">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_clamp_min">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_clamp_max">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|3"/>
+            </hintdict>
+        </param>
+        <!-- RGB ramp -->
+        <param name="simpleFire_rgb_ramp" widget="colorRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="4"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleFire_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleFire_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
+        <!-- RGB/RGB ramp -->
+        <param name="simpleFire_gamma" slider="True" min="0.1" max="4" slidermin="0.1" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_hue_shift" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_saturation" slider="True" max="2" slidermax="2">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_exposure" slider="True" min="-5" max="5" slidermin="-5" slidermax="5">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_multiply" slider="True" max="4" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_add" slider="True" min="-1" max="1" slidermin="-1" slidermax="1">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="2|4"/>
+            </hintdict>
+        </param>
+        <!-- Non-raw -->
+        <param name="simpleFire_contrast" slider="True" max="4" slidermax="4">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|2|3|4"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_contrast_pivot" slider="True">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="in"/>
+                <string name="conditionalVisValue" value="1|2|3|4"/>
+            </hintdict>
+        </param>
+    </page>
+    <param name="position_offset"/>
+    <param name="interpolation"/>
+    <param name="compensate_scaling"/>
+</args>
