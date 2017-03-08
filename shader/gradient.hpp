@@ -76,7 +76,7 @@ public:
                          AiArray(4, 1, AI_TYPE_FLOAT, 0.0f, 0.0f, 1.0f, 1.0f));
         AiParameterArray((base + "_rgb_ramp_Colors").c_str(),
                          AiArray(4, 1, AI_TYPE_RGB, AI_RGB_BLACK, AI_RGB_BLACK, AI_RGB_WHITE, AI_RGB_WHITE));
-        AiMetaDataSetBool(mds, (base + "_rgb_ramp_Colors").c_str(), "always_linear", true);
+        // AiMetaDataSetBool(mds, (base + "_rgb_ramp_Colors").c_str(), "always_linear", true);
     }
 
     template <typename arnold_t> inline
