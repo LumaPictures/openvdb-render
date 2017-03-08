@@ -40,7 +40,7 @@ public:
         INTERPOLATION_BSPLINE
     };
 
-    static void parameters(const std::string& base, AtList* params, AtMetaDataStore* mds)
+    static void parameters(const std::string& base, AtList* params, AtMetaDataStore* /*mds*/)
     {
         static const char* gradient_types[] = {"Raw", "Float", "RGB", "Float Ramp", "RGB Ramp", nullptr};
         static const char* ramp_types[] = {"linear", "catmull-rom", "bspline", nullptr};
