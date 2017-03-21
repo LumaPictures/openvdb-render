@@ -1,5 +1,3 @@
-#include <GL/glew.h>
-
 #include <maya/MFnPlugin.h>
 #include <maya/MGlobal.h>
 #include <maya/MDrawRegistry.h>

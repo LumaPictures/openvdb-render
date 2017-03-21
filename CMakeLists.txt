@@ -11,17 +11,17 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 add_definitions(-Wall -Wextra -Werror -std=c++11 -fPIC)
 
 if (BUILD_MAYA_PLUGIN)
-	add_subdirectory(plugin)
+    add_subdirectory(plugin)
 endif ()
 if (BUILD_MTOA_EXTENSION)
-	add_subdirectory(extension)
+    add_subdirectory(extension)
 endif ()
 if (BUILD_ARNOLD_SHADER)
-	add_subdirectory(shader)
+    add_subdirectory(shader)
 endif ()
 
 install(FILES README.md
-		DESTINATION docs/)
+        DESTINATION docs/)
 
 install(DIRECTORY katana
-		DESTINATION .)
+        DESTINATION .)

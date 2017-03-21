@@ -10,7 +10,6 @@ if (NOT ILMBASE_ROOT)
     set(ILMBASE_ROOT $ENV{ILMBASE_ROOT})
 endif ()
 
-find_path(GLEW_INCLUDE NAMES GL/glew.h)
 find_path(OPENVDB_INCLUDE NAMES openvdb/openvdb.h)
 include_directories(${LUMA_NODE_ID_INCLUDE})
 include_directories(${OPENVDB_INCLUDE})
@@ -28,7 +27,7 @@ file(GLOB SRC *.cpp)
 
 find_library(CUDA_STATIC_LIBRARIES libcudart_static.a
         HINT $ENV{CUDA_HOME}/lib64)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --compiler-options -fPIC -O3 -std=c++11) # pass fpic to the host compiler
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} --compiler-options -fPIC -O3 -std=c++11 -Wno-deprecated-gpu-targets) # pass fpic to the host compiler
 cuda_compile(point_sorter point_sorter.cu)
 cuda_include_directories($ENV{THRUST_ROOT})
 include_directories($ENV{THRUST_ROOT}) # this probably helps clion intellisense
