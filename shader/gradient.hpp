@@ -131,12 +131,12 @@ public:
 
         if (m_channel_mode == CHANNEL_MODE_FLOAT_RAMP) {
             m_float_ramp.resize(bake_size);
-            const unsigned int num_knots = static_cast<unsigned int>(AiNodeGetInt(node, (base + "_float_ramp").c_str()));
-            AtArray* knots_arr = AiNodeGetArray(node, (base + "_float_ramp_Knots").c_str());
-            AtArray* value_arr = AiNodeGetArray(node, (base + "_float_ramp_Floats").c_str());
+            const auto num_knots = static_cast<unsigned int>(AiNodeGetInt(node, (base + "_float_ramp").c_str()));
+            auto* knots_arr = AiNodeGetArray(node, (base + "_float_ramp_Knots").c_str());
+            auto* value_arr = AiNodeGetArray(node, (base + "_float_ramp_Floats").c_str());
             if (num_knots >= 2 && knots_arr != nullptr && value_arr != nullptr) {
-                for (auto i = 0u; i < bake_size; ++i) {
-                    const float v = static_cast<float>(i + 1) / static_cast<float>(bake_size);
+                for (auto i = decltype(bake_size){0}; i < bake_size; ++i) {
+                    const auto v = static_cast<float>(i) / static_cast<float>(bake_size - 1);
                     m_float_ramp[i] = interpolate_value<float>(num_knots, knots_arr, value_arr, v);
                 }
             } else {
@@ -144,12 +144,12 @@ public:
             }
         } else if (m_channel_mode == CHANNEL_MODE_RGB_RAMP) {
             m_rgb_ramp.resize(bake_size);
-            const unsigned int num_knots = static_cast<unsigned int>(AiNodeGetInt(node, (base + "_rgb_ramp").c_str()));
-            AtArray* knots_arr = AiNodeGetArray(node, (base + "_rgb_ramp_Knots").c_str());
-            AtArray* value_arr = AiNodeGetArray(node, (base + "_rgb_ramp_Colors").c_str());
+            const auto num_knots = static_cast<unsigned int>(AiNodeGetInt(node, (base + "_rgb_ramp").c_str()));
+            auto* knots_arr = AiNodeGetArray(node, (base + "_rgb_ramp_Knots").c_str());
+            auto* value_arr = AiNodeGetArray(node, (base + "_rgb_ramp_Colors").c_str());
             if (num_knots >= 2 && knots_arr != nullptr && value_arr != nullptr) {
-                for (auto i = 0u; i < bake_size; ++i) {
-                    const float v = static_cast<float>(i + 1) / static_cast<float>(bake_size);
+                for (auto i = decltype(bake_size){0}; i < bake_size; ++i) {
+                    const auto v = static_cast<float>(i) / static_cast<float>(bake_size - 1);
                     m_rgb_ramp[i] = interpolate_value<AtRGB>(num_knots, knots_arr, value_arr, v);
                 }
             } else {
