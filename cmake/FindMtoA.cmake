@@ -4,9 +4,14 @@
 #
 # This auxiliary CMake file helps in find the MtoA headers and libraries
 #
-# MTOA_FOUND            set if MtoA is found.
-# MTOA_INCLUDE_DIR      MtoA's include directory
-# MTOA_mtoa_api_LIBRARY Full path location of libmtoa_api
+# MTOA_FOUND                Set if MtoA is found.
+# MTOA_INCLUDE_DIR          MtoA's include directory.
+# MTOA_mtoa_api_LIBRARY     Full path location of libmtoa_api.
+# MTOA_VERSION              Full version of MtoA.
+# MTOA_ARCH_VERSION_NUM     Arch version of MtoA.
+# MTOA_MAJOR_VERSION_NUM    Major version of MtoA.
+# MTOA_MINOR_VERSION_NUM    Minor version of MtoA.
+# MTOA_FIX_VERSION          Fix version of MtoA.
 
 find_package(PackageHandleStandardArgs)
 
@@ -58,7 +63,18 @@ if(MTOA_FOUND)
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${ORIGINAL_CMAKE_FIND_LIBRARY_SUFFIXES})
     set(MTOA_INCLUDE_DIR "${MTOA_LOCATION}/include"
         CACHE STRING "MtoA include path")
-        message(STATUS "MTOA location: ${MTOA_LOCATION}")
-		message(STATUS "MTOA LIB:      ${MTOA_mtoa_api_LIBRARY}")
-		message(STATUS "MTOA INCLUDE:  ${MTOA_INCLUDE_DIR}")
+    if(MTOA_INCLUDE_DIR AND EXISTS "${MTOA_INCLUDE_DIR}/utils/Version.h")
+        foreach(_mtoa_comp ARCH_VERSION_NUM MAJOR_VERSION_NUM MINOR_VERSION_NUM FIX_VERSION)
+            file(STRINGS
+                 ${MTOA_INCLUDE_DIR}/utils/Version.h
+                 _mtoa_tmp
+                 REGEX "#define MTOA_${_mtoa_comp} .*$")
+            string(REGEX MATCHALL "[0-9]+" MTOA_${_mtoa_comp} ${_mtoa_tmp})
+        endforeach()
+        set(MTOA_VERSION ${MTOA_ARCH_VERSION_NUM}.${MTOA_MAJOR_VERSION_NUM}.${MTOA_MINOR_VERSION_NUM}.${MTOA_FIX_VERSION})
+    endif()
+    message(STATUS "MTOA location: ${MTOA_LOCATION}")
+    message(STATUS "MTOA LIB:      ${MTOA_mtoa_api_LIBRARY}")
+    message(STATUS "MTOA INCLUDE:  ${MTOA_INCLUDE_DIR}")
+    message(STATUS "MTOA VERSION:  ${MTOA_VERSION}")
 endif()
