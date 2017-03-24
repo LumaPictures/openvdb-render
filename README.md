@@ -2,7 +2,7 @@
 
 **What is this project?**
 
-OpenVDB Render is a generic toolkit for rendering and visualizing openvdb volumes across multiple packages and 3rd party renderers.
+OpenVDB Render is a generic toolkit for rendering and visualizing OpenVDB volumes across multiple packages and 3rd party renderers.
 
 **Where are we right now?**
 
@@ -10,13 +10,21 @@ The repository contains a Maya plugin, MtoA extension and a set of Arnold shader
 
 **What are our short-term goals?**
 
--   Improve real-time display in Maya.
--   Add support for Katana, and share as much code as possible between the Maya plugin and Katana.
--   Support building on Windows.
+-   Improve real-time display in Maya
+-   Windows support
 
 **Supported platforms**
 
--   Maya 2016 (OpenGL Core Profile)
--   CY2016
--   Arnold 4.2.x.
--   GCC 4.8.3.
+-   NVidia GPUs
+-   Linux
+-   Maya 2016 (OpenGL Core Profile) + 2016 Ext 2 + 2017
+-   CY2017
+-   Arnold 4.2.x
+-   GCC 4.8.3
+-   MtoA 1.2 and 1.4
+-   Katana 2.5
+-   Arnold 5 and MtoA-2.0 support is in the works, and will be released the same time as Arnold 5 / MtoA 2
+
+**Notes**
+
+If you are interested in the automatic grid discovery for KtoA or the early Arnold 5 work, and you have access to KtoA's source code or Arnold 5, please contact one of the repo maintainers for a patch.
