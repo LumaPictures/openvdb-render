@@ -1,5 +1,10 @@
 #include <extension/Extension.h>
+#if MTOA12
 #include <extension/ExtensionsManager.h>
+#elif MTOA14
+#include <extension/Extension.h>
+#endif
+
 
 #include "openvdb_translator.h"
 #include "sampler_translator.h"

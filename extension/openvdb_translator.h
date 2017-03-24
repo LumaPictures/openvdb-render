@@ -10,7 +10,12 @@ public:
 
     virtual AtNode* CreateArnoldNodes();
 
-    virtual void Export(AtNode* volume);
+    virtual void Export(AtNode* volume) override;
 
-    virtual void ExportMotion(AtNode* volume, unsigned int step);
+#if MTOA12
+    virtual void ExportMotion(AtNode* volume, unsigned int step) override;
+#elif MTOA14
+    virtual void ExportMotion(AtNode* volume) override;
+#endif
+
 };
