@@ -2,6 +2,8 @@ set(PLUGIN_NAME openvdb_render)
 
 add_definitions(-DLINUX -D_BOOL -DREQUIRE_IOSTREAM -pthread)
 
+set(Boost_USE_STATIC_LIBS ON)
+
 find_package(CUDA)
 find_package(Maya)
 find_package(Boost COMPONENTS regex)
