@@ -9,7 +9,12 @@ option(INCLUDE_HEADERS_IN_BUILD "Include the headers next to the source files fo
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_definitions(-Wall -Wextra -Werror -std=c++11 -fPIC)
+add_definitions(-Wall -Wextra -std=c++11 -fPIC)
+
+if (NOT BUILD_USD_TOOLS)
+    # Some depreceated headers are included with USD.
+    add_definitions(-Werror)
+endif ()
 
 if (BUILD_MAYA_PLUGIN)
     add_subdirectory(plugin)
