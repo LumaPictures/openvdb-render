@@ -6,7 +6,7 @@
 PXR_NAMESPACE_USING_DIRECTIVE
 
 TF_REGISTRY_FUNCTION_WITH_TAG(PxrUsdMayaPrimWriterRegistry, partioVisualizerWriter) {
-    PxrUsdMayaPrimWriterRegistry::Register("vdbVisualizer",
+    PxrUsdMayaPrimWriterRegistry::Register("vdb_visualizer",
                  [](const MDagPath& iDag,
                     const SdfPath& uPath, bool instanceSource,
                     usdWriteJobCtx& jobCtx) -> MayaPrimWriterPtr { return std::make_shared<VdbVisualizerWriter>(

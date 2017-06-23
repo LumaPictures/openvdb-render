@@ -5,7 +5,7 @@
                 "UsdMaya" : {
                     "PrimWriter" : {
                         "mayaPlugin": "vdbVisualizerWriter",
-                        "providesTranslator": [ "vdbVisualizer" ]
+                        "providesTranslator": [ "vdb_visualizer" ]
                     }
                 },
                 "Types": {

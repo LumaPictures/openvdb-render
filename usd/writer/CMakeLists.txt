@@ -14,7 +14,8 @@ set(MAYA_LIBS OpenMaya Foundation OpenMayaAnim OpenMayaFX OpenMayaUI OpenMayaRen
 
 add_library(${PLUGIN_NAME} SHARED ${SRC})
 set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
-target_link_libraries(${PLUGIN_NAME} ${PARTIO_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MAYA_LIBS} tf gf sdf usd usdGeom usdMaya)
+target_link_libraries(${PLUGIN_NAME} ${PARTIO_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MAYA_LIBS} tf gf sdf usd usdGeom usdAi usdMaya)
+set_target_properties(${PLUGIN_NAME} PROPERTIES INSTALL_RPATH_USE_LINK_PATH ON)
 
 install(TARGETS ${PLUGIN_NAME}
         DESTINATION usd/plug-ins)
