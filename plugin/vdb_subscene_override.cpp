@@ -6,6 +6,7 @@
 #include <maya/MGlobal.h>
 #include <maya/MFnDagNode.h>
 #include <maya/MDrawContext.h>
+#include <maya/MFnDagNode.h>
 
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
@@ -168,12 +169,12 @@ namespace MHWRender {
     struct VDBSubSceneOverrideData {
         MBoundingBox bbox;
 
-        MMatrix world_matrix;
-        MMatrix camera_matrix;
-
-        MVector last_camera_direction;
-
+        // We need to handle all the instances
+        std::vector<MMatrix> world_matrices;
         std::vector<PointCloudVertex> point_cloud_data;
+
+        MMatrix camera_matrix;
+        MVector last_camera_direction;
 
         MFloatVector scattering_color;
         MFloatVector attenuation_color;
@@ -223,12 +224,6 @@ namespace MHWRender {
         {
             for (unsigned int x = 0; x < 4; ++x) {
                 for (unsigned int y = 0; y < 4; ++y) {
-                    world_matrix(x, y) = std::numeric_limits<float>::infinity();
-                }
-            }
-
-            for (unsigned int x = 0; x < 4; ++x) {
-                for (unsigned int y = 0; y < 4; ++y) {
                     camera_matrix(x, y) = std::numeric_limits<float>::infinity();
                 }
             }
@@ -249,25 +244,12 @@ namespace MHWRender {
 
         bool update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context)
         {
-            MDagPath dg = MDagPath::getAPathTo(obj);
-            const auto inc_world_matrix = dg.inclusiveMatrix();
-            const auto inc_camera_matrix = frame_context.getMatrix(MFrameContext::kViewMtx);
-            if (world_matrix != inc_world_matrix) {
-                world_has_changed = true;
-                world_matrix = inc_world_matrix;
-            }
+            MFnDagNode dgNode(obj);
+            MDagPath dg;
+            dgNode.getPath(dg);
 
-            if (camera_matrix != inc_camera_matrix) {
-                camera_has_changed = true;
-                camera_matrix = inc_camera_matrix;
-            }
-            const bool matrix_changed = world_has_changed | camera_has_changed;
-            // TODO: we can limit some of the comparisons to the display mode
-            // ie, we don't need to compare certain things if we are using the bounding
-            // box mode
-
-            auto path_is_visible = [&dg]() -> bool {
-                MDagPath dg_copy = dg;
+            auto path_is_visible = [](const MDagPath& dg_in) -> bool {
+                MDagPath dg_copy = dg_in;
                 MFnDagNode dg_node;
                 for (MStatus status = MS::kSuccess; status; status = dg_copy.pop()) {
                     dg_node.setObject(dg_copy.node());
@@ -280,7 +262,36 @@ namespace MHWRender {
                 return true;
             };
 
-            const bool visibility_changed = setup_parameter(visible, path_is_visible());
+            static std::vector<MMatrix> inc_world_matrices;
+            static MDagPathArray paths;
+            inc_world_matrices.clear();
+            paths.clear();
+            dgNode.getAllPaths(paths);
+            const auto pathCount = paths.length();
+            inc_world_matrices.reserve(pathCount);
+            for (auto i = decltype(pathCount){0}; i < pathCount; ++i) {
+                const auto path = paths[i];
+                if (path_is_visible(path)) {
+                    inc_world_matrices.push_back(path.inclusiveMatrix());
+                }
+            }
+
+            if (world_matrices != inc_world_matrices) {
+                world_has_changed = true;
+                world_matrices = inc_world_matrices;
+            }
+
+            const auto inc_camera_matrix = frame_context.getMatrix(MFrameContext::kViewMtx);
+            if (camera_matrix != inc_camera_matrix) {
+                camera_has_changed = true;
+                camera_matrix = inc_camera_matrix;
+            }
+            const bool matrix_changed = world_has_changed | camera_has_changed;
+            // TODO: we can limit some of the comparisons to the display mode
+            // ie, we don't need to compare certain things if we are using the bounding
+            // box mode
+
+            const bool visibility_changed = setup_parameter(visible, !inc_world_matrices.empty());
 
             if (data == nullptr || update_trigger == data->update_trigger) {
                 return matrix_changed | visibility_changed;
@@ -335,6 +346,9 @@ namespace MHWRender {
 
     MPxSubSceneOverride* VDBSubSceneOverride::creator(const MObject& obj)
     {
+        MFnDagNode dgNode(obj);
+        MDagPath dg;
+        dgNode.getPath(dg);
         return new VDBSubSceneOverride(obj);
     }
 
@@ -455,8 +469,18 @@ namespace MHWRender {
         }
 
         if (data->world_has_changed) {
-            bounding_box->setMatrix(&data->world_matrix);
-            point_cloud->setMatrix(&data->world_matrix);
+            // Point cloud instancing does not work for some reason
+            // also because of sorting I'm only displaying the first one.
+            point_cloud->setMatrix(&data->world_matrices[0]);
+
+            static MMatrixArray matrix_arr;
+            const auto matrix_count = data->world_matrices.size();
+            matrix_arr.setLength(matrix_count);
+            for (auto i = decltype(matrix_count){0}; i < matrix_count; ++i) {
+                matrix_arr[i] = data->world_matrices[i];
+            }
+
+            setInstanceTransformArray(*bounding_box, matrix_arr);
         }
 
         if (data->data_has_changed) {
@@ -730,7 +754,7 @@ namespace MHWRender {
                     attenuation_sampler->~RGBSampler();
 
                     const auto camera_matrix = frameContext.getMatrix(MFrameContext::kViewInverseMtx);
-                    MFloatPoint camera_pos = MPoint(0.0f, 0.0f, 0.0f, 1.0f) * (camera_matrix * data->world_matrix.inverse());
+                    MFloatPoint camera_pos = MPoint(0.0f, 0.0f, 0.0f, 1.0f) * (camera_matrix * data->world_matrices[0].inverse());
                     setup_point_cloud(point_cloud, camera_pos);
                     data->camera_has_changed = false;
                     data->world_has_changed = false;
@@ -759,7 +783,7 @@ namespace MHWRender {
 
             if (data->display_mode == DISPLAY_POINT_CLOUD) {
                 const auto camera_matrix = frameContext.getMatrix(MFrameContext::kViewInverseMtx);
-                const auto camera_pos = MPoint(0.0f, 0.0f, 0.0f, 1.0f) * (camera_matrix * data->world_matrix.inverse());
+                const auto camera_pos = MPoint(0.0f, 0.0f, 0.0f, 1.0f) * (camera_matrix * data->world_matrices[0].inverse());
                 MVector camera_dir(
                     camera_pos.x, camera_pos.y, camera_pos.z);
                 camera_dir.normalize();
@@ -775,6 +799,9 @@ namespace MHWRender {
     bool VDBSubSceneOverride::requiresUpdate(const MSubSceneContainer& /*container*/,
                                              const MFrameContext& frameContext) const
     {
+        MFnDagNode dgNode(m_object);
+        MDagPath dg;
+        dgNode.getPath(dg);
         return p_data->update(p_vdb_visualizer->get_update(), m_object, frameContext);
     }
 
