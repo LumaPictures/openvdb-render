@@ -245,8 +245,6 @@ namespace MHWRender {
         bool update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context)
         {
             MFnDagNode dgNode(obj);
-            MDagPath dg;
-            dgNode.getPath(dg);
 
             auto path_is_visible = [](const MDagPath& dg_in) -> bool {
                 MDagPath dg_copy = dg_in;
@@ -468,8 +466,7 @@ namespace MHWRender {
             bounding_box->enable(data->old_bounding_box_enabled);
         }
 
-        if (data->world_has_changed) {
-            // Point cloud instancing does not work for some reason
+        auto setup_matrices = [&] () {
             // also because of sorting I'm only displaying the first one.
             point_cloud->setMatrix(&data->world_matrices[0]);
 
@@ -481,7 +478,7 @@ namespace MHWRender {
             }
 
             setInstanceTransformArray(*bounding_box, matrix_arr);
-        }
+        };
 
         if (data->data_has_changed) {
             auto setup_bounding_box = [this, &data]() -> bool {
@@ -765,8 +762,11 @@ namespace MHWRender {
                                                                 std::max(data->voxel_size.y(), data->voxel_size.z())));
                     p_point_cloud_shader->setParameter("jitter_size", MFloatVector(
                         data->voxel_size.x(), data->voxel_size.y(), data->voxel_size.y()) * data->point_jitter);
+
                 }
             }
+
+            setup_matrices();
         }
 
         // Setting up shader parameters
@@ -778,9 +778,6 @@ namespace MHWRender {
         }
 
         if (data->camera_has_changed || data->world_has_changed) {
-            data->camera_has_changed = false;
-            data->world_has_changed = false;
-
             if (data->display_mode == DISPLAY_POINT_CLOUD) {
                 const auto camera_matrix = frameContext.getMatrix(MFrameContext::kViewInverseMtx);
                 const auto camera_pos = MPoint(0.0f, 0.0f, 0.0f, 1.0f) * (camera_matrix * data->world_matrices[0].inverse());
@@ -793,6 +790,13 @@ namespace MHWRender {
                     setup_point_cloud(point_cloud, camera_pos);
                 }
             }
+
+            if (data->world_has_changed) {
+                setup_matrices();
+            }
+
+            data->camera_has_changed = false;
+            data->world_has_changed = false;
         }
     }
 
