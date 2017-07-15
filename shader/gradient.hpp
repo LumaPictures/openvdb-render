@@ -86,7 +86,7 @@ public:
         } else if (k >= (1.0f - AI_EPSILON)) {
             return get_array_elem<arnold_t>(values, num_knots - 1);
         } else {
-            for (auto i = 1; i < (num_knots - 1); ++i) {
+            for (auto i = decltype(num_knots){1}; i < (num_knots - 1); ++i) {
                 const auto k1 = AiArrayGetFlt(knots, i);
                 if (k <= k1) {
                     const auto k0 = AiArrayGetFlt(knots, i - 1);

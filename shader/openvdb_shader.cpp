@@ -8,7 +8,7 @@
 AI_SHADER_NODE_EXPORT_METHODS(openvdbShaderMethods);
 
 namespace {
-    enum VolumeCollectorParams {
+    enum {
         p_scattering_source,
         p_scattering,
         p_scattering_channel,
@@ -31,11 +31,77 @@ namespace {
         p_compensate_scaling
     };
 
-    static const char* scattering_source_labels[] = {"parameter", "channel", NULL};
-    static const char* attenuation_source_labels[] = {"parameter", "channel", "scattering", NULL};
-    static const char* emission_source_labels[] = {"parameter", "channel", NULL};
-    static const char* attenuation_mode_labels[] = {"absorption", "extinction", NULL};
-    static const char* interpolation_labels[] = {"closest", "trilinear", "tricubic", NULL};
+    template <typename T>
+    inline T eval(AtShaderGlobals*, const AtNode*, int) {
+        assert("Unimplemented type.");
+    }
+
+    template <>
+    inline float eval<float>(AtShaderGlobals* sg, const AtNode* node, int p) {
+        return AiShaderEvalParamFuncFlt(sg, node, p);
+    }
+
+    template <>
+    inline AtRGB eval<AtRGB>(AtShaderGlobals* sg, const AtNode* node, int p) {
+        return AiShaderEvalParamFuncRGB(sg, node, p);
+    }
+
+    template <typename T>
+    inline T get(const AtNode*, const char*) {
+        assert("Unimplemented type.");
+    }
+
+    template <>
+    inline float get<float>(const AtNode* node, const char* param_name) {
+        return AiNodeGetFlt(node, param_name);
+    }
+
+    template <>
+    inline AtRGB get<AtRGB>(const AtNode* node, const char* param_name) {
+        return AiNodeGetRGB(node, param_name);
+    }
+
+    template <typename T>
+    inline T zero() {
+        assert("Unimplemented type.");
+    }
+
+    template <>
+    inline float zero<float>() {
+        return 0.0f;
+    }
+
+    template <>
+    inline AtRGB zero<AtRGB>() {
+        return AI_RGB_BLACK;
+    }
+
+    template<typename T, int p> struct alignas(8)
+    Accessor {
+        Accessor() : cache(T()), is_linked(false) {}
+
+        inline T operator()(AtShaderGlobals* sg, const AtNode* node) const {
+            return is_linked ? eval<T>(sg, node, p) : cache;
+        }
+
+        void init(const AtNode* node, const char* param_name) {
+            is_linked = AiNodeIsLinked(node, param_name);
+            cache = get<T>(node, param_name);
+        }
+
+        bool is_zero() const {
+            return !is_linked && (cache == zero<T>());
+        }
+
+        T cache;
+        bool is_linked;
+    };
+
+    static const char* scattering_source_labels[] = {"parameter", "channel", nullptr};
+    static const char* attenuation_source_labels[] = {"parameter", "channel", "scattering", nullptr};
+    static const char* emission_source_labels[] = {"parameter", "channel", nullptr};
+    static const char* attenuation_mode_labels[] = {"absorption", "extinction", nullptr};
+    static const char* interpolation_labels[] = {"closest", "trilinear", "tricubic", nullptr};
 
     enum InputSource {
         INPUT_SOURCE_PARAMETER,
@@ -61,22 +127,24 @@ namespace {
         Gradient attenuation_gradient;
         Gradient emission_gradient;
 
+        Accessor<AtRGB, p_scattering_color> scattering_color;
+        Accessor<AtRGB, p_attenuation_color> attenuation_color;
+        Accessor<AtRGB, p_emission_color> emission_color;
+
+        Accessor<float, p_scattering_intensity> scattering_intensity;
+        Accessor<float, p_attenuation_intensity> attenuation_intensity;
+        Accessor<float, p_emission_intensity> emission_intensity;
+        Accessor<float, p_anisotropy> anisotropy;
+
         AtString scattering_channel;
         AtString attenuation_channel;
         AtString emission_channel;
+
         AtRGB scattering;
-        AtRGB scattering_color;
         AtRGB attenuation;
-        AtRGB attenuation_color;
         AtRGB emission;
-        AtRGB emission_color;
 
         AtPoint position_offset;
-
-        float scattering_intensity;
-        float anisotropy;
-        float attenuation_intensity;
-        float emission_intensity;
 
         int attenuation_mode;
         int interpolation;
@@ -90,15 +158,8 @@ namespace {
         InputFrom position_offset_from;
 
         bool scattering_is_linked;
-        bool scattering_color_is_linked;
-        bool scattering_intensity_is_linked;
-        bool anisotropy_is_linked;
         bool attenuation_is_linked;
-        bool attenuation_color_is_linked;
-        bool attenuation_intensity_is_linked;
         bool emission_is_linked;
-        bool emission_color_is_linked;
-        bool emission_intensity_is_linked;
         bool compensate_scaling;
 
         void* operator new(size_t size)
@@ -122,27 +183,29 @@ namespace {
 
             if (AiNodeIsLinked(node, "position_offset")) {
                 position_offset_from = INPUT_FROM_EVALUATE;
-            }
-            else if (position_offset != AI_V3_ZERO) {
+            } else if (position_offset != AI_V3_ZERO) {
                 position_offset_from = INPUT_FROM_CACHE;
-            }
-            else {
+            } else {
                 position_offset_from = INPUT_FROM_NONE;
             }
 
+            auto is_linked = [&] (const char* param_name) -> bool {
+                return AiNodeIsLinked(node, param_name);
+            };
+
+            scattering_intensity.init(node, "scattering_intensity");
+            attenuation_intensity.init(node, "attenuation_intensity");
+            emission_intensity.init(node, "emission_intensity");
+            anisotropy.init(node, "anisotropy");
+
+            scattering_color.init(node, "scattering_color");
+            attenuation_color.init(node, "attenuation_color");
+            emission_color.init(node, "emission_color");
+
             // get linked status
-            scattering_is_linked = AiNodeIsLinked(node, "scattering");
-            scattering_color_is_linked = AiNodeIsLinked(node, "scattering_color");
-            scattering_intensity_is_linked = AiNodeIsLinked(node, "scattering_intensity");
-            anisotropy_is_linked = AiNodeIsLinked(node, "anisotropy");
-
-            attenuation_is_linked = AiNodeIsLinked(node, "attenuation");
-            attenuation_color_is_linked = AiNodeIsLinked(node, "attenuation_color");
-            attenuation_intensity_is_linked = AiNodeIsLinked(node, "attenuation_intensity");
-
-            emission_is_linked = AiNodeIsLinked(node, "emission");
-            emission_color_is_linked = AiNodeIsLinked(node, "emission_color");
-            emission_intensity_is_linked = AiNodeIsLinked(node, "emission_intensity");
+            scattering_is_linked = is_linked("scattering");
+            attenuation_is_linked = is_linked("attenuation");
+            emission_is_linked = is_linked("emission");
 
             // cache parameter values
             interpolation = AiNodeGetInt(node, "interpolation");
@@ -150,22 +213,15 @@ namespace {
             scattering_source = AiNodeGetInt(node, "scattering_source");
             scattering = AiNodeGetRGB(node, "scattering");
             scattering_channel = AtString(AiNodeGetStr(node, "scattering_channel"));
-            scattering_color = AiNodeGetRGB(node, "scattering_color");
-            scattering_intensity = AiNodeGetFlt(node, "scattering_intensity");
-            anisotropy = AiNodeGetFlt(node, "anisotropy");
 
             attenuation_source = AiNodeGetInt(node, "attenuation_source");
             attenuation = AiNodeGetRGB(node, "attenuation");
             attenuation_channel = AtString(AiNodeGetStr(node, "attenuation_channel"));
-            attenuation_color = AiNodeGetRGB(node, "attenuation_color");
-            attenuation_intensity = AiNodeGetFlt(node, "attenuation_intensity");
             attenuation_mode = AiNodeGetInt(node, "attenuation_mode");
 
             emission_source = AiNodeGetInt(node, "emission_source");
             emission = AiNodeGetRGB(node, "emission");
             emission_channel = AtString(AiNodeGetStr(node, "emission_channel"));
-            emission_color = AiNodeGetRGB(node, "emission_color");
-            emission_intensity = AiNodeGetFlt(node, "emission_intensity");
 
             compensate_scaling = AiNodeGetBool(node, "compensate_scaling");
 
@@ -221,22 +277,20 @@ namespace {
             }
 
             // detect constant zero values for color and intensity
-            if ((!scattering_intensity_is_linked && scattering_intensity == 0.0f) ||
-                (!scattering_color_is_linked && AiColorEqual(scattering_color, AI_RGB_BLACK))) {
+            if (scattering_intensity.is_zero()||
+                scattering_color.is_zero()) {
                 scattering_from = INPUT_FROM_CACHE;
-                scattering = AI_RGB_BLACK;
+                scattering = zero<AtRGB>();
             }
 
-            if ((!attenuation_intensity_is_linked && attenuation_intensity == 0.0f) ||
-                (!attenuation_color_is_linked && AiColorEqual(attenuation_color, AI_RGB_BLACK))) {
+            if (attenuation_intensity.is_zero() || attenuation_color.is_zero()) {
                 attenuation_from = INPUT_FROM_CACHE;
-                attenuation = AI_RGB_BLACK;
+                attenuation = zero<AtRGB>();
             }
 
-            if ((!emission_intensity_is_linked && emission_intensity == 0.0f) ||
-                (!emission_color_is_linked && AiColorEqual(emission_color, AI_RGB_BLACK))) {
+            if (emission_intensity.is_zero() || emission_color.is_zero()) {
                 emission_from = INPUT_FROM_NONE;
-                emission = AI_RGB_BLACK;
+                emission = zero<AtRGB>();
             }
         }
     };
@@ -276,7 +330,6 @@ node_parameters
 }
 
 static void Initialize(AtNode* node, AtParamValue*)
-//node_initialize
 {
     AiNodeSetLocalData(node, new ShaderData());
 }
@@ -298,24 +351,14 @@ shader_evaluate
     const ShaderData* data = reinterpret_cast<const ShaderData*>(AiNodeGetLocalData(node));
 
     // sampling position offset
-    AtPoint Po_orig = AI_V3_ZERO;
+    const auto Po_orig = sg->Po;
 
-    switch (data->position_offset_from) {
-        case INPUT_FROM_EVALUATE:
-            Po_orig = sg->Po;
-            sg->Po += AiShaderEvalParamVec(p_position_offset);
-            break;
-        case INPUT_FROM_CACHE:
-            Po_orig = sg->Po;
-            sg->Po += data->position_offset;
-            break;
-        default:
-            Po_orig = AI_V3_ZERO;
-            break;
+    if (data->position_offset_from == INPUT_FROM_EVALUATE) {
+        sg->Po += AiShaderEvalParamVec(p_position_offset);
+    } else if (data->position_offset_from == INPUT_FROM_CACHE) {
+        sg->Po += data->position_offset;
     }
 
-    // the values storing the result of AiVolumeSampleRGB() need to be zeroed
-    // or NaNs will occur in optimized builds (htoa#374)
     AtColor scattering = AI_RGB_BLACK;
     AtColor attenuation = AI_RGB_BLACK;
 
@@ -338,17 +381,14 @@ shader_evaluate
                 scattering = data->scattering;
                 break;
             default:
-                assert("invalid value for data->scattering_from");
-                break;
+                assert("[openvdb_render] Invalid value for data->scattering_from!");
         }
 
         if (!(sg->Rt & AI_RAY_SHADOW) || (data->attenuation_mode == ATTENUATION_MODE_ABSORPTION)) {
             // color, intensity, anisotropy and clipping
-            const AtRGB scattering_color = data->scattering_color_is_linked ? AiShaderEvalParamRGB(p_scattering_color)
-                                                                            : data->scattering_color;
-            const float scattering_intensity = data->scattering_intensity_is_linked ? AiShaderEvalParamFlt(
-                p_scattering_intensity) : data->scattering_intensity;
-            const float anisotropy = data->anisotropy_is_linked ? AiShaderEvalParamFlt(p_anisotropy) : data->anisotropy;
+            const auto scattering_color = data->scattering_color(sg, node);
+            const auto scattering_intensity = data->scattering_intensity(sg, node);
+            const auto anisotropy = data->anisotropy(sg, node);
 
             AtRGB scattering_result = scattering * scattering_color * scattering_intensity;
             AiColorClipToZero(scattering_result);
@@ -376,15 +416,11 @@ shader_evaluate
             attenuation = scattering;
             break;
         default:
-            assert("invalid value for data->attenuation_from");
-            break;
+            assert("[openvdb_render] Invalid value for data->attenuation_from!");
     }
 
-    // color, intensity and clipping
-    const AtRGB attenuation_color = data->attenuation_color_is_linked ? AiShaderEvalParamRGB(p_attenuation_color)
-                                                                      : data->attenuation_color;
-    const float attenuation_intensity = data->attenuation_intensity_is_linked ? AiShaderEvalParamFlt(
-        p_attenuation_intensity) : data->attenuation_intensity;
+    const auto attenuation_color = data->attenuation_color(sg, node);
+    const auto attenuation_intensity = data->attenuation_intensity(sg, node);
     attenuation *= attenuation_color * attenuation_intensity;
     AiColorClipToZero(attenuation);
 
@@ -397,7 +433,7 @@ shader_evaluate
             AiShaderGlobalsSetVolumeAttenuation(sg, attenuation * (data->compensate_scaling ? scale_factor : 1.0f));
             break;
         default:
-            assert("Invalid attenuation mode!");
+            assert("[openvdb_render] Invalid attenuation mode!");
     }
 
     // emission
@@ -415,14 +451,11 @@ shader_evaluate
                 emission = data->emission;
                 break;
             default:
-                assert("invalid value for data->emission_from");
+                assert("[openvdb_render] Invalid value for data->emission_from!");
         }
 
-        // color, intensity and clipping
-        const AtRGB emission_color = data->emission_color_is_linked ? AiShaderEvalParamRGB(p_emission_color)
-                                                                    : data->emission_color;
-        const float emission_intensity = data->emission_intensity_is_linked ? AiShaderEvalParamFlt(p_emission_intensity)
-                                                                            : data->emission_intensity;
+        const auto emission_color = data->emission_color(sg, node);
+        const auto emission_intensity = data->emission_intensity(sg, node);
         emission *= emission_color * emission_intensity;
         AiColorClipToZero(emission);
 
