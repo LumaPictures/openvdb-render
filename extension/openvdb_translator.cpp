@@ -135,6 +135,8 @@ void OpenvdbTranslator::Export(AtNode* volume)
 
     AiNodeSetByte(volume, "visibility", ComputeVisibility());
 
+    ExportLightLinking(volume);
+
     AtByte visibility = 0;
     if (FindMayaPlug("primaryVisibility").asBool()) {
         visibility |= AI_RAY_CAMERA;
