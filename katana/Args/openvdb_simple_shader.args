@@ -18,21 +18,33 @@
         <param name="simpleSmoke_float_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
         <param name="simpleSmoke_float_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
         <param name="simpleSmoke_float_ramp_Floats" default="0,0,1,1" size="4" widget="null"/>
-        <!-- Float/float ramp -->
+        <!-- RGB ramp -->
+        <param name="simpleSmoke_rgb_ramp" widget="colorRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="4"/>
+            </hintdict>
+        </param>
+        <param name="simpleSmoke_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleSmoke_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleSmoke_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
+        <!-- Float/float ramp/RGB ramp -->
         <param name="simpleSmoke_input_min" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
                 <string name="conditionalVisOp" value="in"/>
-                <string name="conditionalVisValue" value="1|3"/>
+                <string name="conditionalVisValue" value="1|3|4"/>
             </hintdict>
         </param>
         <param name="simpleSmoke_input_max" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
                 <string name="conditionalVisOp" value="in"/>
-                <string name="conditionalVisValue" value="1|3"/>
+                <string name="conditionalVisValue" value="1|3|4"/>
             </hintdict>
         </param>
+        <!-- Float/float ramp -->
         <param name="simpleSmoke_bias" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
@@ -75,17 +87,6 @@
                 <string name="conditionalVisValue" value="1|3"/>
             </hintdict>
         </param>
-        <!-- RGB ramp -->
-        <param name="simpleSmoke_rgb_ramp" widget="colorRamp">
-            <hintdict name="conditionalVisOps">
-                <string name="conditionalVisPath" value="../simpleSmoke_channel_mode"/>
-                <string name="conditionalVisOp" value="equalTo"/>
-                <string name="conditionalVisValue" value="4"/>
-            </hintdict>
-        </param>
-        <param name="simpleSmoke_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
-        <param name="simpleSmoke_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
-        <param name="simpleSmoke_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
         <!-- RGB/RGB ramp -->
         <param name="simpleSmoke_gamma" slider="True" min="0.1" max="4" slidermin="0.1" slidermax="4">
             <hintdict name="conditionalVisOps">
@@ -152,7 +153,7 @@
         <param name="opacity_shadow"/>
         <param name="opacity_channel"/>
         <param name="simpleOpacity_channel_mode"/>
-                <!-- Float ramp -->
+        <!-- Float ramp -->
         <param name="simpleOpacity_float_ramp" widget="floatRamp">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
@@ -163,21 +164,33 @@
         <param name="simpleOpacity_float_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
         <param name="simpleOpacity_float_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
         <param name="simpleOpacity_float_ramp_Floats" default="0,0,1,1" size="4" widget="null"/>
-        <!-- Float/float ramp -->
+        <!-- RGB ramp -->
+        <param name="simpleOpacity_rgb_ramp" widget="colorRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="4"/>
+            </hintdict>
+        </param>
+        <param name="simpleOpacity_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleOpacity_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleOpacity_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
+        <!-- Float/float ramp/RGB ramp -->
         <param name="simpleOpacity_input_min" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
                 <string name="conditionalVisOp" value="in"/>
-                <string name="conditionalVisValue" value="1|3"/>
+                <string name="conditionalVisValue" value="1|3|4"/>
             </hintdict>
         </param>
         <param name="simpleOpacity_input_max" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
                 <string name="conditionalVisOp" value="in"/>
-                <string name="conditionalVisValue" value="1|3"/>
+                <string name="conditionalVisValue" value="1|3|4"/>
             </hintdict>
         </param>
+        <!-- Float/float ramp -->
         <param name="simpleOpacity_bias" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
@@ -220,17 +233,6 @@
                 <string name="conditionalVisValue" value="1|3"/>
             </hintdict>
         </param>
-        <!-- RGB ramp -->
-        <param name="simpleOpacity_rgb_ramp" widget="colorRamp">
-            <hintdict name="conditionalVisOps">
-                <string name="conditionalVisPath" value="../simpleOpacity_channel_mode"/>
-                <string name="conditionalVisOp" value="equalTo"/>
-                <string name="conditionalVisValue" value="4"/>
-            </hintdict>
-        </param>
-        <param name="simpleOpacity_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
-        <param name="simpleOpacity_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
-        <param name="simpleOpacity_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
         <!-- RGB/RGB ramp -->
         <param name="simpleOpacity_gamma" slider="True" min="0.1" max="4" slidermin="0.1" slidermax="4">
             <hintdict name="conditionalVisOps">
@@ -296,7 +298,7 @@
         <param name="fire_intensity" slider="True" slidermax="4"/>
         <param name="fire_channel"/>
         <param name="simpleFire_channel_mode"/>
-                <!-- Float ramp -->
+        <!-- Float ramp -->
         <param name="simpleFire_float_ramp" widget="floatRamp">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
@@ -307,21 +309,33 @@
         <param name="simpleFire_float_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
         <param name="simpleFire_float_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
         <param name="simpleFire_float_ramp_Floats" default="0,0,1,1" size="4" widget="null"/>
-        <!-- Float/float ramp -->
+        <!-- RGB ramp -->
+        <param name="simpleFire_rgb_ramp" widget="colorRamp">
+            <hintdict name="conditionalVisOps">
+                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
+                <string name="conditionalVisOp" value="equalTo"/>
+                <string name="conditionalVisValue" value="4"/>
+            </hintdict>
+        </param>
+        <param name="simpleFire_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
+        <param name="simpleFire_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
+        <param name="simpleFire_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
+        <!-- Float/float ramp/RGB ramp -->
         <param name="simpleFire_input_min" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
                 <string name="conditionalVisOp" value="in"/>
-                <string name="conditionalVisValue" value="1|3"/>
+                <string name="conditionalVisValue" value="1|3|4"/>
             </hintdict>
         </param>
         <param name="simpleFire_input_max" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
                 <string name="conditionalVisOp" value="in"/>
-                <string name="conditionalVisValue" value="1|3"/>
+                <string name="conditionalVisValue" value="1|3|4"/>
             </hintdict>
         </param>
+        <!-- Float/float ramp -->
         <param name="simpleFire_bias" slider="True">
             <hintdict name="conditionalVisOps">
                 <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
@@ -364,17 +378,6 @@
                 <string name="conditionalVisValue" value="1|3"/>
             </hintdict>
         </param>
-        <!-- RGB ramp -->
-        <param name="simpleFire_rgb_ramp" widget="colorRamp">
-            <hintdict name="conditionalVisOps">
-                <string name="conditionalVisPath" value="../simpleFire_channel_mode"/>
-                <string name="conditionalVisOp" value="equalTo"/>
-                <string name="conditionalVisValue" value="4"/>
-            </hintdict>
-        </param>
-        <param name="simpleFire_rgb_ramp_Interpolation" default="linear" options="linear|catmull-rom|bspline" widget="null"/>
-        <param name="simpleFire_rgb_ramp_Knots" default="0,0,1,1" size="4" widget="null"/>
-        <param name="simpleFire_rgb_ramp_Colors" default="0,0,0,0,0,0,1,1,1,1,1,1" size="12" tupleSize="3" widget="null"/>
         <!-- RGB/RGB ramp -->
         <param name="simpleFire_gamma" slider="True" min="0.1" max="4" slidermin="0.1" slidermax="4">
             <hintdict name="conditionalVisOps">
