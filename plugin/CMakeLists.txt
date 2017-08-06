@@ -18,7 +18,9 @@ if (NOT ILMBASE_ROOT)
     set(ILMBASE_ROOT $ENV{ILMBASE_ROOT})
 endif ()
 
-find_path(OPENVDB_INCLUDE NAMES openvdb/openvdb.h)
+find_path(OPENVDB_INCLUDE
+    NAMES openvdb/openvdb.h
+    HINTS $ENV{OPENVDB_ROOT}/include)
 include_directories(${LUMA_NODE_ID_INCLUDE})
 include_directories(${OPENVDB_INCLUDE})
 include_directories(${Boost_INCLUDE_DIRS})
