@@ -194,6 +194,9 @@ elseif("${MAYA_VERSION}" STREQUAL "2015")
 elseif("${MAYA_VERSION}" STREQUAL "2016")
     set(MAYA_QT_VERSION_SHORT  CACHE STRING "4.8")
     set(MAYA_QT_VERSION_LONG  CACHE STRING "4.8.6")
+elseif("${MAYA_VERSION}" STREQUAL "2017")
+    set(MAYA_QT_VERSION_SHORT  CACHE STRING "5.6")
+    set(MAYA_QT_VERSION_LONG  CACHE STRING "5.6.1")
 endif()
 
 # NOTE: the MAYA_LOCATION environment variable is often misunderstood.  On every OS it is expected to point
@@ -221,6 +224,7 @@ LIST(APPEND MAYA_INCLUDE_DIRS ${MAYA_INCLUDE_DIR})
 FIND_PATH(MAYA_DEVKIT_INC_DIR GL/glext.h
   HINTS
     ${MAYA_LOCATION}
+    $ENV{DEVKIT_LOCATION}
   PATH_SUFFIXES
 	devkit/plug-ins/   # linux
 	../../devkit/plug-ins   # osx
