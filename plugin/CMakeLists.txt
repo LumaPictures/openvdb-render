@@ -1,6 +1,10 @@
 set(PLUGIN_NAME openvdb_render)
 
-add_definitions(-DLINUX -D_BOOL -DREQUIRE_IOSTREAM -pthread)
+add_definitions(-D_BOOL -DREQUIRE_IOSTREAM)
+
+if (CMAKE_SYSTEM_NAME EQUAL "Linux")
+    add_definitions(-DLINUX -pthread)
+endif ()
 
 set(Boost_USE_STATIC_LIBS ON)
 

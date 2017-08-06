@@ -9,11 +9,21 @@ option(INCLUDE_HEADERS_IN_BUILD "Include the headers next to the source files fo
 
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_definitions(-Wall -Wextra -std=c++11 -fPIC)
+add_definitions(-std=c++11)
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+else ()
+    add_definitions(-Wall -Wextra -fPIC)
+endif ()
 
 if (NOT BUILD_USD_TOOLS)
     # Some depreceated headers are included with USD.
-    add_definitions(-Werror)
+    if (MSVC)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WX")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /WX")
+    else ()
+        add_definitions(-Werror)
+    endif ()
 endif ()
 
 if (BUILD_MAYA_PLUGIN)
