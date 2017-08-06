@@ -1,7 +1,9 @@
 #include "vdb_subscene_override.h"
 
 #include "vdb_maya_utils.hpp"
+#ifdef USE_CUDA
 #include "point_sorter.h"
+#endif
 
 #include <maya/MGlobal.h>
 #include <maya/MFnDagNode.h>
@@ -164,7 +166,9 @@ namespace MHWRender {
         }
     };
 
+#ifdef USE_CUDA
     static_assert(sizeof(PointCloudVertex) == sizeof(PointData), "CPU and GPU data structures differ in size for point clouds!");
+#endif
 
     struct VDBSubSceneOverrideData {
         MBoundingBox bbox;
@@ -837,13 +841,17 @@ namespace MHWRender {
             tbb::parallel_sort(data->point_cloud_data.begin(), data->point_cloud_data.end(), sorting_function);
         } else if (sorting_mode == POINT_SORT_GPU_CPU) {
             if (cuda_enabled) {
+#ifdef USE_CUDA
                 sort_points(reinterpret_cast<PointData*>(data->point_cloud_data.data()), data->point_cloud_data.size(), &camera_pos.x);
+#endif
             } else {
                 tbb::parallel_sort(data->point_cloud_data.begin(), data->point_cloud_data.end(), sorting_function);
             }
         } else if (sorting_mode == POINT_SORT_GPU) {
             if (cuda_enabled) {
+#ifdef USE_CUDA
                 sort_points(reinterpret_cast<PointData*>(data->point_cloud_data.data()), data->point_cloud_data.size(), &camera_pos.x);
+#endif
             }
         }
 
@@ -875,6 +883,10 @@ namespace MHWRender {
     }
 
     void VDBSubSceneOverride::init_gpu() {
+#ifdef USE_CUDA
         cuda_enabled = cuda_available();
+#else
+        cuda_enabled = false;
+#endif
     }
 }

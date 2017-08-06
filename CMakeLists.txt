@@ -5,6 +5,7 @@ option(BUILD_MAYA_PLUGIN "Build the maya plugin." ON)
 option(BUILD_MTOA_EXTENSION "Build the MtoA extension." ON)
 option(BUILD_ARNOLD_SHADER "Build the Arnold shader." ON)
 option(BUILD_USD_TOOLS "Build the various USD tools." ON)
+option(USE_CUDA "Use CUDA." ON)
 option(INCLUDE_HEADERS_IN_BUILD "Include the headers next to the source files for IDEs that need this." OFF)
 
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
