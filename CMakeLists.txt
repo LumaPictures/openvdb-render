@@ -7,7 +7,7 @@ option(BUILD_ARNOLD_SHADER "Build the Arnold shader." ON)
 option(BUILD_USD_TOOLS "Build the various USD tools." ON)
 option(INCLUDE_HEADERS_IN_BUILD "Include the headers next to the source files for IDEs that need this." OFF)
 
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_definitions(-Wall -Wextra -std=c++11 -fPIC)
 
