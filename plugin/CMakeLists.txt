@@ -38,6 +38,7 @@ if (WIN32)
 else ()
     find_library(OPENVDB_STATIC_LIBRARY NAMES libopenvdb.a)
 endif ()
+find_package(OpenGL REQUIRED)
 
 file(GLOB SRC *.cpp)
 
@@ -63,7 +64,7 @@ if (WIN32)
     set_target_properties(${PLUGIN_NAME} PROPERTIES SUFFIX ".mll")
 endif ()
 
-target_link_libraries(${PLUGIN_NAME} ${MAYA_LIBS} ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(${PLUGIN_NAME} ${OPENGL_gl_LIBRARY} ${MAYA_LIBS} ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES})
 if (USE_CUDA)
     target_link_libraries(${PLUGIN_NAME} ${CUDA_STATIC_LIBRARIES})
 endif ()

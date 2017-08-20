@@ -14,6 +14,8 @@
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_sort.h>
 
+#include <GL/glext.h>
+
 #include <new>
 #include <random>
 #include <algorithm>
