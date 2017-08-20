@@ -144,6 +144,9 @@ endforeach(version)
 find_program(MAYA_EXECUTABLE maya
     PATHS $ENV{MAYA_LOCATION} ${MAYA_LOCATION} ${_maya_TEST_PATHS}
     PATH_SUFFIXES bin
+    NO_CMAKE_PATH
+    NO_CMAKE_ENVIRONMENT_PATH
+    NO_CMAKE_SYSTEM_PATH
     NO_SYSTEM_ENVIRONMENT_PATH
     DOC "Maya's executable path")
 
