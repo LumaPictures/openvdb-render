@@ -17,6 +17,11 @@ else ()
     add_definitions(-Wall -Wextra -fPIC)
 endif ()
 
+if (WIN32)
+    add_definitions(-DNOMINMAX)
+    add_definitions(-D__TBB_NO_IMPLICIT_LINKAGE)
+endif ()
+
 if (NOT BUILD_USD_TOOLS)
     # Some depreceated headers are included with USD.
     if (MSVC)
