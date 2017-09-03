@@ -197,8 +197,13 @@ void OpenvdbTranslator::Export(AtNode* volume)
     }
 
 #ifndef ARNOLD5
+    const char* mtoa_path = getenv("MTOA_PATH");
+    if (!mtoa_path)
+        mtoa_path = getenv("MTOA_ROOT");
+    if (!mtoa_path)
+        return;
     AiNodeSetStr(volume, "dso",
-                 (std::string(getenv("MTOA_PATH")) + std::string("procedurals/volume_openvdb.so")).c_str());
+                 (std::string(mtoa_path) + std::string("procedurals/volume_openvdb.so")).c_str());
 #endif
 
 #ifndef ARNOLD5
