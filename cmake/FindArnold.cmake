@@ -43,19 +43,20 @@ endif ()
 find_library(ARNOLD_LIBRARY
              NAMES ai
              PATHS ${ARNOLD_HOME}/bin
+                   ${ARNOLD_HOME}/lib
              DOC "Arnold library")
 
-find_file(ARNOLD_KICK
+find_program(ARNOLD_KICK
           names kick
           PATHS ${ARNOLD_HOME}/bin
           DOC "Arnold kick executable")
 
-find_file(ARNOLD_PYKICK
+find_program(ARNOLD_PYKICK
           names pykick
           PATHS ${ARNOLD_HOME}/python/pykikc
           DOC "Arnold pykick executable")
 
-find_file(ARNOLD_MAKETX
+find_program(ARNOLD_MAKETX
           names maketx
           PATHS ${ARNOLD_HOME}/bin
           DOC "Arnold maketx executable")
@@ -68,7 +69,7 @@ find_path(ARNOLD_PYTHON_DIR arnold/ai_allocate.py
           PATHS ${ARNOLD_HOME}/python
           DOC "Arnold python bindings path")
 
-find_file(ARNOLD_OSLC
+find_program(ARNOLD_OSLC
           names oslc
           PATHS ${ARNOLD_HOME}/bin
           DOC "Arnold flavoured oslc")

@@ -18,7 +18,7 @@ find_package(PackageHandleStandardArgs)
 ##
 ## Obtain MtoA install location
 ##
-find_path(MTOA_LOCATION include/render/AOV.h
+find_path(MTOA_LOCATION include/utils/Version.h
     HINTS ENV MTOA_ROOT
     NO_DEFAULT_PATH
     NO_SYSTEM_ENVIRONMENT_PATH)
@@ -51,6 +51,9 @@ find_package_handle_standard_args(MtoA
 if(MTOA_FOUND)
     set(ORIGINAL_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
     if(WIN32)
+        set(MTOA_LIBRARY_DIR "${MTOA_LOCATION}/lib"
+            CACHE STRING "MtoA library path")
+        find_library(MTOA_mtoa_api_LIBRARY mtoa_api ${MTOA_LIBRARY_DIR})
     elseif(APPLE)
         set(MTOA_LIBRARY_DIR "${MTOA_LOCATION}/bin"
             CACHE STRING "MtoA library path")
