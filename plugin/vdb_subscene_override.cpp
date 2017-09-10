@@ -256,13 +256,15 @@ namespace MHWRender {
             }
         };
 
-        if (filename.empty()) {
-            data_has_changed |= true;
+        const auto old_filename = this->vdb_file ? this->vdb_file->filename() : "";
+        const auto filename_changed = old_filename != filename;
+        const auto old_uuid = this->vdb_file ? this->vdb_file->getUniqueTag() : "";
+        const auto uuid_changed = data->vdb_file != nullptr && !data->vdb_file->isIdentical(old_uuid);
+        if (filename_changed || uuid_changed) {
+            open_file();
+        } else if (filename.empty() && this->vdb_file != nullptr) {
+            data_has_changed = true;
             clear();
-        } else if (vdb_file == nullptr) {
-            open_file();
-        } else if (filename != vdb_file->filename()) {
-            open_file();
         }
 
         data_has_changed |= setup_parameter(display_mode, data->display_mode);
