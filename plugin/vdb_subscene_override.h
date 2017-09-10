@@ -55,4 +55,71 @@ namespace MHWRender {
         sampler_mem_area m_emission_sampler;
         sampler_mem_area m_attenuation_sampler;
     };
+
+    // we are storing an extra float here to have better memory alignment
+    struct PointCloudVertex {
+        MFloatPoint position;
+        MColor color;
+
+        PointCloudVertex() : position(0.0f, 0.0f, 0.0f, 0.0f), color(0.0f, 0.0f, 0.0f, 0.0f) {
+
+        }
+
+        PointCloudVertex(const MFloatPoint& p) : position(p), color(0.0f, 0.0f, 0.0f, 0.0f) {
+
+        }
+    };
+
+    struct VDBSubSceneOverrideData {
+        MBoundingBox bbox;
+
+        // We need to handle all the instances
+        std::vector<MMatrix> world_matrices;
+        std::vector<PointCloudVertex> point_cloud_data;
+
+        MMatrix camera_matrix;
+        MVector last_camera_direction;
+
+        MFloatVector scattering_color;
+        MFloatVector attenuation_color;
+        MFloatVector emission_color;
+
+        std::string attenuation_channel;
+        std::string scattering_channel;
+        std::string emission_channel;
+
+        Gradient scattering_gradient;
+        Gradient attenuation_gradient;
+        Gradient emission_gradient;
+
+        std::unique_ptr<openvdb::io::File> vdb_file;
+        openvdb::GridBase::ConstPtr scattering_grid;
+        openvdb::GridBase::ConstPtr attenuation_grid;
+        openvdb::GridBase::ConstPtr emission_grid;
+
+        openvdb::Vec3f voxel_size;
+
+        float point_size;
+        float point_jitter;
+
+        int vertex_count;
+        int point_skip;
+        int update_trigger;
+        VDBDisplayMode display_mode;
+        VDBShaderMode shader_mode;
+
+        bool data_has_changed;
+        bool shader_has_changed;
+        bool camera_has_changed;
+        bool world_has_changed;
+        bool visible;
+        bool old_bounding_box_enabled;
+        bool old_point_cloud_enabled;
+
+        VDBSubSceneOverrideData();
+        ~VDBSubSceneOverrideData();
+        void clear();
+        bool VDBSubSceneOverrideData::update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context);
+    };
+
 }

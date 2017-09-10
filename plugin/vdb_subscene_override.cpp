@@ -154,197 +154,136 @@ namespace MHWRender {
         }
     }
 
-    // we are storing an extra float here to have better memory alignment
-    struct PointCloudVertex {
-        MFloatPoint position;
-        MColor color;
-
-        PointCloudVertex() : position(0.0f, 0.0f, 0.0f, 0.0f), color(0.0f, 0.0f, 0.0f, 0.0f) {
-
-        }
-
-        PointCloudVertex(const MFloatPoint& p) : position(p), color(0.0f, 0.0f, 0.0f, 0.0f) {
-
-        }
-    };
-
 #ifdef USE_CUDA
     static_assert(sizeof(PointCloudVertex) == sizeof(PointData), "CPU and GPU data structures differ in size for point clouds!");
 #endif
 
-    struct VDBSubSceneOverrideData {
-        MBoundingBox bbox;
+    VDBSubSceneOverrideData::VDBSubSceneOverrideData() :
+        last_camera_direction(0.0, 0.0, 0.0),
+        voxel_size(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(),
+                   std::numeric_limits<float>::infinity()),
+        point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
+        vertex_count(0), point_skip(-1), update_trigger(-1),
+        display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_SIMPLE),
+        data_has_changed(false), shader_has_changed(false), camera_has_changed(false), world_has_changed(false),
+        visible(true), old_bounding_box_enabled(true), old_point_cloud_enabled(true)
+    {
+        for (unsigned int x = 0; x < 4; ++x) {
+            for (unsigned int y = 0; y < 4; ++y) {
+                camera_matrix(x, y) = std::numeric_limits<float>::infinity();
+            }
+        }
+    }
 
-        // We need to handle all the instances
-        std::vector<MMatrix> world_matrices;
-        std::vector<PointCloudVertex> point_cloud_data;
+    VDBSubSceneOverrideData::~VDBSubSceneOverrideData()
+    {
+        clear();
+    }
 
-        MMatrix camera_matrix;
-        MVector last_camera_direction;
+    void VDBSubSceneOverrideData::clear()
+    {
+        scattering_grid = 0;
+        attenuation_grid = 0;
+        emission_grid = 0;
+        vdb_file.reset();
+    }
 
-        MFloatVector scattering_color;
-        MFloatVector attenuation_color;
-        MFloatVector emission_color;
+    bool VDBSubSceneOverrideData::update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context)
+    {
+        MFnDagNode dgNode(obj);
 
-        std::string attenuation_channel;
-        std::string scattering_channel;
-        std::string emission_channel;
-
-        Gradient scattering_gradient;
-        Gradient attenuation_gradient;
-        Gradient emission_gradient;
-
-        std::unique_ptr<openvdb::io::File> vdb_file;
-        openvdb::GridBase::ConstPtr scattering_grid;
-        openvdb::GridBase::ConstPtr attenuation_grid;
-        openvdb::GridBase::ConstPtr emission_grid;
-
-        openvdb::Vec3f voxel_size;
-
-        float point_size;
-        float point_jitter;
-
-        int vertex_count;
-        int point_skip;
-        int update_trigger;
-        VDBDisplayMode display_mode;
-        VDBShaderMode shader_mode;
-
-        bool data_has_changed;
-        bool shader_has_changed;
-        bool camera_has_changed;
-        bool world_has_changed;
-        bool visible;
-        bool old_bounding_box_enabled;
-        bool old_point_cloud_enabled;
-
-        VDBSubSceneOverrideData() :
-            last_camera_direction(0.0, 0.0, 0.0),
-            voxel_size(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(),
-                       std::numeric_limits<float>::infinity()),
-            point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
-            vertex_count(0), point_skip(-1), update_trigger(-1),
-            display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_SIMPLE),
-            data_has_changed(false), shader_has_changed(false), camera_has_changed(false), world_has_changed(false),
-            visible(true), old_bounding_box_enabled(true), old_point_cloud_enabled(true)
-        {
-            for (unsigned int x = 0; x < 4; ++x) {
-                for (unsigned int y = 0; y < 4; ++y) {
-                    camera_matrix(x, y) = std::numeric_limits<float>::infinity();
+        auto path_is_visible = [](const MDagPath& dg_in) -> bool {
+            MDagPath dg_copy = dg_in;
+            MFnDagNode dg_node;
+            for (MStatus status = MS::kSuccess; status; status = dg_copy.pop()) {
+                dg_node.setObject(dg_copy.node());
+                if (dg_node.isIntermediateObject()) {
+                    return false;
+                } else if (!dg_node.findPlug("visibility").asBool()) {
+                    return false;
                 }
+            }
+            return true;
+        };
+
+        static std::vector<MMatrix> inc_world_matrices;
+        static MDagPathArray paths;
+        inc_world_matrices.clear();
+        paths.clear();
+        dgNode.getAllPaths(paths);
+        const auto pathCount = paths.length();
+        inc_world_matrices.reserve(pathCount);
+        for (auto i = decltype(pathCount){0}; i < pathCount; ++i) {
+            const auto path = paths[i];
+            if (path_is_visible(path)) {
+                inc_world_matrices.push_back(path.inclusiveMatrix());
             }
         }
 
-        ~VDBSubSceneOverrideData()
-        {
+        if (world_matrices != inc_world_matrices) {
+            world_has_changed = true;
+            world_matrices = inc_world_matrices;
+        }
+
+        const auto inc_camera_matrix = frame_context.getMatrix(MFrameContext::kViewMtx);
+        if (camera_matrix != inc_camera_matrix) {
+            camera_has_changed = true;
+            camera_matrix = inc_camera_matrix;
+        }
+        const bool matrix_changed = world_has_changed | camera_has_changed;
+        // TODO: we can limit some of the comparisons to the display mode
+        // ie, we don't need to compare certain things if we are using the bounding
+        // box mode
+
+        const bool visibility_changed = setup_parameter(visible, !inc_world_matrices.empty());
+
+        if (data == nullptr || update_trigger == data->update_trigger) {
+            return matrix_changed | visibility_changed;
+        }
+
+        update_trigger = data->update_trigger;
+
+        const std::string& filename = data->vdb_path;
+        auto open_file = [&]() {
+            data_has_changed |= true;
             clear();
+
+            try {
+                vdb_file.reset(new openvdb::io::File(filename));
+            }
+            catch (...) {
+                vdb_file.reset();
+            }
+        };
+
+        if (filename.empty()) {
+            data_has_changed |= true;
+            clear();
+        } else if (vdb_file == nullptr) {
+            open_file();
+        } else if (filename != vdb_file->filename()) {
+            open_file();
         }
 
-        void clear()
-        {
-            scattering_grid = 0;
-            attenuation_grid = 0;
-            emission_grid = 0;
-            vdb_file.reset();
-        }
+        data_has_changed |= setup_parameter(display_mode, data->display_mode);
+        data_has_changed |= setup_parameter(shader_mode, data->shader_mode);
+        data_has_changed |= setup_parameter(bbox, data->bbox);
+        data_has_changed |= setup_parameter(scattering_color, data->scattering_color);
+        data_has_changed |= setup_parameter(attenuation_color, data->attenuation_color);
+        data_has_changed |= setup_parameter(emission_color, data->emission_color);
+        data_has_changed |= setup_parameter(attenuation_channel, data->attenuation_channel);
+        data_has_changed |= setup_parameter(scattering_channel, data->scattering_channel);
+        data_has_changed |= setup_parameter(emission_channel, data->emission_channel);
+        data_has_changed |= setup_parameter(scattering_gradient, data->scattering_gradient);
+        data_has_changed |= setup_parameter(attenuation_gradient, data->attenuation_gradient);
+        data_has_changed |= setup_parameter(emission_gradient, data->emission_gradient);
+        data_has_changed |= setup_parameter(point_skip, data->point_skip);
 
-        bool update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context)
-        {
-            MFnDagNode dgNode(obj);
+        shader_has_changed |= setup_parameter(point_size, data->point_size);
+        shader_has_changed |= setup_parameter(point_jitter, data->point_jitter);
 
-            auto path_is_visible = [](const MDagPath& dg_in) -> bool {
-                MDagPath dg_copy = dg_in;
-                MFnDagNode dg_node;
-                for (MStatus status = MS::kSuccess; status; status = dg_copy.pop()) {
-                    dg_node.setObject(dg_copy.node());
-                    if (dg_node.isIntermediateObject()) {
-                        return false;
-                    } else if (!dg_node.findPlug("visibility").asBool()) {
-                        return false;
-                    }
-                }
-                return true;
-            };
-
-            static std::vector<MMatrix> inc_world_matrices;
-            static MDagPathArray paths;
-            inc_world_matrices.clear();
-            paths.clear();
-            dgNode.getAllPaths(paths);
-            const auto pathCount = paths.length();
-            inc_world_matrices.reserve(pathCount);
-            for (auto i = decltype(pathCount){0}; i < pathCount; ++i) {
-                const auto path = paths[i];
-                if (path_is_visible(path)) {
-                    inc_world_matrices.push_back(path.inclusiveMatrix());
-                }
-            }
-
-            if (world_matrices != inc_world_matrices) {
-                world_has_changed = true;
-                world_matrices = inc_world_matrices;
-            }
-
-            const auto inc_camera_matrix = frame_context.getMatrix(MFrameContext::kViewMtx);
-            if (camera_matrix != inc_camera_matrix) {
-                camera_has_changed = true;
-                camera_matrix = inc_camera_matrix;
-            }
-            const bool matrix_changed = world_has_changed | camera_has_changed;
-            // TODO: we can limit some of the comparisons to the display mode
-            // ie, we don't need to compare certain things if we are using the bounding
-            // box mode
-
-            const bool visibility_changed = setup_parameter(visible, !inc_world_matrices.empty());
-
-            if (data == nullptr || update_trigger == data->update_trigger) {
-                return matrix_changed | visibility_changed;
-            }
-
-            update_trigger = data->update_trigger;
-
-            const std::string& filename = data->vdb_path;
-            auto open_file = [&]() {
-                data_has_changed |= true;
-                clear();
-
-                try {
-                    vdb_file.reset(new openvdb::io::File(filename));
-                }
-                catch (...) {
-                    vdb_file.reset();
-                }
-            };
-
-            if (filename.empty()) {
-                data_has_changed |= true;
-                clear();
-            } else if (vdb_file == nullptr) {
-                open_file();
-            } else if (filename != vdb_file->filename()) {
-                open_file();
-            }
-
-            data_has_changed |= setup_parameter(display_mode, data->display_mode);
-            data_has_changed |= setup_parameter(shader_mode, data->shader_mode);
-            data_has_changed |= setup_parameter(bbox, data->bbox);
-            data_has_changed |= setup_parameter(scattering_color, data->scattering_color);
-            data_has_changed |= setup_parameter(attenuation_color, data->attenuation_color);
-            data_has_changed |= setup_parameter(emission_color, data->emission_color);
-            data_has_changed |= setup_parameter(attenuation_channel, data->attenuation_channel);
-            data_has_changed |= setup_parameter(scattering_channel, data->scattering_channel);
-            data_has_changed |= setup_parameter(emission_channel, data->emission_channel);
-            data_has_changed |= setup_parameter(scattering_gradient, data->scattering_gradient);
-            data_has_changed |= setup_parameter(attenuation_gradient, data->attenuation_gradient);
-            data_has_changed |= setup_parameter(emission_gradient, data->emission_gradient);
-            data_has_changed |= setup_parameter(point_skip, data->point_skip);
-
-            shader_has_changed |= setup_parameter(point_size, data->point_size);
-            shader_has_changed |= setup_parameter(point_jitter, data->point_jitter);
-
-            return data_has_changed | shader_has_changed | matrix_changed | visibility_changed;
-        }
-    };
+        return data_has_changed | shader_has_changed | matrix_changed | visibility_changed;
+    }
 
     MString VDBSubSceneOverride::registrantId("VDBVisualizerSubSceneOverride");
 
