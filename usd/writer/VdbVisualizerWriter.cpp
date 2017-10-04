@@ -114,9 +114,9 @@ VdbVisualizerWriter::~VdbVisualizerWriter() {
     UsdAiNodeAPI nodeApi(primSchema);
     UsdAiShapeAPI shapeApi(primSchema);
     CleanupAttributeKeys(primSchema.GetStepSizeAttr());
-    CleanupAttributeKeys(shapeApi.GetMatteAttr(), UsdInterpolationTypeHeld);
-    CleanupAttributeKeys(shapeApi.GetReceiveShadowsAttr(), UsdInterpolationTypeHeld);
-    CleanupAttributeKeys(shapeApi.GetSelfShadowsAttr(), UsdInterpolationTypeHeld);
+    CleanupAttributeKeys(shapeApi.GetAiMatteAttr(), UsdInterpolationTypeHeld);
+    CleanupAttributeKeys(shapeApi.GetAiReceiveShadowsAttr(), UsdInterpolationTypeHeld);
+    CleanupAttributeKeys(shapeApi.GetAiSelfShadowsAttr(), UsdInterpolationTypeHeld);
     CleanupAttributeKeys(nodeApi.GetUserAttribute(filename_token), UsdInterpolationTypeHeld);
     CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_scale_token));
     CleanupAttributeKeys(nodeApi.GetUserAttribute(velocity_fps_token));
@@ -154,9 +154,9 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
 
     const auto sampling_quality = volume_node.findPlug("samplingQuality").asFloat();
     primSchema.GetStepSizeAttr().Set(volume_node.findPlug("voxelSize").asFloat() / (sampling_quality / 100.0f), usdTime);
-    shapeApi.CreateMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
-    shapeApi.CreateReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
-    shapeApi.CreateSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
+    shapeApi.CreateAiMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
+    shapeApi.CreateAiReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
+    shapeApi.CreateAiSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
     get_attribute(mUsdPrim, nodeApi, filename_token, SdfValueTypeNames->String)
         .Set(std::string(out_vdb_path.asChar()), usdTime);
 
