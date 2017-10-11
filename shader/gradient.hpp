@@ -40,7 +40,13 @@ public:
         INTERPOLATION_BSPLINE
     };
 
-    static void parameters(const std::string& base, AtList* params, AtMetaDataStore* /*mds*/)
+    static void parameters(const std::string& base, AtList* params,
+#ifdef ARNOLD5
+                           AtNodeEntry* /*mds*/
+#else
+                           AtMetaDataStore* /*mds*/
+#endif
+    )
     {
         static const char* gradient_types[] = {"Raw", "Float", "RGB", "Float Ramp", "RGB Ramp", nullptr};
         static const char* ramp_types[] = {"linear", "catmull-rom", "bspline", nullptr};
@@ -97,14 +103,23 @@ public:
                         return v0;
                     }
                     const auto t = (k - k0) / kd;
-                    return LERP(t, v0, v1);
+                    return
+#ifdef ARNOLD5
+                        AiLerp(t, v0, v1);
+#else
+                        LERP(t, v0, v1);
+#endif
                 }
             }
             return get_array_elem<arnold_t>(values, num_knots - 1);
         }
     }
 
-    void update(const std::string& base, AtNode* node, AtParamValue*)
+    void update(const std::string& base, AtNode* node
+#ifndef ARNOLD5
+                , AtParamValue*
+#endif
+    )
     {
         m_contrast = AiNodeGetFlt(node, (base + "_contrast").c_str());
         m_contrast_pivot = AiNodeGetFlt(node, (base + "_contrast_pivot").c_str());
@@ -171,5 +186,9 @@ public:
 template<>
 inline AtRGB GradientBase<AtRGB>::make_color(float r, float g, float b) const
 {
+#ifdef ARNOLD5
+    return AtRGB(r, g, b);
+#else
     return AiColorCreate(r, g, b);
+#endif
 }
