@@ -21,7 +21,7 @@ add_library(${PLUGIN_NAME} SHARED ${SRC})
 set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
 target_link_libraries(${PLUGIN_NAME} ${ARNOLD_LIBRARY})
 if (ARNOLD_VERSION_ARCH_NUM VERSION_GREATER "4")
-    target_compile_definitions(${PLUGIN_NAME} PRIVATE "-DARNOLD5")
+    target_compile_options(${PLUGIN_NAME} PRIVATE "-DARNOLD5")
 endif ()
 
 install(TARGETS ${PLUGIN_NAME}

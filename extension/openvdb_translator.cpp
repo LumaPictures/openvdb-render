@@ -38,10 +38,16 @@ namespace {
                 iterate_param_elems<rgba_elems.size()>(node, param_name, rgba_elems, func);
                 break;
             case AI_TYPE_VECTOR:
+#ifndef ARNOLD5
             case AI_TYPE_POINT:
+#endif
                 iterate_param_elems<vec_elems.size()>(node, param_name, vec_elems, func);
                 break;
+#ifdef ARNOLD5
+            case AI_TYPE_VECTOR2:
+#else
             case AI_TYPE_POINT2:
+#endif
                 iterate_param_elems<vec2_elems.size()>(node, param_name, vec2_elems, func);
                 break;
             default:
@@ -64,7 +70,11 @@ namespace {
         checked_arnold_nodes.insert(node);
 
         auto check_channel = [&node, &out_grids](const char* channel) {
-            auto ch = AiNodeGetStr(node, channel);
+            auto ch = AiNodeGetStr(node, channel)
+#ifdef ARNOLD5
+            .c_str()
+#endif
+            ;
             if (ch != nullptr && ch[0] != '\0') {
                 out_grids.insert(std::string(ch));
             }
@@ -77,10 +87,10 @@ namespace {
             auto param_name = AiParamGetName(param_entry);
             const auto param_type = AiParamGetType(param_entry);
             if (param_type == AI_TYPE_STRING) {
-                auto volume_sample = false;
+                auto is_volume_sample = false;
                 constexpr auto volume_sample_name = "volume_sample";
-                if (AiMetaDataGetBool(node_entry, AiParamGetName(param_entry), volume_sample_name, &volume_sample) &&
-                    volume_sample) {
+                if (AiMetaDataGetBool(node_entry, AiParamGetName(param_entry), volume_sample_name, &is_volume_sample) &&
+                is_volume_sample) {
                     check_channel(AiParamGetName(param_entry));
                 }
             } else {
@@ -144,6 +154,23 @@ void OpenvdbTranslator::Export(AtNode* volume)
     if (FindMayaPlug("castsShadows").asBool()) {
         visibility |= AI_RAY_SHADOW;
     }
+#ifdef ARNOLD5
+    if (FindMayaPlug("aiVisibleInDiffuseReflection").asBool()) {
+        visibility |= AI_RAY_DIFFUSE_REFLECT;
+    }
+
+    if (FindMayaPlug("aiVisibleInSpecularReflection").asBool()) {
+        visibility |= AI_RAY_SPECULAR_REFLECT;
+    }
+
+    if (FindMayaPlug("aiVisibleInDiffuseTransmission").asBool()) {
+        visibility |= AI_RAY_DIFFUSE_TRANSMIT;
+    }
+
+    if (FindMayaPlug("aiVisibleInSpecularTransmission").asBool()) {
+        visibility &= ~(AI_RAY_SPECULAR_TRANSMIT);
+    }
+#else
     if (FindMayaPlug("visibleInDiffuse").asBool()) {
         visibility |= AI_RAY_DIFFUSE;
     }
@@ -159,6 +186,7 @@ void OpenvdbTranslator::Export(AtNode* volume)
     if (FindMayaPlug("visibleInSubsurface").asBool()) {
         visibility |= AI_RAY_SUBSURFACE;
     }
+#endif
 
     AiNodeSetByte(volume, "visibility", visibility);
     AiNodeSetBool(volume, "self_shadows", FindMayaPlug("selfShadows").asBool());
@@ -178,8 +206,13 @@ void OpenvdbTranslator::Export(AtNode* volume)
     AiNodeDeclare(volume, "filename", "constant STRING");
     AiNodeSetStr(volume, "filename", FindMayaPlug("outVdbPath").asString().asChar());
 
+#ifdef ARNOLD5
+    ProcessParameter(volume, "min", AI_TYPE_VECTOR, "bboxMin");
+    ProcessParameter(volume, "max", AI_TYPE_VECTOR, "bboxMax");
+#else
     ProcessParameter(volume, "min", AI_TYPE_POINT, "bboxMin");
     ProcessParameter(volume, "max", AI_TYPE_POINT, "bboxMax");
+#endif
 
     AtNode* shader = nullptr;
 
@@ -190,10 +223,10 @@ void OpenvdbTranslator::Export(AtNode* volume)
         if (!shading_group_plug.isNull()) {
 #if MTOA12
             shader = ExportNode(shading_group_plug);
-#elif MTOA14
+#else
             shader = ExportConnectedNode(shading_group_plug);
 #endif
-            if (shader != 0) {
+            if (shader != nullptr) {
                 AiNodeSetPtr(volume, "shader", shader);
             }
         }
@@ -218,12 +251,12 @@ void OpenvdbTranslator::Export(AtNode* volume)
     const unsigned int additional_grids_count = additional_grids.length();
     for (unsigned int i = 0; i < additional_grids_count; ++i) {
         const MString additional_grid = additional_grids[i];
-        if (additional_grid.length()) {
+        if (additional_grid.length() > 0) {
             out_grids.insert(additional_grid.asChar());
         }
     }
 
-    AtArray* grid_names = AiArrayAllocate(static_cast<unsigned int>(out_grids.size()), 1, AI_TYPE_STRING);
+    auto* grid_names = AiArrayAllocate(static_cast<unsigned int>(out_grids.size()), 1, AI_TYPE_STRING);
 
     unsigned int id = 0;
     for (const auto& out_grid : out_grids) {
@@ -271,7 +304,7 @@ void OpenvdbTranslator::ExportMotion(AtNode* volume, unsigned int step)
 {
     ExportMatrix(volume, step);
 }
-#elif MTOA14
+#else
 void OpenvdbTranslator::ExportMotion(AtNode* volume)
 {
     ExportMatrix(volume);
