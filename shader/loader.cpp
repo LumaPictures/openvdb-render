@@ -1,7 +1,6 @@
 #include <ai.h>
 #include <cstring>
 
-extern AtNodeMethods* openvdbShaderMethods;
 extern AtNodeMethods* openvdbSamplerMethods;
 extern AtNodeMethods* openvdbSimpleShaderMethods;
 
@@ -9,9 +8,6 @@ namespace {
     enum {
         SHADER_SAMPLER,
         SHADER_SIMPLE_OPENVDB,
-#ifndef ARNOLD5
-        SHADER_OPENVDB,
-#endif
     };
 }
 
@@ -32,14 +28,6 @@ node_loader
             node->name = "openvdb_simple_shader";
             node->node_type = AI_NODE_SHADER;
             break;
-#ifndef ARNOLD5
-        case SHADER_OPENVDB:
-            node->methods = openvdbShaderMethods;
-            node->output_type = AI_TYPE_RGB;
-            node->name = "openvdb_shader";
-            node->node_type = AI_NODE_SHADER;
-            break;
-#endif
         default:
             return false;
     }

@@ -2,7 +2,7 @@
 
 #include <translators/shape/ShapeTranslator.h>
 
-#include "shader_translator.h"
+#include "shader_params_translator.h"
 
 class OpenvdbTranslator : public VDBShaderParamsTranslator<CShapeTranslator> {
 public:

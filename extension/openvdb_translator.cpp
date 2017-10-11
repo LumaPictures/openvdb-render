@@ -4,7 +4,7 @@
 #include <functional>
 #include <array>
 
-#include "shader_translator.h"
+#include "shader_params_translator.h"
 
 namespace {
     using link_function_t = std::function<void(AtNode*)>;
@@ -233,11 +233,7 @@ void OpenvdbTranslator::Export(AtNode* volume)
     } else {
         shader = GetArnoldNode("shader");
         AiNodeSetPtr(volume, "shader", shader);
-        if (FindMayaPlug("shaderMode").asShort() == 0) {
-            ExportArnoldParams(shader);
-        } else {
-            ExportSimpleParams(shader);
-        }
+        ExportSimpleParams(shader);
     }
 
     std::set<std::string> out_grids;

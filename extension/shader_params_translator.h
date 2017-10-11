@@ -129,36 +129,6 @@ public:
         }
     }
 
-    inline void ExportArnoldParams(AtNode* shader)
-    {
-        this->ProcessParameter(shader, "scattering_source", AI_TYPE_INT, "scatteringSource");
-        this->ProcessParameter(shader, "scattering", AI_TYPE_RGB, "scattering");
-        this->ProcessParameter(shader, "scattering_channel", AI_TYPE_STRING, "scatteringChannel");
-        this->ProcessParameter(shader, "scattering_color", AI_TYPE_RGB, "scatteringColor");
-        this->ProcessParameter(shader, "scattering_intensity", AI_TYPE_FLOAT, "scatteringIntensity");
-        this->ProcessParameter(shader, "anisotropy", AI_TYPE_FLOAT, "anisotropy");
-
-        this->ProcessParameter(shader, "attenuation_source", AI_TYPE_INT, "attenuationSource");
-        this->ProcessParameter(shader, "attenuation", AI_TYPE_RGB, "attenuation");
-        this->ProcessParameter(shader, "attenuation_channel", AI_TYPE_STRING, "attenuationChannel");
-        this->ProcessParameter(shader, "attenuation_color", AI_TYPE_RGB, "attenuationColor");
-        this->ProcessParameter(shader, "attenuation_intensity", AI_TYPE_FLOAT, "attenuationIntensity");
-        this->ProcessParameter(shader, "attenuation_mode", AI_TYPE_INT, "attenuationMode");
-
-        this->ProcessParameter(shader, "emission_source", AI_TYPE_INT, "emissionSource");
-        this->ProcessParameter(shader, "emission", AI_TYPE_RGB, "emission");
-        this->ProcessParameter(shader, "emission_channel", AI_TYPE_STRING, "emissionChannel");
-        this->ProcessParameter(shader, "emission_color", AI_TYPE_RGB, "emissionColor");
-        this->ProcessParameter(shader, "emission_intensity", AI_TYPE_FLOAT, "emissionIntensity");
-
-        this->ProcessParameter(shader, "position_offset", AI_TYPE_VECTOR, "positionOffset");
-        this->ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
-        this->ProcessParameter(shader, "compensate_scaling", AI_TYPE_BOOLEAN, "compensateScaling");
-
-        std::vector<std::string> gradient_names = {"scattering", "attenuation", "emission"};
-        export_gradients(shader, gradient_names);
-    }
-
     inline void ExportSimpleParams(AtNode* shader)
     {
 
