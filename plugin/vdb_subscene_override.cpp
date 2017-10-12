@@ -218,7 +218,7 @@ namespace MHWRender {
                        std::numeric_limits<float>::infinity()),
             point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
             vertex_count(0), point_skip(-1), update_trigger(-1),
-            display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_VOLUME_COLLECTOR),
+            display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_SIMPLE),
             data_has_changed(false), shader_has_changed(false), camera_has_changed(false), world_has_changed(false),
             visible(true), old_bounding_box_enabled(true), old_point_cloud_enabled(true)
         {

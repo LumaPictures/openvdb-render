@@ -78,7 +78,6 @@ MObject VDBVisualizerShape::s_velocity_shutter_end;
 MObject VDBVisualizerShape::s_bounds_slack;
 
 MObject VDBVisualizerShape::s_shader_mode;
-VDBShaderParams VDBVisualizerShape::s_shader_params;
 VDBSimpleShaderParams VDBVisualizerShape::s_simple_shader_params;
 
 const boost::regex VDBVisualizerShape::s_frame_expr("[^#]*\\/[^/]+[\\._]#+[\\._][^/]*vdb");
@@ -188,7 +187,7 @@ VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1
                                          attenuation_color(1.0f, 1.0f, 1.0f), emission_color(1.0f, 1.0f, 1.0f),
                                          vdb_file(nullptr), point_size(2.0f), point_jitter(0.15f),
                                          point_skip(1), update_trigger(0), display_mode(DISPLAY_GRID_BBOX),
-                                         shader_mode(SHADER_MODE_VOLUME_COLLECTOR)
+                                         shader_mode(SHADER_MODE_SIMPLE)
 {
 }
 
@@ -600,12 +599,10 @@ MStatus VDBVisualizerShape::initialize()
     addAttribute(s_bounds_slack);
 
     s_shader_mode = eAttr.create("shaderMode", "shader_mode");
-    eAttr.addField("Arnold Volume Collector", SHADER_MODE_VOLUME_COLLECTOR);
     eAttr.addField("Simple Shader", SHADER_MODE_SIMPLE);
     eAttr.setDefault(SHADER_MODE_DEFAULT);
     addAttribute(s_shader_mode);
 
-    s_shader_params.create_params();
     s_simple_shader_params.create_params(false);
 
     MObject display_params[] = {
@@ -617,7 +614,6 @@ MStatus VDBVisualizerShape::initialize()
         attributeAffects(shader_param, s_update_trigger);
     }
 
-    s_shader_params.affect_output(s_update_trigger);
     s_simple_shader_params.affect_output(s_update_trigger);
 
     return status;
@@ -638,80 +634,7 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
         if (m_vdb_data.display_mode >= DISPLAY_POINT_CLOUD) {
             const auto shader_mode = static_cast<VDBShaderMode>(MPlug(tmo, s_shader_mode).asShort());
             m_vdb_data.shader_mode = shader_mode;
-            if (shader_mode == SHADER_MODE_VOLUME_COLLECTOR) {
-                const short scattering_mode = MPlug(tmo, s_shader_params.scattering_source).asShort();
-                MPlug scattering_color_plug(tmo, s_shader_params.scattering_color);
-                const float scattering_intensity = MPlug(tmo, s_shader_params.scattering_intensity).asFloat();
-                m_vdb_data.scattering_color.x = scattering_color_plug.child(0).asFloat() * scattering_intensity;
-                m_vdb_data.scattering_color.y = scattering_color_plug.child(1).asFloat() * scattering_intensity;
-                m_vdb_data.scattering_color.z = scattering_color_plug.child(2).asFloat() * scattering_intensity;
-
-                if (scattering_mode == 1) {
-                    m_vdb_data.scattering_channel = MPlug(tmo, s_shader_params.scattering_channel).asString().asChar();
-                } else {
-                    MPlug scattering_plug(tmo, s_shader_params.scattering);
-                    if (!scattering_plug.isConnected()) // TODO: handle this
-                    {
-                        m_vdb_data.scattering_color.x *= scattering_plug.child(0).asFloat();
-                        m_vdb_data.scattering_color.y *= scattering_plug.child(1).asFloat();
-                        m_vdb_data.scattering_color.z *= scattering_plug.child(2).asFloat();
-                    }
-
-                    m_vdb_data.scattering_channel = "";
-                }
-
-                const short attenuation_mode = MPlug(tmo, s_shader_params.attenuation_source).asShort();
-                MPlug attenuation_color_plug(tmo, s_shader_params.attenuation_color);
-                const float attenuation_intensity = MPlug(tmo, s_shader_params.attenuation_intensity).asFloat();
-                m_vdb_data.attenuation_color.x = attenuation_color_plug.child(0).asFloat() * attenuation_intensity;
-                m_vdb_data.attenuation_color.y = attenuation_color_plug.child(1).asFloat() * attenuation_intensity;
-                m_vdb_data.attenuation_color.z = attenuation_color_plug.child(2).asFloat() * attenuation_intensity;
-
-                if (attenuation_mode == 1) {
-                    m_vdb_data.attenuation_channel = MPlug(tmo,
-                                                           s_shader_params.attenuation_channel).asString().asChar();
-                } else if (attenuation_mode == 0) {
-                    MPlug attenuation_plug(tmo, s_shader_params.attenuation);
-                    if (!attenuation_plug.isConnected()) // TODO: handle this
-                    {
-                        m_vdb_data.attenuation_color.x *= attenuation_plug.child(0).asFloat();
-                        m_vdb_data.attenuation_color.y *= attenuation_plug.child(1).asFloat();
-                        m_vdb_data.attenuation_color.z *= attenuation_plug.child(2).asFloat();
-                    }
-
-                    m_vdb_data.attenuation_channel = "";
-                } else {
-                    m_vdb_data.attenuation_channel = m_vdb_data.scattering_channel;
-                }
-
-                const short emission_mode = MPlug(tmo, s_shader_params.emission_source).asShort();
-                MPlug emission_color_plug(tmo, s_shader_params.emission_color);
-                const float emission_intensity = MPlug(tmo, s_shader_params.emission_intensity).asFloat();
-                m_vdb_data.emission_color.x = emission_color_plug.child(0).asFloat() * emission_intensity;
-                m_vdb_data.emission_color.y = emission_color_plug.child(1).asFloat() * emission_intensity;
-                m_vdb_data.emission_color.z = emission_color_plug.child(2).asFloat() * emission_intensity;
-
-                if (emission_mode == 1) {
-                    m_vdb_data.emission_channel = MPlug(tmo, s_shader_params.emission_channel).asString().asChar();
-                } else {
-                    MPlug emission_plug(tmo, s_shader_params.emission);
-                    if (!emission_plug.isConnected()) // TODO: handle this
-                    {
-                        m_vdb_data.emission_color.x *= emission_plug.child(0).asFloat();
-                        m_vdb_data.emission_color.y *= emission_plug.child(1).asFloat();
-                        m_vdb_data.emission_color.z *= emission_plug.child(2).asFloat();
-                    }
-
-                    m_vdb_data.emission_channel = "";
-                }
-
-                m_vdb_data.scattering_gradient.clear();
-                m_vdb_data.attenuation_gradient.clear();
-                m_vdb_data.emission_gradient.clear();
-                m_vdb_data.scattering_gradient.update(s_shader_params.scattering_gradient, tmo);
-                m_vdb_data.attenuation_gradient.update(s_shader_params.attenuation_gradient, tmo);
-                m_vdb_data.emission_gradient.update(s_shader_params.emission_gradient, tmo);
-            } else if (shader_mode == SHADER_MODE_SIMPLE) {
+            if (shader_mode == SHADER_MODE_SIMPLE) { // we'll expand this later on
                 m_vdb_data.scattering_channel = MPlug(tmo, s_simple_shader_params.smoke_channel).asString().asChar();
                 const float smoke_intensity = MPlug(tmo, s_simple_shader_params.smoke_intensity).asFloat();
                 MPlug smoke_plug(tmo, s_simple_shader_params.smoke);
@@ -772,9 +695,6 @@ void VDBVisualizerShape::postConstructor()
 {
     setRenderable(true);
     MObject tmo = thisMObject();
-    s_shader_params.scattering_gradient.post_constructor(tmo);
-    s_shader_params.attenuation_gradient.post_constructor(tmo);
-    s_shader_params.emission_gradient.post_constructor(tmo);
     s_simple_shader_params.smoke_gradient.post_constructor(tmo);
     s_simple_shader_params.opacity_gradient.post_constructor(tmo);
     s_simple_shader_params.fire_gradient.post_constructor(tmo);

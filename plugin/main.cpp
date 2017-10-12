@@ -6,7 +6,6 @@
 #include "vdb_visualizer.h"
 #include "vdb_query.h"
 #include "vdb_sampler.h"
-#include "vdb_shader.h"
 #include "vdb_simple_shader.h"
 
 MStatus initializePlugin(MObject obj)
@@ -14,7 +13,7 @@ MStatus initializePlugin(MObject obj)
     const bool is_interactive = MGlobal::mayaState() == MGlobal::kInteractive;
     MStatus status = MS::kFailure;
 
-    MFnPlugin plugin(obj, "Luma Pictures", "0.0.1", "Any");
+    MFnPlugin plugin(obj, "Luma Pictures", "0.2.0", "Any");
 
     status = plugin.registerShape(VDBVisualizerShape::typeName, VDBVisualizerShape::typeId,
                                   VDBVisualizerShape::creator, VDBVisualizerShape::initialize,
@@ -31,15 +30,6 @@ MStatus initializePlugin(MObject obj)
 
     if (!status) {
         status.perror("[openvdb] Error registering the VDBSampler Node.");
-        return status;
-    }
-
-    status = plugin.registerNode(VDBShaderNode::s_type_name, VDBShaderNode::s_type_id,
-                                 VDBShaderNode::creator, VDBShaderNode::initialize, MPxNode::kDependNode,
-                                 &VDBShaderNode::s_classification);
-
-    if (!status) {
-        status.perror("[openvdb] Error registering the VDBShader Node.");
         return status;
     }
 
@@ -98,13 +88,6 @@ MStatus uninitializePlugin(MObject obj)
 
     if (!status) {
         status.perror("[openvdb] Error deregistering the VDBSampler Node.");
-        return status;
-    }
-
-    status = plugin.deregisterNode(VDBShaderNode::s_type_id);
-
-    if (!status) {
-        status.perror("[openvdb] Error deregistering the VDBShader Node.");
         return status;
     }
 

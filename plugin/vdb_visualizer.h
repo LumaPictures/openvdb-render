@@ -12,7 +12,6 @@
 
 #include "vdb_sampler.h"
 #include "gradient.hpp"
-#include "vdb_shader.h"
 #include "vdb_simple_shader.h"
 
 enum VDBDisplayMode {
@@ -25,8 +24,7 @@ enum VDBDisplayMode {
 };
 
 enum VDBShaderMode {
-    SHADER_MODE_VOLUME_COLLECTOR = 0,
-    SHADER_MODE_SIMPLE,
+    SHADER_MODE_SIMPLE = 0,
     SHADER_MODE_DEFAULT = SHADER_MODE_SIMPLE
 };
 
@@ -153,7 +151,6 @@ public:
 
     // shader parameters
     static MObject s_shader_mode;
-    static VDBShaderParams s_shader_params;
     static VDBSimpleShaderParams s_simple_shader_params;
 
     static const boost::regex s_frame_expr;
