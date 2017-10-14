@@ -106,3 +106,21 @@ inline bool read_transformed_bounding_box(openvdb::GridBase::ConstPtr grid, MBou
 
     return true;
 }
+
+constexpr float LINEAR_FROM_SRGB_EXPONENT = 2.2f;
+inline void LinearFromSRGB(float* data, size_t n)
+{
+    for (size_t i = 0; i < n; ++i)
+        data[i] = std::pow(data[i], LINEAR_FROM_SRGB_EXPONENT);
+}
+
+inline MFloatVector LinearFromSRGB(const MFloatVector& color)
+{
+    return { std::pow(color.x, LINEAR_FROM_SRGB_EXPONENT), std::pow(color.y, LINEAR_FROM_SRGB_EXPONENT), std::pow(color.z, LINEAR_FROM_SRGB_EXPONENT) };
+}
+
+constexpr float SRGB_FROM_LINEAR_EXPONENT = 1.0f / LINEAR_FROM_SRGB_EXPONENT;
+inline MFloatVector SRGBFromLinear(const MFloatVector& color)
+{
+    return { std::pow(color.x, SRGB_FROM_LINEAR_EXPONENT), std::pow(color.y, SRGB_FROM_LINEAR_EXPONENT), std::pow(color.z, SRGB_FROM_LINEAR_EXPONENT) };
+}

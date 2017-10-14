@@ -20,7 +20,8 @@ enum VDBDisplayMode {
     DISPLAY_POINT_CLOUD,
     DISPLAY_NON_SHADED,
     DISPLAY_SHADED,
-    DISPLAY_MESH
+    DISPLAY_MESH,
+    DISPLAY_SLICED
 };
 
 enum VDBShaderMode {
@@ -34,6 +35,101 @@ enum VDBPointSort {
     POINT_SORT_GPU_CPU,
     POINT_SORT_GPU,
     POINT_SORT_DEFAULT = POINT_SORT_CPU
+};
+
+// Data for DISPLAY_SLICED mode.
+
+enum class VDBChannelSource {
+    VALUE = 0,
+    RAMP = 1
+};
+
+enum class VDBEmissionMode {
+    NONE = 0,
+    CHANNEL = 1,
+    DENSITY = 2,
+    BLACKBODY = 3,
+};
+
+template <typename T>
+struct RampData {
+    std::vector<T> samples;
+    float input_min;
+    float input_max;
+    RampData() : input_min(-1), input_max(-1) {}
+};
+
+struct VDBSlicedDisplayData {
+
+    // Shader data; the shader approximates aiStandardVolume shader.
+    // The visualization also supports ramps.
+    float density;
+    std::string density_channel;
+    RampData<float> density_ramp;
+    VDBChannelSource density_source;
+
+    float scatter;
+    MFloatVector scatter_color;
+    std::string scatter_color_channel;
+    RampData<MFloatVector> scatter_color_ramp;
+    VDBChannelSource scatter_color_source;
+    float scatter_anisotropy;
+
+    MFloatVector transparent;
+    std::string transparent_channel;
+
+    VDBEmissionMode emission_mode;
+    float emission;
+    MFloatVector emission_color;
+    std::string emission_channel;
+    RampData<MFloatVector> emission_ramp;
+    VDBChannelSource emission_source;
+
+    float temperature;
+    std::string temperature_channel;
+    float blackbody_kelvin;
+    float blackbody_intensity;
+
+    // Additional visualization data.
+    int   slice_count;
+    int   shadow_sample_count;
+    float shadow_gain;
+
+    VDBSlicedDisplayData();
+};
+
+struct RampParams {
+    MObject ramp;
+    MObject input_min;
+    MObject input_max;
+};
+
+struct VDBSlicedDisplayParams {
+    MObject density;
+    MObject density_channel;
+    RampParams density_ramp;
+    MObject density_source;
+    MObject scatter;
+    MObject scatter_color;
+    MObject scatter_color_channel;
+    RampParams scatter_color_ramp;
+    MObject scatter_color_source;
+    MObject scatter_anisotropy;
+    MObject transparent;
+    MObject transparent_channel;
+    MObject emission_mode;
+    MObject emission;
+    MObject emission_color;
+    MObject emission_channel;
+    RampParams emission_ramp;
+    MObject emission_source;
+    MObject temperature;
+    MObject temperature_channel;
+    MObject blackbody_kelvin;
+    MObject blackbody_intensity;
+    MObject slice_count;
+    MObject shadow_sample_count;
+    MObject shadow_gain;
 };
 
 struct VDBVisualizerData {
@@ -61,6 +157,8 @@ struct VDBVisualizerData {
     int update_trigger;
     VDBDisplayMode display_mode;
     VDBShaderMode shader_mode;
+
+    VDBSlicedDisplayData sliced_display_data;
 
     VDBVisualizerData();
 
@@ -134,6 +232,7 @@ public:
     static MObject s_point_jitter;
     static MObject s_point_skip;
     static MObject s_point_sort;
+    static VDBSlicedDisplayParams s_sliced_display_params;
 
     static MObject s_override_shader;
     static MObject s_sampling_quality;

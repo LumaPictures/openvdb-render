@@ -165,6 +165,7 @@ namespace MHWRender {
         point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
         vertex_count(0), point_skip(-1), update_trigger(-1),
         display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_SIMPLE),
+        sliced_display_changes(VDBSlicedDisplayChangeSet::NO_CHANGES),
         data_has_changed(false), shader_has_changed(false), camera_has_changed(false), world_has_changed(false),
         visible(true), old_bounding_box_enabled(true), old_point_cloud_enabled(true)
     {
@@ -244,8 +245,9 @@ namespace MHWRender {
         update_trigger = data->update_trigger;
 
         const std::string& filename = data->vdb_path;
+        bool file_has_changed = false;
         auto open_file = [&]() {
-            data_has_changed |= true;
+            file_has_changed = true;
             clear();
 
             try {
@@ -263,13 +265,15 @@ namespace MHWRender {
         if (filename_changed || uuid_changed) {
             open_file();
         } else if (filename.empty() && this->vdb_file != nullptr) {
-            data_has_changed = true;
+            file_has_changed = true;
             clear();
         }
+        data_has_changed |= file_has_changed;
 
-        data_has_changed |= setup_parameter(display_mode, data->display_mode);
+        const bool display_mode_changed = setup_parameter(display_mode, data->display_mode);
+        const bool bbox_changed = setup_parameter(bbox, data->bbox);
+        data_has_changed |= display_mode_changed | bbox_changed;
         data_has_changed |= setup_parameter(shader_mode, data->shader_mode);
-        data_has_changed |= setup_parameter(bbox, data->bbox);
         data_has_changed |= setup_parameter(scattering_color, data->scattering_color);
         data_has_changed |= setup_parameter(attenuation_color, data->attenuation_color);
         data_has_changed |= setup_parameter(emission_color, data->emission_color);
@@ -283,6 +287,70 @@ namespace MHWRender {
 
         shader_has_changed |= setup_parameter(point_size, data->point_size);
         shader_has_changed |= setup_parameter(point_jitter, data->point_jitter);
+
+        if (display_mode == DISPLAY_SLICED) {
+            if (display_mode_changed) {
+                sliced_display_changes = VDBSlicedDisplayChangeSet::ALL;
+            }
+
+            bool shader_param_changed = false;
+            shader_param_changed |= setup_parameter(sliced_display_data.density, data->sliced_display_data.density);
+            shader_param_changed |= setup_parameter(sliced_display_data.density_ramp.input_min, data->sliced_display_data.density_ramp.input_min);
+            shader_param_changed |= setup_parameter(sliced_display_data.density_ramp.input_max, data->sliced_display_data.density_ramp.input_max);
+            shader_param_changed |= setup_parameter(sliced_display_data.density_source, data->sliced_display_data.density_source);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter, data->sliced_display_data.scatter);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_color, data->sliced_display_data.scatter_color);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_color_ramp.input_min, data->sliced_display_data.scatter_color_ramp.input_min);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_color_ramp.input_max, data->sliced_display_data.scatter_color_ramp.input_max);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_color_source, data->sliced_display_data.scatter_color_source);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_anisotropy, data->sliced_display_data.scatter_anisotropy);
+            shader_param_changed |= setup_parameter(sliced_display_data.transparent, data->sliced_display_data.transparent);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_mode, data->sliced_display_data.emission_mode);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission, data->sliced_display_data.emission);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_color, data->sliced_display_data.emission_color);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_ramp.input_min, data->sliced_display_data.emission_ramp.input_min);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_ramp.input_max, data->sliced_display_data.emission_ramp.input_max);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_source, data->sliced_display_data.emission_source);
+            shader_param_changed |= setup_parameter(sliced_display_data.temperature, data->sliced_display_data.temperature);
+            shader_param_changed |= setup_parameter(sliced_display_data.blackbody_kelvin, data->sliced_display_data.blackbody_kelvin);
+            shader_param_changed |= setup_parameter(sliced_display_data.blackbody_intensity, data->sliced_display_data.blackbody_intensity);
+            shader_param_changed |= setup_parameter(sliced_display_data.shadow_sample_count, data->sliced_display_data.shadow_sample_count);
+            shader_param_changed |= setup_parameter(sliced_display_data.shadow_gain, data->sliced_display_data.shadow_gain);
+            if (shader_param_changed)
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::SHADER_PARAM;
+
+            if (setup_parameter(sliced_display_data.slice_count, data->sliced_display_data.slice_count)) {
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::SLICE_COUNT;
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::ALL_CHANNELS;
+            }
+
+            if (bbox_changed)
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::BOUNDING_BOX;
+
+            if (setup_parameter(sliced_display_data.density_ramp.samples, data->sliced_display_data.density_ramp.samples))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::DENSITY_RAMP_SAMPLES;
+            if (setup_parameter(sliced_display_data.scatter_color_ramp.samples, data->sliced_display_data.scatter_color_ramp.samples))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::SCATTER_COLOR_RAMP_SAMPLES;
+            if (setup_parameter(sliced_display_data.emission_ramp.samples, data->sliced_display_data.emission_ramp.samples))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::EMISSION_RAMP_SAMPLES;
+
+            if (setup_parameter(sliced_display_data.density_channel, data->sliced_display_data.density_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::DENSITY_CHANNEL;
+            if (setup_parameter(sliced_display_data.scatter_color_channel, data->sliced_display_data.scatter_color_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::SCATTER_COLOR_CHANNEL;
+            if (setup_parameter(sliced_display_data.transparent_channel, data->sliced_display_data.transparent_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::TRANSPARENT_CHANNEL;
+            if (setup_parameter(sliced_display_data.emission_channel, data->sliced_display_data.emission_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::EMISSION_CHANNEL;
+            if (setup_parameter(sliced_display_data.temperature_channel, data->sliced_display_data.temperature_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::TEMPERATURE_CHANNEL;
+
+            if (file_has_changed) {
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::ALL_CHANNELS;
+            }
+
+            data_has_changed |= (sliced_display_changes != VDBSlicedDisplayChangeSet::NO_CHANGES);
+        }
 
         return data_has_changed | shader_has_changed | matrix_changed | visibility_changed;
     }
@@ -298,7 +366,8 @@ namespace MHWRender {
     }
 
     VDBSubSceneOverride::VDBSubSceneOverride(const MObject& obj) : MPxSubSceneOverride(obj),
-                                                                   p_data(new VDBSubSceneOverrideData)
+                                                                   p_data(new VDBSubSceneOverrideData),
+                                                                   m_sliced_display(*this)
     {
         m_object = obj;
         MFnDependencyNode dnode(obj);
@@ -427,6 +496,7 @@ namespace MHWRender {
             point_cloud->enable(false);
             bounding_box->enable(false);
             selection_bounding_box->enable(false);
+            m_sliced_display.enable(false);
             return;
         } else {
             point_cloud->enable(data->old_point_cloud_enabled);
@@ -449,6 +519,7 @@ namespace MHWRender {
                 selection_bounding_box->setMatrix(&matrix_arr[0]);
             else
                 setInstanceTransformArray(*selection_bounding_box, matrix_arr);
+            m_sliced_display.setWorldMatrices(matrix_arr);
         };
 
         if (data->data_has_changed) {
@@ -493,6 +564,7 @@ namespace MHWRender {
             if (!file_exists || data->display_mode <= DISPLAY_GRID_BBOX) {
                 point_cloud->enable(false);
                 bounding_box->enable(true);
+                m_sliced_display.enable(false);
                 data->old_point_cloud_enabled = false;
                 data->old_bounding_box_enabled = true;
 
@@ -560,6 +632,7 @@ namespace MHWRender {
                 bounding_box->enable(false);
                 data->old_point_cloud_enabled = false;
                 point_cloud->enable(false);
+                m_sliced_display.enable(false);
                 if (data->display_mode == DISPLAY_POINT_CLOUD) {
                     try {
                         if (!data->vdb_file->isOpen()) {
@@ -742,6 +815,18 @@ namespace MHWRender {
                     p_point_cloud_shader->setParameter("jitter_size", MFloatVector(
                         data->voxel_size.x(), data->voxel_size.y(), data->voxel_size.y()) * data->point_jitter);
 
+                } else if (data->display_mode == DISPLAY_SLICED) {
+                    if (!data->vdb_file->isOpen()) {
+                        data->vdb_file->open(false);
+                    }
+                    if (hasChange(data->sliced_display_changes, VDBSlicedDisplayChangeSet::BOUNDING_BOX)) {
+                        p_bbox_position.reset(new MVertexBuffer(position_buffer_desc));
+                        p_bbox_indices.reset(new MIndexBuffer(MGeometry::kUnsignedInt32));
+                        setup_bounding_box();
+                    }
+                    selection_bounding_box->enable(true);
+                    m_sliced_display.enable(true);
+                    m_sliced_display.update(container, data->vdb_file.get(), data->bbox, data->sliced_display_data, data->sliced_display_changes);
                 }
             }
 

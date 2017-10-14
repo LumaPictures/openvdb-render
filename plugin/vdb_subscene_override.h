@@ -5,6 +5,7 @@
 
 #include "vdb_visualizer.h"
 #include "vdb_subscene_utils.hpp"
+#include "vdb_sliced_display.h"
 
 namespace MHWRender {
     struct VDBSubSceneOverrideData;
@@ -55,6 +56,8 @@ namespace MHWRender {
         sampler_mem_area m_scattering_sampler;
         sampler_mem_area m_emission_sampler;
         sampler_mem_area m_attenuation_sampler;
+
+        VDBSlicedDisplay m_sliced_display;
     };
 
     // we are storing an extra float here to have better memory alignment
@@ -108,6 +111,9 @@ namespace MHWRender {
         int update_trigger;
         VDBDisplayMode display_mode;
         VDBShaderMode shader_mode;
+
+        VDBSlicedDisplayData sliced_display_data;
+        VDBSlicedDisplayChangeSet sliced_display_changes;
 
         bool data_has_changed;
         bool shader_has_changed;

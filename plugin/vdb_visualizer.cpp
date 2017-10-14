@@ -79,6 +79,7 @@ MObject VDBVisualizerShape::s_bounds_slack;
 
 MObject VDBVisualizerShape::s_shader_mode;
 VDBSimpleShaderParams VDBVisualizerShape::s_simple_shader_params;
+VDBSlicedDisplayParams VDBVisualizerShape::s_sliced_display_params;
 
 const boost::regex VDBVisualizerShape::s_frame_expr("[^#]*\\/[^/]+[\\._]#+[\\._][^/]*vdb");
 const boost::regex VDBVisualizerShape::s_hash_expr("#+");
@@ -180,6 +181,27 @@ namespace {
             }
         }
     };
+}
+
+VDBSlicedDisplayData::VDBSlicedDisplayData()
+    : density(-1)
+    , density_source(VDBChannelSource::VALUE)
+    , scatter(-1)
+    , scatter_color(-1, -1, -1)
+    , scatter_color_source(VDBChannelSource::VALUE)
+    , scatter_anisotropy(-1)
+    , transparent(-1, -1, -1)
+    , emission_mode(VDBEmissionMode::NONE)
+    , emission(-1)
+    , emission_color(-1, -1, -1)
+    , emission_source(VDBChannelSource::VALUE)
+    , temperature(-1)
+    , blackbody_kelvin(-1)
+    , blackbody_intensity(-1)
+    , slice_count(-1)
+    , shadow_sample_count(-1)
+    , shadow_gain(-1)
+{
 }
 
 VDBVisualizerData::VDBVisualizerData() : bbox(MPoint(-1.0, -1.0, -1.0), MPoint(1.0, 1.0, 1.0)),
@@ -400,6 +422,7 @@ MStatus VDBVisualizerShape::initialize()
     MFnEnumAttribute eAttr;
     MFnUnitAttribute uAttr;
     MFnStringData sData;
+    MRampAttribute rAttr;
 
     MStatus status = MS::kSuccess;
 
@@ -439,6 +462,7 @@ MStatus VDBVisualizerShape::initialize()
     //eAttr.addField("Volumetric Non Shaded", DISPLAY_NON_SHADED);
     //eAttr.addField("Volumetric Shaded", DISPLAY_SHADED);
     //eAttr.addField("Mesh", DISPLAY_MESH);
+    eAttr.addField("Slices", DISPLAY_SLICED);
     eAttr.setDefault(DISPLAY_GRID_BBOX);
 
     addAttribute(s_display_mode);
@@ -549,6 +573,195 @@ MStatus VDBVisualizerShape::initialize()
     eAttr.setDefault(POINT_SORT_DEFAULT);
     addAttribute(s_point_sort);
 
+    // Sliced display params
+    // sv stands for Standard Volume.
+    s_sliced_display_params.density = nAttr.create("svDensity", "sv_density", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(3.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.density));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.density, s_update_trigger));
+
+    s_sliced_display_params.density_channel = tAttr.create("svDensityChannel", "sv_density_channel", MFnData::kString);
+    tAttr.setDefault(sData.create("density"));
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.density_channel));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.density_channel, s_update_trigger));
+
+    s_sliced_display_params.density_ramp.ramp = rAttr.createCurveRamp("svDensityRamp", "sv_density_ramp");
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.density_ramp.ramp));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.density_ramp.ramp, s_update_trigger));
+
+    s_sliced_display_params.density_ramp.input_min = nAttr.create("svDensityRampInputOffset", "sv_density_ramp_input_offset", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.density_ramp.input_min));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.density_ramp.input_min, s_update_trigger));
+
+    s_sliced_display_params.density_ramp.input_max = nAttr.create("svDensityRampInputMax", "sv_density_ramp_input_max", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.density_ramp.input_max));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.density_ramp.input_max, s_update_trigger));
+
+    s_sliced_display_params.density_source = eAttr.create("svDensitySource", "sv_density_source");
+    eAttr.addField("Value", 0);
+    eAttr.addField("Ramp", 1);
+    eAttr.setDefault(0);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.density_source));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.density_source, s_update_trigger));
+
+    s_sliced_display_params.scatter = nAttr.create("svScatter", "sv_scatter", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.scatter));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.scatter, s_update_trigger));
+
+    s_sliced_display_params.scatter_color = nAttr.createColor("svScatterColor", "sv_scatter_color");
+    nAttr.setDefault(1.0, 1.0, 1.0);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.scatter_color));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.scatter_color, s_update_trigger));
+
+    s_sliced_display_params.scatter_color_channel = tAttr.create("svScatterColorChannel", "sv_scatter_color_channel", MFnData::kString);
+    tAttr.setDefault(sData.create(""));
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.scatter_color_channel));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.scatter_color_channel, s_update_trigger));
+
+    s_sliced_display_params.scatter_color_ramp.ramp = rAttr.createColorRamp("svScatterColorRamp", "sv_scatter_color_ramp");
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.scatter_color_ramp.ramp));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.scatter_color_ramp.ramp, s_update_trigger));
+
+    s_sliced_display_params.scatter_color_ramp.input_min = nAttr.create("svScatterColorRampInputOffset", "sv_scatter_color_ramp_input_offset", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.scatter_color_ramp.input_min));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.scatter_color_ramp.input_min, s_update_trigger));
+
+    s_sliced_display_params.scatter_color_ramp.input_max = nAttr.create("svScatterColorRampInputMax", "sv_scatter_color_ramp_input_max", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.scatter_color_ramp.input_max));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.scatter_color_ramp.input_max, s_update_trigger));
+
+    s_sliced_display_params.scatter_color_source = eAttr.create("svScatterColorSource", "sv_scatter_color_source");
+    eAttr.addField("Color", 0);
+    eAttr.addField("Ramp", 1);
+    eAttr.setDefault(0);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.scatter_color_source));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.scatter_color_source, s_update_trigger));
+
+    s_sliced_display_params.scatter_anisotropy = nAttr.create("svScatterAnisotropy", "sv_scatter_anisotropy", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    nAttr.setMin(-1.0f);
+    nAttr.setMax(1.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.scatter_anisotropy));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.scatter_anisotropy, s_update_trigger));
+
+    s_sliced_display_params.transparent = nAttr.createColor("svTransparent", "sv_transparent");
+    nAttr.setDefault(0.5, 0.5, 0.5);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.transparent));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.transparent, s_update_trigger));
+
+    s_sliced_display_params.transparent_channel = tAttr.create("svTransparentChannel", "sv_transparent_channel", MFnData::kString);
+    tAttr.setDefault(sData.create(""));
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.transparent_channel));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.transparent_channel, s_update_trigger));
+
+    s_sliced_display_params.emission_mode = eAttr.create("svEmissionMode", "sv_emission_mode");
+    eAttr.addField("None", 0);
+    eAttr.addField("Channel", 1);
+    eAttr.addField("Density", 2);
+    eAttr.addField("Blackbody", 3);
+    eAttr.setDefault(0);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.emission_mode));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.emission_mode, s_update_trigger));
+
+    s_sliced_display_params.emission = nAttr.create("svEmission", "sv_emission", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.emission));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.emission, s_update_trigger));
+
+    s_sliced_display_params.emission_color = nAttr.createColor("svEmissionColor", "sv_emission_color");
+    nAttr.setDefault(1.0, 1.0, 1.0);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.emission_color));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.emission_color, s_update_trigger));
+
+    s_sliced_display_params.emission_channel = tAttr.create("svEmissionChannel", "sv_emission_channel", MFnData::kString);
+    tAttr.setDefault(sData.create("heat"));
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.emission_channel));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.emission_channel, s_update_trigger));
+
+    s_sliced_display_params.emission_ramp.ramp = rAttr.createColorRamp("svEmissionRamp", "sv_emission_ramp");
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.emission_ramp.ramp));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.emission_ramp.ramp, s_update_trigger));
+
+    s_sliced_display_params.emission_ramp.input_min = nAttr.create("svEmissionRampInputOffset", "sv_emission_ramp_input_offset", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.emission_ramp.input_min));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.emission_ramp.input_min, s_update_trigger));
+
+    s_sliced_display_params.emission_ramp.input_max = nAttr.create("svEmissionRampInputMax", "sv_emission_ramp_input_max", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.emission_ramp.input_max));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.emission_ramp.input_max, s_update_trigger));
+
+    s_sliced_display_params.emission_source = eAttr.create("svEmissionSource", "sv_emission_source");
+    eAttr.addField("Color", 0);
+    eAttr.addField("Ramp", 1);
+    eAttr.setDefault(0);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.emission_source));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.emission_source, s_update_trigger));
+
+    s_sliced_display_params.temperature = nAttr.create("svTemperature", "sv_temperature", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(1.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.temperature));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.temperature, s_update_trigger));
+
+    s_sliced_display_params.temperature_channel = tAttr.create("svTemperatureChannel", "sv_temperature_channel", MFnData::kString);
+    tAttr.setDefault(sData.create("temperature"));
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.temperature_channel));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.temperature_channel, s_update_trigger));
+
+    s_sliced_display_params.blackbody_kelvin = nAttr.create("svBlackbodyKelvin", "sv_blackbody_kelvin", MFnNumericData::kFloat);
+    nAttr.setDefault(5000.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setSoftMax(20000.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.blackbody_kelvin));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.blackbody_kelvin, s_update_trigger));
+
+    s_sliced_display_params.blackbody_intensity = nAttr.create("svBlackbodyIntensity", "sv_blackbody_intensity", MFnNumericData::kFloat);
+    nAttr.setDefault(1.0f);
+    nAttr.setMin(0.0f);
+    nAttr.setMax(1.0f);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.blackbody_intensity));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.blackbody_intensity, s_update_trigger));
+
+    s_sliced_display_params.slice_count = eAttr.create("sliceCount", "slice_count");
+    eAttr.addField("16", 16);
+    eAttr.addField("32", 32);
+    eAttr.addField("64", 64);
+    eAttr.addField("128", 128);
+    eAttr.addField("256", 256);
+    eAttr.setDefault(128);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.slice_count));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.slice_count, s_update_trigger));
+
+    s_sliced_display_params.shadow_gain = nAttr.create("shadowGain", "shadow_gain", MFnNumericData::kFloat);
+    nAttr.setDefault(0.2);
+    nAttr.setMin(0.0);
+    nAttr.setSoftMax(4.0);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.shadow_gain));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.shadow_gain, s_update_trigger));
+
+    s_sliced_display_params.shadow_sample_count = nAttr.create("shadowSampleCount", "shadow_sample_count", MFnNumericData::kInt);
+    nAttr.setDefault(8);
+    nAttr.setMin(0);
+    nAttr.setSoftMax(16);
+    CHECK_MSTATUS(MPxNode::addAttribute(s_sliced_display_params.shadow_sample_count));
+    CHECK_MSTATUS(attributeAffects(s_sliced_display_params.shadow_sample_count, s_update_trigger));
+
+    // End of sliced display params.
+
     s_override_shader = nAttr.create("overrideShader", "override_shader", MFnNumericData::kBoolean);
     nAttr.setDefault(false);
     nAttr.setChannelBox(true);
@@ -619,6 +832,47 @@ MStatus VDBVisualizerShape::initialize()
     return status;
 }
 
+namespace {
+
+    MFloatVector attributeAsFloatVector(const MObject& object, const MObject& attribute)
+    {
+        MPlug plug(object, attribute);
+        return { plug.child(0).asFloat(), plug.child(1).asFloat(), plug.child(2).asFloat() };
+    }
+
+    const auto RAMP_SAMPLE_COUNT = 32;
+
+    std::vector<float> sampleValueRamp(const MObject& object, const MObject& attribute)
+    {
+        std::vector<float> res;
+        MStatus status = MS::kSuccess;
+        MFloatArray float_array;
+        MRampAttribute ramp = MRampAttribute(object, attribute);
+        ramp.sampleValueRamp(RAMP_SAMPLE_COUNT, float_array, &status);
+        CHECK_MSTATUS_AND_RETURN(status, res);
+        res.resize(RAMP_SAMPLE_COUNT);
+        float_array.get(res.data());
+        return res;
+    }
+
+    std::vector<MFloatVector> sampleColorRamp(const MObject& object, const MObject& attribute)
+    {
+        std::vector<MFloatVector> res;
+        MStatus status = MS::kSuccess;
+        MColorArray color_array;
+        MRampAttribute ramp = MRampAttribute(object, attribute);
+        ramp.sampleColorRamp(RAMP_SAMPLE_COUNT, color_array, &status);
+        CHECK_MSTATUS_AND_RETURN(status, res);
+        res.resize(RAMP_SAMPLE_COUNT);
+        for (unsigned int i = 0; i < RAMP_SAMPLE_COUNT; ++i) {
+            const MColor& color = color_array[i];
+            res[i] = MFloatVector(color.r, color.g, color.b);
+        }
+        return res;
+    }
+
+} // unnamed namespace
+
 VDBVisualizerData* VDBVisualizerShape::get_update()
 {
     const int update_trigger = MPlug(thisMObject(), s_update_trigger).asInt();
@@ -631,7 +885,42 @@ VDBVisualizerData* VDBVisualizerShape::get_update()
         m_vdb_data.point_skip = MPlug(tmo, s_point_skip).asInt();
         m_vdb_data.update_trigger = update_trigger;
 
-        if (m_vdb_data.display_mode >= DISPLAY_POINT_CLOUD) {
+        if (m_vdb_data.display_mode == DISPLAY_SLICED) {
+            auto& data = m_vdb_data.sliced_display_data;
+            auto& params = s_sliced_display_params;
+            data.density = MPlug(tmo, params.density).asFloat();
+            data.density_channel = MPlug(tmo, params.density_channel).asString().asChar();
+            data.density_ramp.samples = sampleValueRamp(tmo, params.density_ramp.ramp);
+            data.density_ramp.input_min = MPlug(tmo, params.density_ramp.input_min).asFloat();
+            data.density_ramp.input_max = MPlug(tmo, params.density_ramp.input_max).asFloat();
+            data.density_source = VDBChannelSource(MPlug(tmo, params.density_source).asInt());
+            data.scatter = MPlug(tmo, params.scatter).asFloat();
+            data.scatter_color = attributeAsFloatVector(tmo, params.scatter_color);
+            data.scatter_color_channel = MPlug(tmo, params.scatter_color_channel).asString().asChar();
+            data.scatter_color_ramp.samples = sampleColorRamp(tmo, params.scatter_color_ramp.ramp);
+            data.scatter_color_ramp.input_min = MPlug(tmo, params.scatter_color_ramp.input_min).asFloat();
+            data.scatter_color_ramp.input_max = MPlug(tmo, params.scatter_color_ramp.input_max).asFloat();
+            data.scatter_color_source = VDBChannelSource(MPlug(tmo, params.scatter_color_source).asInt());
+            data.scatter_anisotropy = MPlug(tmo, params.scatter_anisotropy).asFloat();
+            data.transparent = attributeAsFloatVector(tmo, params.transparent);
+            data.transparent_channel = MPlug(tmo, params.transparent_channel).asString().asChar();
+            data.emission_mode = VDBEmissionMode(MPlug(tmo, params.emission_mode).asInt());
+            data.emission = MPlug(tmo, params.emission).asFloat();
+            data.emission_color = attributeAsFloatVector(tmo, params.emission_color);
+            data.emission_channel = MPlug(tmo, params.emission_channel).asString().asChar();
+            data.emission_ramp.samples = sampleColorRamp(tmo, params.emission_ramp.ramp);
+            data.emission_ramp.input_min = MPlug(tmo, params.emission_ramp.input_min).asFloat();
+            data.emission_ramp.input_max = MPlug(tmo, params.emission_ramp.input_max).asFloat();
+            data.emission_source = VDBChannelSource(MPlug(tmo, params.emission_source).asInt());
+            data.temperature = MPlug(tmo, params.temperature).asFloat();
+            data.temperature_channel = MPlug(tmo, params.temperature_channel).asString().asChar();
+            data.blackbody_kelvin = MPlug(tmo, params.blackbody_kelvin).asFloat();
+            data.blackbody_intensity = MPlug(tmo, params.blackbody_intensity).asFloat();
+            m_vdb_data.sliced_display_data.slice_count = MPlug(thisMObject(), s_sliced_display_params.slice_count).asInt();
+            data.shadow_sample_count = MPlug(tmo, params.shadow_sample_count).asInt();
+            data.shadow_gain = MPlug(tmo, params.shadow_gain).asFloat();
+
+        } else if (m_vdb_data.display_mode >= DISPLAY_POINT_CLOUD) {
             const auto shader_mode = static_cast<VDBShaderMode>(MPlug(tmo, s_shader_mode).asShort());
             m_vdb_data.shader_mode = shader_mode;
             if (shader_mode == SHADER_MODE_SIMPLE) { // we'll expand this later on
@@ -698,6 +987,35 @@ void VDBVisualizerShape::postConstructor()
     s_simple_shader_params.smoke_gradient.post_constructor(tmo);
     s_simple_shader_params.opacity_gradient.post_constructor(tmo);
     s_simple_shader_params.fire_gradient.post_constructor(tmo);
+
+    // Add at least one entry to the ramps to avoid Maya script errors.
+    MStatus status;
+    {
+        MFloatArray positions(1, 0);
+        MFloatArray floats(1, 0);
+        MIntArray interps(1, 0);
+        MRampAttribute density_ramp(tmo, s_sliced_display_params.density_ramp.ramp);
+        density_ramp.addEntries(positions, floats, interps, &status);
+        CHECK_MSTATUS(status);
+    }
+
+    {
+        MFloatArray positions(1, 0);
+        MColorArray colors(1, MColor::kOpaqueBlack);
+        MIntArray interps(1, 0);
+        MRampAttribute scatter_color_ramp(tmo, s_sliced_display_params.scatter_color_ramp.ramp);
+        scatter_color_ramp.addEntries(positions, colors, interps, &status);
+        CHECK_MSTATUS(status);
+    }
+
+    {
+        MFloatArray positions(1, 0);
+        MColorArray colors(1, MColor::kOpaqueBlack);
+        MIntArray interps(1, 0);
+        MRampAttribute emission_ramp(tmo, s_sliced_display_params.emission_ramp.ramp);
+        emission_ramp.addEntries(positions, colors, interps, &status);
+        CHECK_MSTATUS(status);
+    }
 }
 
 VDBVisualizerShapeUI::VDBVisualizerShapeUI()
