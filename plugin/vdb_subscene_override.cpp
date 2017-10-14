@@ -376,6 +376,25 @@ namespace MHWRender {
             container.add(bounding_box);
         }
 
+        MHWRender::MRenderItem* selection_bounding_box = container.find("selection_bounding_box");
+        if (selection_bounding_box == nullptr) {
+            selection_bounding_box = MHWRender::MRenderItem::Create(
+                "selection_bounding_box",
+                MHWRender::MRenderItem::NonMaterialSceneItem,
+                MHWRender::MGeometry::kTriangles);
+            selection_bounding_box->enable(true);
+            selection_bounding_box->setDrawMode(MHWRender::MGeometry::kSelectionOnly);
+            selection_bounding_box->depthPriority(MHWRender::MRenderItem::sSelectionDepthPriority);
+
+            MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
+                MHWRender::MShaderManager::k3dSolidShader, nullptr, nullptr);
+            if (shader) {
+                selection_bounding_box->setShader(shader);
+            }
+
+            container.add(selection_bounding_box);
+        }
+
         MHWRender::MRenderItem* point_cloud = container.find("point_cloud");
         if (point_cloud == nullptr) {
             point_cloud = MHWRender::MRenderItem::Create("point_cloud",
@@ -407,6 +426,7 @@ namespace MHWRender {
             data->old_bounding_box_enabled = bounding_box->isEnabled();
             point_cloud->enable(false);
             bounding_box->enable(false);
+            selection_bounding_box->enable(false);
             return;
         } else {
             point_cloud->enable(data->old_point_cloud_enabled);
@@ -425,10 +445,14 @@ namespace MHWRender {
             }
 
             setInstanceTransformArray(*bounding_box, matrix_arr);
+            if (matrix_arr.length() == 1)
+                selection_bounding_box->setMatrix(&matrix_arr[0]);
+            else
+                setInstanceTransformArray(*selection_bounding_box, matrix_arr);
         };
 
         if (data->data_has_changed) {
-            auto setup_bounding_box = [this, &data]() -> bool {
+            auto setup_bounding_box = [this, &data, selection_bounding_box]() -> bool {
                 MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(this->p_bbox_position->acquire(8, true));
                 MFloatVector min = data->bbox.min();
                 MFloatVector max = data->bbox.max();
@@ -448,6 +472,14 @@ namespace MHWRender {
                 bbox_vertices[7] = MFloatVector(max.x, min.y, max.z);
                 this->p_bbox_position->commit(bbox_vertices);
                 set_bbox_indices(1, this->p_bbox_indices.get());
+
+                // Selection bbox.
+                p_selection_bbox_indices.reset(new MHWRender::MIndexBuffer(MHWRender::MGeometry::kUnsignedInt32));
+                set_bbox_indices_triangles(1, p_selection_bbox_indices.get());
+                MHWRender::MVertexBufferArray vertex_buffers;
+                vertex_buffers.addBuffer("", p_bbox_position.get());
+                setGeometryForRenderItem(*selection_bounding_box, vertex_buffers, *p_selection_bbox_indices.get(), &data->bbox);
+
                 return ret;
             };
 

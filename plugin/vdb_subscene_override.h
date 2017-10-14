@@ -35,6 +35,7 @@ namespace MHWRender {
 
         std::unique_ptr<MVertexBuffer> p_bbox_position;
         std::unique_ptr<MIndexBuffer> p_bbox_indices;
+        std::unique_ptr<MIndexBuffer> p_selection_bbox_indices;
 
         std::unique_ptr<MVertexBuffer> p_position_buffer;
         std::unique_ptr<MVertexBuffer> p_color_buffer;

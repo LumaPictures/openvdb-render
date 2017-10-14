@@ -229,3 +229,56 @@ inline void set_bbox_indices(const unsigned int num_bboxes, MHWRender::MIndexBuf
     }
     bbox_indices->commit(indices);
 }
+
+inline void set_bbox_indices_triangles(const unsigned int num_bboxes, MHWRender::MIndexBuffer* bbox_indices)
+{
+    unsigned int* indices = reinterpret_cast<unsigned int*>(bbox_indices->acquire(36 * num_bboxes, true));
+    unsigned int id = 0;
+    for (unsigned int bbox = 0; bbox < num_bboxes; ++bbox)
+    {
+        const unsigned int bbox_base = bbox * 8;
+
+        indices[id++] = bbox_base + 0; // mmm
+        indices[id++] = bbox_base + 1; // mMm
+        indices[id++] = bbox_base + 3; // mmM
+        indices[id++] = bbox_base + 3; // mmM
+        indices[id++] = bbox_base + 1; // mMm
+        indices[id++] = bbox_base + 2; // mMM
+
+        indices[id++] = bbox_base + 4; // Mmm
+        indices[id++] = bbox_base + 7; // MmM
+        indices[id++] = bbox_base + 5; // MMm
+        indices[id++] = bbox_base + 5; // MMm
+        indices[id++] = bbox_base + 7; // MmM
+        indices[id++] = bbox_base + 6; // MMM
+
+        indices[id++] = bbox_base + 0; // mmm
+        indices[id++] = bbox_base + 4; // Mmm
+        indices[id++] = bbox_base + 1; // mMm
+        indices[id++] = bbox_base + 1; // mMm
+        indices[id++] = bbox_base + 4; // Mmm
+        indices[id++] = bbox_base + 5; // MMm
+
+        indices[id++] = bbox_base + 3; // mmM
+        indices[id++] = bbox_base + 2; // mMM
+        indices[id++] = bbox_base + 7; // MmM
+        indices[id++] = bbox_base + 7; // MmM
+        indices[id++] = bbox_base + 2; // mMM
+        indices[id++] = bbox_base + 6; // MMM
+
+        indices[id++] = bbox_base + 0; // mmm
+        indices[id++] = bbox_base + 3; // mmM
+        indices[id++] = bbox_base + 4; // Mmm
+        indices[id++] = bbox_base + 4; // Mmm
+        indices[id++] = bbox_base + 3; // mmM
+        indices[id++] = bbox_base + 7; // MmM
+
+        indices[id++] = bbox_base + 1; // mMm
+        indices[id++] = bbox_base + 5; // MMm
+        indices[id++] = bbox_base + 2; // mMM
+        indices[id++] = bbox_base + 2; // mMM
+        indices[id++] = bbox_base + 5; // MMm
+        indices[id++] = bbox_base + 6; // MMM
+    }
+    bbox_indices->commit(indices);
+}
