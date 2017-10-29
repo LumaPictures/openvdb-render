@@ -603,7 +603,7 @@ MStatus VDBVisualizerShape::initialize()
     eAttr.setDefault(SHADER_MODE_DEFAULT);
     addAttribute(s_shader_mode);
 
-    s_simple_shader_params.create_params(false);
+    s_simple_shader_params.create_params();
 
     MObject display_params[] = {
         s_point_size, s_point_jitter, s_point_skip, s_override_shader, s_shader_mode

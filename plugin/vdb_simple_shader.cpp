@@ -19,7 +19,7 @@ VDBSimpleShaderParams::VDBSimpleShaderParams() :
 
 }
 
-void VDBSimpleShaderParams::create_params(bool add_shared)
+void VDBSimpleShaderParams::create_params()
 {
     MFnNumericAttribute nAttr;
     MFnTypedAttribute tAttr;
@@ -78,29 +78,26 @@ void VDBSimpleShaderParams::create_params(bool add_shared)
     opacity_gradient.create_params();
     fire_gradient.create_params();
 
-    if (add_shared) {
-        anisotropy = nAttr.create("anisotropy", "anisotropy", MFnNumericData::kFloat);
-        nAttr.setDefault(0.0f);
-        nAttr.setMin(-1.0f);
-        nAttr.setMax(1.0f);
-        MPxNode::addAttribute(anisotropy);
+    anisotropy = nAttr.create("anisotropy", "anisotropy", MFnNumericData::kFloat);
+    nAttr.setDefault(0.0f);
+    nAttr.setMin(-1.0f);
+    nAttr.setMax(1.0f);
+    MPxNode::addAttribute(anisotropy);
 
-        position_offset = nAttr.createPoint("positionOffset", "position_offset");
-        nAttr.setDefault(0.0, 0.0, 0.0);
-        MPxNode::addAttribute(position_offset);
+    position_offset = nAttr.createPoint("positionOffset", "position_offset");
+    nAttr.setDefault(0.0, 0.0, 0.0);
+    MPxNode::addAttribute(position_offset);
 
-        interpolation = eAttr.create("interpolation", "interpolation");
-        eAttr.addField("Closest", 0);
-        eAttr.addField("Trilinear", 1);
-        eAttr.addField("Tricubic", 2);
-        eAttr.setDefault(1);
-        MPxNode::addAttribute(interpolation);
+    interpolation = eAttr.create("interpolation", "interpolation");
+    eAttr.addField("Closest", 0);
+    eAttr.addField("Trilinear", 1);
+    eAttr.addField("Tricubic", 2);
+    eAttr.setDefault(1);
+    MPxNode::addAttribute(interpolation);
 
-        compensate_scaling = nAttr.create("compensateScaling", "compensate_scaling", MFnNumericData::kBoolean);
-        nAttr.setDefault(true);
-        MPxNode::addAttribute(compensate_scaling);
-
-    }
+    compensate_scaling = nAttr.create("compensateScaling", "compensate_scaling", MFnNumericData::kBoolean);
+    nAttr.setDefault(true);
+    MPxNode::addAttribute(compensate_scaling);
 }
 
 void VDBSimpleShaderParams::affect_output(MObject& out_object)
@@ -176,6 +173,6 @@ MStatus VDBSimpleShaderNode::initialize()
     nAttr.setWritable(false);
     addAttribute(out_color);
 
-    s_params.create_params(true);
+    s_params.create_params();
     return MS::kSuccess;
 }

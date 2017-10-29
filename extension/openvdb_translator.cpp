@@ -119,11 +119,7 @@ AtNode* OpenvdbTranslator::CreateArnoldNodes()
     if (IsMasterInstance()) {
         AtNode* volume = AddArnoldNode("volume");
         if (!FindMayaPlug("overrideShader").asBool()) {
-            if (FindMayaPlug("shaderMode").asShort() == 0) {
-                AddArnoldNode("openvdb_shader", "shader");
-            } else {
-                AddArnoldNode("openvdb_simple_shader", "shader");
-            }
+            AddArnoldNode("openvdb_simple_shader", "shader");
         }
         return volume;
     } else {

@@ -9,7 +9,7 @@
 struct VDBSimpleShaderParams {
     VDBSimpleShaderParams();
 
-    void create_params(bool add_shared);
+    void create_params();
 
     void affect_output(MObject& out_object);
 
