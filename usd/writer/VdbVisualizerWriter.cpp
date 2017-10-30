@@ -150,10 +150,10 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     VtVec3fArray extents(2);
     extents[0] = GfVec3f(bbox_min[0], bbox_min[1], bbox_min[2]);
     extents[1] = GfVec3f(bbox_max[0], bbox_max[1], bbox_max[2]);
-    primSchema.GetExtentAttr().Set(extents, usdTime);
+    primSchema.CreateExtentAttr().Set(extents, usdTime);
 
     const auto sampling_quality = volume_node.findPlug("samplingQuality").asFloat();
-    primSchema.GetStepSizeAttr().Set(volume_node.findPlug("voxelSize").asFloat() / (sampling_quality / 100.0f), usdTime);
+    primSchema.CreateStepSizeAttr().Set(volume_node.findPlug("voxelSize").asFloat() / (sampling_quality / 100.0f), usdTime);
     shapeApi.CreateAiMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
     shapeApi.CreateAiReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
     shapeApi.CreateAiSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
