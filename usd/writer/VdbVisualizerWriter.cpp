@@ -136,7 +136,7 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     // some of the attributes that don't need to be animated has to be exported here
     if (usdTime.IsDefault()) {
         has_velocity_grids = export_grids(mUsdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
-        primSchema.GetDsoAttr().Set(std::string("volume_openvdb"));
+        primSchema.CreateDsoAttr().Set(std::string("volume_openvdb"));
     }
 
     if (usdTime.IsDefault() == getArgs().exportAnimation) {
