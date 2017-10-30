@@ -24,7 +24,11 @@ node_loader
             break;
         case SHADER_SIMPLE_OPENVDB:
             node->methods = openvdbSimpleShaderMethods;
+#ifdef ARNOLD5
+            node->output_type = AI_TYPE_CLOSURE;
+#else
             node->output_type = AI_TYPE_RGB;
+#endif
             node->name = "openvdb_simple_shader";
             node->node_type = AI_NODE_SHADER;
             break;
