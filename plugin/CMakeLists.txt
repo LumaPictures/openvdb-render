@@ -2,7 +2,7 @@ set(PLUGIN_NAME openvdb_render)
 
 add_definitions(-D_BOOL -DREQUIRE_IOSTREAM)
 
-if (CMAKE_SYSTEM_NAME EQUAL "Linux")
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_definitions(-DLINUX -pthread)
 endif ()
 
