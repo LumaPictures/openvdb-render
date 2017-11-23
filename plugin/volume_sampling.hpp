@@ -55,6 +55,33 @@ Result sampleGrid(
 
 namespace detail {
 
+template <typename VecT>
+inline typename VecT::value_type maxComponentValue(const VecT& v)
+{
+    return std::max(std::max(v.x(), v.y()), v.z());
+}
+
+template <typename VecT>
+inline typename VecT::value_type getLOD(const VecT& v)
+{
+    return std::log2(maxComponentValue(v));
+}
+
+template <typename T>
+struct identity { using type = T; };
+
+template <typename T> inline
+T clamp(T val, typename identity<T>::type floor, typename identity<T>::type ceil)
+{
+    return std::min(ceil, std::max(floor, val));
+}
+
+template <typename T> inline
+T unlerp(typename identity<T>::type a, typename identity<T>::type b, T x)
+{
+    return (x - a) / (b - a);
+}
+
 inline openvdb::CoordBBox
 getIndexSpaceBoundingBox(const openvdb::GridBase& grid)
 {
@@ -199,33 +226,6 @@ Result sampleVolume(
     });
 
     return Result::SUCCESS;
-}
-
-template <typename VecT>
-inline typename VecT::value_type maxComponentValue(const VecT& v)
-{
-    return std::max(std::max(v.x(), v.y()), v.z());
-}
-
-template <typename VecT>
-inline typename VecT::value_type getLOD(const VecT& v)
-{
-    return std::log2(maxComponentValue(v));
-}
-
-template <typename T>
-struct identity { typedef T type; };
-
-template <typename T>
-T clamp(T val, typename identity<T>::type floor, typename identity<T>::type ceil)
-{
-    return std::min(ceil, std::max(floor, val));
-}
-
-template <typename T>
-T unlerp(typename identity<T>::type a, typename identity<T>::type b, T x)
-{
-    return (x - a) / (b - a);
 }
 
 } // namespace detail

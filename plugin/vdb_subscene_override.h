@@ -126,7 +126,7 @@ namespace MHWRender {
         VDBSubSceneOverrideData();
         ~VDBSubSceneOverrideData();
         void clear();
-        bool VDBSubSceneOverrideData::update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context);
+        bool update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context);
     };
 
 }
