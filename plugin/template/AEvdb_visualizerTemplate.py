@@ -1,7 +1,20 @@
 import pymel.core as pm
+import maya.cmds
 import re, os
 
 from channelController import channelController
+
+
+class CacheLimit:
+    def __init__(self):
+        self.limit = maya.cmds.vdb_visualizer_volume_cache(query=True, limit=True)
+
+    def get(self):
+        return self.limit
+
+    def set(self, new_limit):
+        self.limit = new_limit
+
 
 class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
     def delete_ui(self, ui):
@@ -42,6 +55,13 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
                                                               text=pm.getAttr(param_name))])
         self.clear_popups(grp)
         pm.popupMenu(parent=grp, postMenuCommand=lambda popup, popup_parent: AEvdb_visualizerTemplate.setup_popup_menu_elems(popup, popup_parent, param_name))
+
+    def add_channel_control(self, annotation, channel_name, param_name):
+        def create_func(param_name):
+            self.create_channel(annotation, channel_name, param_name)
+        def update_func(param_name):
+            self.update_channel(channel_name, param_name)
+        self.callCustom(create_func, update_func, param_name)
 
     # TODO : maybe use something like templates in c++?
     def create_scattering_channel(self, param_name):
@@ -126,6 +146,41 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         vdb_path = pm.getAttr(param_name)
         pm.textFieldButtonGrp("OpenVDBPathGrp", edit=True, text="" if vdb_path is None else vdb_path,
                               changeCommand=lambda val: pm.setAttr(param_name, val), buttonCommand=lambda: AEvdb_visualizerTemplate.press_vdb_path(param_name))
+
+    def create_volume_cache_limit_slider(self, param_name):
+        pm.floatSliderButtonGrp("VDBVisualizerVolumeCacheLimit", label="Volume Cache Limit (GB)", buttonLabel="Update",
+                                field=True, columnWidth4=(144,70,0,20), columnAttach=(1,'right',5),
+                                minValue=0, maxValue=10, precision=0, step=1, sliderStep=1, fieldStep=1)
+        self.update_volume_cache_limit_slider(param_name)
+
+    def update_volume_cache_limit_slider(self, param_name):
+        cache_limit = CacheLimit()
+
+        def button_command():
+            maya.cmds.vdb_visualizer_volume_cache(edit=True, limit=cache_limit.get())
+            maya.cmds.vdb_visualizer_volume_cache(limit=True)
+
+        control = pm.floatSliderButtonGrp("VDBVisualizerVolumeCacheLimit", edit=True,
+                                          value=cache_limit.get(),
+                                          changeCommand=lambda val: cache_limit.set(round(val)),
+                                          buttonCommand=button_command)
+        control.dragCommand(lambda val: control.setValue(round(val)))
+
+    def create_voxel_type_menu(self, param_name):
+        def change_command(item):
+            maya.cmds.vdb_visualizer_volume_cache(edit=True, voxelType=item)
+            maya.cmds.vdb_visualizer_volume_cache(voxelType=True)
+
+        menu = pm.optionMenuGrp("VDBVisualizerVolumeCacheVoxelType",
+                               label="Volume Cache Precision",
+                               changeCommand=change_command).menu()
+        menu.addItems(["half", "float"])
+        menu.setWidth(70)
+        self.update_voxel_type_menu(param_name)
+
+    def update_voxel_type_menu(self, param_name):
+        menu = pm.optionMenuGrp("VDBVisualizerVolumeCacheVoxelType", edit=True).menu()
+        menu.setValue(maya.cmds.vdb_visualizer_volume_cache(query=True, voxelType=True))
 
     def create_channel_stats(self, param_name):
         pm.text("OpenVDBChannelStats", label=pm.getAttr(param_name), align="left")
@@ -260,6 +315,15 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl("pointSkip", label="Point Skip")
         self.addControl("pointSort", label="Point Sort")
 
+        self.addSeparator()
+        self.addControl("sliceCount", label="Slice Count")
+        self.addControl("shadowGain", label="Shadow Gain")
+        self.addControl("shadowSampleCount", label="Shadow Sample Count")
+
+        self.addSeparator()
+        self.callCustom(self.create_volume_cache_limit_slider, self.update_volume_cache_limit_slider, "dummy_attr_1")
+        self.callCustom(self.create_voxel_type_menu, self.update_voxel_type_menu, "dummy_attr_2")
+
         self.endLayout()
 
         self.beginLayout("Render Parameters", collapse=False)
@@ -318,6 +382,53 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.addControl("fireIntensity", label="Intensity")
         self.create_gradient_params("simpleFire", node_name)
         self.endLayout()
+
+        self.endLayout()
+
+        self.beginLayout("Standard Volume shader", collapse=False)
+
+        def AddRamp(ramp_name):
+            pm.mel.eval('source AEaddRampControl.mel; AEaddRampControl("%s.%s")' % (node_name, ramp_name))
+
+        self.beginLayout("Density", collapse=False)
+        self.addControl("sv_density", label="Density")
+        self.add_channel_control("Density Channel", "StandardVolumeDensity", "sv_density_channel")
+        self.addControl("sv_density_source", label="Channel Mode")
+        AddRamp("svDensityRamp")
+        self.endLayout()
+
+        self.beginLayout("Scatter", collapse=False)
+        self.addControl("sv_scatter", label="Weight")
+        self.addControl("sv_scatter_color", label="Color")
+        self.add_channel_control("Color Channel", "StandardVolumeScatter",  "sv_scatter_color_channel")
+        self.addControl("sv_scatter_color_source", label="Channel Mode")
+        self.addControl("sv_scatter_anisotropy", label="Anisotropy")
+        AddRamp("svScatterColorRamp")
+        self.endLayout()
+
+        self.beginLayout("Transparent", collapse=False)
+        self.addControl("sv_transparent", label="Weight")
+        self.add_channel_control("Channel", "StandardVolumeTransparent", "sv_transparent_channel")
+        self.endLayout()
+
+        self.beginLayout("Emission", collapse=False)
+        self.addControl("sv_emission_mode", label="Mode")
+        self.addControl("sv_emission", label="Weight")
+        self.addControl("sv_emission_color", label="Color")
+        self.add_channel_control("Channel", "StandardVolumeEmission", "sv_emission_channel")
+        self.addControl("sv_emission_source", label="Channel Mode")
+        AddRamp("svEmissionRamp")
+        self.endLayout()
+
+        self.beginLayout("Temperature", collapse=False)
+        self.addControl("sv_temperature", label="Temperature")
+        self.add_channel_control("Channel", "StandardVolumeTemperature", "sv_temperature_channel")
+        self.addControl("sv_blackbody_kelvin", label="Blackbody Kelvin")
+        self.addControl("sv_blackbody_intensity", label="Blackbody Intensity")
+        self.endLayout()
+
+        self.endLayout()
+
 
         self.endLayout()
 

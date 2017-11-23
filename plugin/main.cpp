@@ -8,7 +8,7 @@
 #include "vdb_sampler.h"
 #include "vdb_simple_shader.h"
 
-MStatus initializePlugin(MObject obj)
+PLUGIN_EXPORT MStatus initializePlugin(MObject obj)
 {
     const bool is_interactive = MGlobal::mayaState() == MGlobal::kInteractive;
     MStatus status = MS::kFailure;
@@ -63,6 +63,13 @@ MStatus initializePlugin(MObject obj)
         return status;
     }
 
+    status = plugin.registerCommand(VDBVolumeCacheCmd::COMMAND_STRING, VDBVolumeCacheCmd::creator, VDBVolumeCacheCmd::create_syntax);
+
+    if (!status) {
+        status.perror("[openvdb] Error registering the VDBVolumeCacheCmd Command.");
+        return status;
+    }
+
     if (is_interactive) {
         MGlobal::executePythonCommand(
             "import AEvdb_visualizerTemplate; import AEvdb_samplerTemplate; import AEvdb_shaderTemplate");
@@ -71,7 +78,7 @@ MStatus initializePlugin(MObject obj)
     return status;
 }
 
-MStatus uninitializePlugin(MObject obj)
+PLUGIN_EXPORT MStatus uninitializePlugin(MObject obj)
 {
     MStatus status = MS::kSuccess;
 
@@ -112,6 +119,13 @@ MStatus uninitializePlugin(MObject obj)
 
     if (!status) {
         status.perror("[openvdb] Error deregistering the VDBQuery Command.");
+        return status;
+    }
+
+    status = plugin.deregisterCommand(VDBVolumeCacheCmd::COMMAND_STRING);
+
+    if (!status) {
+        status.perror("[openvdb] Error deregistering the VDBVolumeCacheCmd Command.");
         return status;
     }
 

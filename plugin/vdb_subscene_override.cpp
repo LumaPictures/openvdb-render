@@ -1,7 +1,9 @@
 #include "vdb_subscene_override.h"
 
 #include "vdb_maya_utils.hpp"
+#ifdef USE_CUDA
 #include "point_sorter.h"
+#endif
 
 #include <maya/MGlobal.h>
 #include <maya/MFnDagNode.h>
@@ -11,6 +13,8 @@
 #include <tbb/task_scheduler_init.h>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_sort.h>
+
+#include <GL/glext.h>
 
 #include <new>
 #include <random>
@@ -150,195 +154,206 @@ namespace MHWRender {
         }
     }
 
-    // we are storing an extra float here to have better memory alignment
-    struct PointCloudVertex {
-        MFloatPoint position;
-        MColor color;
-
-        PointCloudVertex() : position(0.0f, 0.0f, 0.0f, 0.0f), color(0.0f, 0.0f, 0.0f, 0.0f) {
-
-        }
-
-        PointCloudVertex(const MFloatPoint& p) : position(p), color(0.0f, 0.0f, 0.0f, 0.0f) {
-
-        }
-    };
-
+#ifdef USE_CUDA
     static_assert(sizeof(PointCloudVertex) == sizeof(PointData), "CPU and GPU data structures differ in size for point clouds!");
+#endif
 
-    struct VDBSubSceneOverrideData {
-        MBoundingBox bbox;
+    VDBSubSceneOverrideData::VDBSubSceneOverrideData() :
+        last_camera_direction(0.0, 0.0, 0.0),
+        voxel_size(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(),
+                   std::numeric_limits<float>::infinity()),
+        point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
+        vertex_count(0), point_skip(-1), update_trigger(-1),
+        display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_SIMPLE),
+        sliced_display_changes(VDBSlicedDisplayChangeSet::NO_CHANGES),
+        data_has_changed(false), shader_has_changed(false), camera_has_changed(false), world_has_changed(false),
+        visible(true), old_bounding_box_enabled(true), old_point_cloud_enabled(true)
+    {
+        for (unsigned int x = 0; x < 4; ++x) {
+            for (unsigned int y = 0; y < 4; ++y) {
+                camera_matrix(x, y) = std::numeric_limits<float>::infinity();
+            }
+        }
+    }
 
-        // We need to handle all the instances
-        std::vector<MMatrix> world_matrices;
-        std::vector<PointCloudVertex> point_cloud_data;
+    VDBSubSceneOverrideData::~VDBSubSceneOverrideData()
+    {
+        clear();
+    }
 
-        MMatrix camera_matrix;
-        MVector last_camera_direction;
+    void VDBSubSceneOverrideData::clear()
+    {
+        scattering_grid = 0;
+        attenuation_grid = 0;
+        emission_grid = 0;
+        vdb_file.reset();
+    }
 
-        MFloatVector scattering_color;
-        MFloatVector attenuation_color;
-        MFloatVector emission_color;
+    bool VDBSubSceneOverrideData::update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context)
+    {
+        MFnDagNode dgNode(obj);
 
-        std::string attenuation_channel;
-        std::string scattering_channel;
-        std::string emission_channel;
-
-        Gradient scattering_gradient;
-        Gradient attenuation_gradient;
-        Gradient emission_gradient;
-
-        std::unique_ptr<openvdb::io::File> vdb_file;
-        openvdb::GridBase::ConstPtr scattering_grid;
-        openvdb::GridBase::ConstPtr attenuation_grid;
-        openvdb::GridBase::ConstPtr emission_grid;
-
-        openvdb::Vec3f voxel_size;
-
-        float point_size;
-        float point_jitter;
-
-        int vertex_count;
-        int point_skip;
-        int update_trigger;
-        VDBDisplayMode display_mode;
-        VDBShaderMode shader_mode;
-
-        bool data_has_changed;
-        bool shader_has_changed;
-        bool camera_has_changed;
-        bool world_has_changed;
-        bool visible;
-        bool old_bounding_box_enabled;
-        bool old_point_cloud_enabled;
-
-        VDBSubSceneOverrideData() :
-            last_camera_direction(0.0, 0.0, 0.0),
-            voxel_size(std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity(),
-                       std::numeric_limits<float>::infinity()),
-            point_size(std::numeric_limits<float>::infinity()), point_jitter(std::numeric_limits<float>::infinity()),
-            vertex_count(0), point_skip(-1), update_trigger(-1),
-            display_mode(DISPLAY_AXIS_ALIGNED_BBOX), shader_mode(SHADER_MODE_SIMPLE),
-            data_has_changed(false), shader_has_changed(false), camera_has_changed(false), world_has_changed(false),
-            visible(true), old_bounding_box_enabled(true), old_point_cloud_enabled(true)
-        {
-            for (unsigned int x = 0; x < 4; ++x) {
-                for (unsigned int y = 0; y < 4; ++y) {
-                    camera_matrix(x, y) = std::numeric_limits<float>::infinity();
+        auto path_is_visible = [](const MDagPath& dg_in) -> bool {
+            MDagPath dg_copy = dg_in;
+            MFnDagNode dg_node;
+            for (MStatus status = MS::kSuccess; status; status = dg_copy.pop()) {
+                dg_node.setObject(dg_copy.node());
+                if (dg_node.isIntermediateObject()) {
+                    return false;
+                } else if (!dg_node.findPlug("visibility").asBool()) {
+                    return false;
                 }
+            }
+            return true;
+        };
+
+        static std::vector<MMatrix> inc_world_matrices;
+        static MDagPathArray paths;
+        inc_world_matrices.clear();
+        paths.clear();
+        dgNode.getAllPaths(paths);
+        const auto pathCount = paths.length();
+        inc_world_matrices.reserve(pathCount);
+        for (auto i = decltype(pathCount){0}; i < pathCount; ++i) {
+            const auto path = paths[i];
+            if (path_is_visible(path)) {
+                inc_world_matrices.push_back(path.inclusiveMatrix());
             }
         }
 
-        ~VDBSubSceneOverrideData()
-        {
+        if (world_matrices != inc_world_matrices) {
+            world_has_changed = true;
+            world_matrices = inc_world_matrices;
+        }
+
+        const auto inc_camera_matrix = frame_context.getMatrix(MFrameContext::kViewMtx);
+        if (camera_matrix != inc_camera_matrix) {
+            camera_has_changed = true;
+            camera_matrix = inc_camera_matrix;
+        }
+        const bool matrix_changed = world_has_changed | camera_has_changed;
+        // TODO: we can limit some of the comparisons to the display mode
+        // ie, we don't need to compare certain things if we are using the bounding
+        // box mode
+
+        const bool visibility_changed = setup_parameter(visible, !inc_world_matrices.empty());
+
+        if (data == nullptr || update_trigger == data->update_trigger) {
+            return matrix_changed | visibility_changed;
+        }
+
+        update_trigger = data->update_trigger;
+
+        const std::string& filename = data->vdb_path;
+        bool file_has_changed = false;
+        auto open_file = [&]() {
+            file_has_changed = true;
+            clear();
+
+            try {
+                vdb_file.reset(new openvdb::io::File(filename));
+            }
+            catch (...) {
+                vdb_file.reset();
+            }
+        };
+
+        const auto old_filename = this->vdb_file ? this->vdb_file->filename() : "";
+        const auto filename_changed = old_filename != filename;
+        const auto old_uuid = this->vdb_file ? this->vdb_file->getUniqueTag() : "";
+        const auto uuid_changed = data->vdb_file != nullptr && !data->vdb_file->isIdentical(old_uuid);
+        if (filename_changed || uuid_changed) {
+            open_file();
+        } else if (filename.empty() && this->vdb_file != nullptr) {
+            file_has_changed = true;
             clear();
         }
+        data_has_changed |= file_has_changed;
 
-        void clear()
-        {
-            scattering_grid = 0;
-            attenuation_grid = 0;
-            emission_grid = 0;
-            vdb_file.reset();
+        const bool display_mode_changed = setup_parameter(display_mode, data->display_mode);
+        const bool bbox_changed = setup_parameter(bbox, data->bbox);
+        data_has_changed |= display_mode_changed | bbox_changed;
+        data_has_changed |= setup_parameter(shader_mode, data->shader_mode);
+        data_has_changed |= setup_parameter(scattering_color, data->scattering_color);
+        data_has_changed |= setup_parameter(attenuation_color, data->attenuation_color);
+        data_has_changed |= setup_parameter(emission_color, data->emission_color);
+        data_has_changed |= setup_parameter(attenuation_channel, data->attenuation_channel);
+        data_has_changed |= setup_parameter(scattering_channel, data->scattering_channel);
+        data_has_changed |= setup_parameter(emission_channel, data->emission_channel);
+        data_has_changed |= setup_parameter(scattering_gradient, data->scattering_gradient);
+        data_has_changed |= setup_parameter(attenuation_gradient, data->attenuation_gradient);
+        data_has_changed |= setup_parameter(emission_gradient, data->emission_gradient);
+        data_has_changed |= setup_parameter(point_skip, data->point_skip);
+
+        shader_has_changed |= setup_parameter(point_size, data->point_size);
+        shader_has_changed |= setup_parameter(point_jitter, data->point_jitter);
+
+        if (display_mode == DISPLAY_SLICED) {
+            if (display_mode_changed) {
+                sliced_display_changes = VDBSlicedDisplayChangeSet::ALL;
+            }
+
+            bool shader_param_changed = false;
+            shader_param_changed |= setup_parameter(sliced_display_data.density, data->sliced_display_data.density);
+            shader_param_changed |= setup_parameter(sliced_display_data.density_ramp.input_min, data->sliced_display_data.density_ramp.input_min);
+            shader_param_changed |= setup_parameter(sliced_display_data.density_ramp.input_max, data->sliced_display_data.density_ramp.input_max);
+            shader_param_changed |= setup_parameter(sliced_display_data.density_source, data->sliced_display_data.density_source);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter, data->sliced_display_data.scatter);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_color, data->sliced_display_data.scatter_color);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_color_ramp.input_min, data->sliced_display_data.scatter_color_ramp.input_min);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_color_ramp.input_max, data->sliced_display_data.scatter_color_ramp.input_max);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_color_source, data->sliced_display_data.scatter_color_source);
+            shader_param_changed |= setup_parameter(sliced_display_data.scatter_anisotropy, data->sliced_display_data.scatter_anisotropy);
+            shader_param_changed |= setup_parameter(sliced_display_data.transparent, data->sliced_display_data.transparent);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_mode, data->sliced_display_data.emission_mode);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission, data->sliced_display_data.emission);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_color, data->sliced_display_data.emission_color);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_ramp.input_min, data->sliced_display_data.emission_ramp.input_min);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_ramp.input_max, data->sliced_display_data.emission_ramp.input_max);
+            shader_param_changed |= setup_parameter(sliced_display_data.emission_source, data->sliced_display_data.emission_source);
+            shader_param_changed |= setup_parameter(sliced_display_data.temperature, data->sliced_display_data.temperature);
+            shader_param_changed |= setup_parameter(sliced_display_data.blackbody_kelvin, data->sliced_display_data.blackbody_kelvin);
+            shader_param_changed |= setup_parameter(sliced_display_data.blackbody_intensity, data->sliced_display_data.blackbody_intensity);
+            shader_param_changed |= setup_parameter(sliced_display_data.shadow_sample_count, data->sliced_display_data.shadow_sample_count);
+            shader_param_changed |= setup_parameter(sliced_display_data.shadow_gain, data->sliced_display_data.shadow_gain);
+            if (shader_param_changed)
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::SHADER_PARAM;
+
+            if (setup_parameter(sliced_display_data.slice_count, data->sliced_display_data.slice_count)) {
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::SLICE_COUNT;
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::ALL_CHANNELS;
+            }
+
+            if (bbox_changed)
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::BOUNDING_BOX;
+
+            if (setup_parameter(sliced_display_data.density_ramp.samples, data->sliced_display_data.density_ramp.samples))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::DENSITY_RAMP_SAMPLES;
+            if (setup_parameter(sliced_display_data.scatter_color_ramp.samples, data->sliced_display_data.scatter_color_ramp.samples))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::SCATTER_COLOR_RAMP_SAMPLES;
+            if (setup_parameter(sliced_display_data.emission_ramp.samples, data->sliced_display_data.emission_ramp.samples))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::EMISSION_RAMP_SAMPLES;
+
+            if (setup_parameter(sliced_display_data.density_channel, data->sliced_display_data.density_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::DENSITY_CHANNEL;
+            if (setup_parameter(sliced_display_data.scatter_color_channel, data->sliced_display_data.scatter_color_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::SCATTER_COLOR_CHANNEL;
+            if (setup_parameter(sliced_display_data.transparent_channel, data->sliced_display_data.transparent_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::TRANSPARENT_CHANNEL;
+            if (setup_parameter(sliced_display_data.emission_channel, data->sliced_display_data.emission_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::EMISSION_CHANNEL;
+            if (setup_parameter(sliced_display_data.temperature_channel, data->sliced_display_data.temperature_channel))
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::TEMPERATURE_CHANNEL;
+
+            if (file_has_changed) {
+                sliced_display_changes |= VDBSlicedDisplayChangeSet::ALL_CHANNELS;
+            }
+
+            data_has_changed |= (sliced_display_changes != VDBSlicedDisplayChangeSet::NO_CHANGES);
         }
 
-        bool update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context)
-        {
-            MFnDagNode dgNode(obj);
-
-            auto path_is_visible = [](const MDagPath& dg_in) -> bool {
-                MDagPath dg_copy = dg_in;
-                MFnDagNode dg_node;
-                for (MStatus status = MS::kSuccess; status; status = dg_copy.pop()) {
-                    dg_node.setObject(dg_copy.node());
-                    if (dg_node.isIntermediateObject()) {
-                        return false;
-                    } else if (!dg_node.findPlug("visibility").asBool()) {
-                        return false;
-                    }
-                }
-                return true;
-            };
-
-            static std::vector<MMatrix> inc_world_matrices;
-            static MDagPathArray paths;
-            inc_world_matrices.clear();
-            paths.clear();
-            dgNode.getAllPaths(paths);
-            const auto pathCount = paths.length();
-            inc_world_matrices.reserve(pathCount);
-            for (auto i = decltype(pathCount){0}; i < pathCount; ++i) {
-                const auto path = paths[i];
-                if (path_is_visible(path)) {
-                    inc_world_matrices.push_back(path.inclusiveMatrix());
-                }
-            }
-
-            if (world_matrices != inc_world_matrices) {
-                world_has_changed = true;
-                world_matrices = inc_world_matrices;
-            }
-
-            const auto inc_camera_matrix = frame_context.getMatrix(MFrameContext::kViewMtx);
-            if (camera_matrix != inc_camera_matrix) {
-                camera_has_changed = true;
-                camera_matrix = inc_camera_matrix;
-            }
-            const bool matrix_changed = world_has_changed | camera_has_changed;
-            // TODO: we can limit some of the comparisons to the display mode
-            // ie, we don't need to compare certain things if we are using the bounding
-            // box mode
-
-            const bool visibility_changed = setup_parameter(visible, !inc_world_matrices.empty());
-
-            if (data == nullptr || update_trigger == data->update_trigger) {
-                return matrix_changed | visibility_changed;
-            }
-
-            update_trigger = data->update_trigger;
-
-            const std::string& filename = data->vdb_path;
-            auto open_file = [&]() {
-                data_has_changed |= true;
-                clear();
-
-                try {
-                    vdb_file.reset(new openvdb::io::File(filename));
-                }
-                catch (...) {
-                    vdb_file.reset();
-                }
-            };
-
-            if (filename.empty()) {
-                data_has_changed |= true;
-                clear();
-            } else if (vdb_file == nullptr) {
-                open_file();
-            } else if (filename != vdb_file->filename()) {
-                open_file();
-            }
-
-            data_has_changed |= setup_parameter(display_mode, data->display_mode);
-            data_has_changed |= setup_parameter(shader_mode, data->shader_mode);
-            data_has_changed |= setup_parameter(bbox, data->bbox);
-            data_has_changed |= setup_parameter(scattering_color, data->scattering_color);
-            data_has_changed |= setup_parameter(attenuation_color, data->attenuation_color);
-            data_has_changed |= setup_parameter(emission_color, data->emission_color);
-            data_has_changed |= setup_parameter(attenuation_channel, data->attenuation_channel);
-            data_has_changed |= setup_parameter(scattering_channel, data->scattering_channel);
-            data_has_changed |= setup_parameter(emission_channel, data->emission_channel);
-            data_has_changed |= setup_parameter(scattering_gradient, data->scattering_gradient);
-            data_has_changed |= setup_parameter(attenuation_gradient, data->attenuation_gradient);
-            data_has_changed |= setup_parameter(emission_gradient, data->emission_gradient);
-            data_has_changed |= setup_parameter(point_skip, data->point_skip);
-
-            shader_has_changed |= setup_parameter(point_size, data->point_size);
-            shader_has_changed |= setup_parameter(point_jitter, data->point_jitter);
-
-            return data_has_changed | shader_has_changed | matrix_changed | visibility_changed;
-        }
-    };
+        return data_has_changed | shader_has_changed | matrix_changed | visibility_changed;
+    }
 
     MString VDBSubSceneOverride::registrantId("VDBVisualizerSubSceneOverride");
 
@@ -351,7 +366,8 @@ namespace MHWRender {
     }
 
     VDBSubSceneOverride::VDBSubSceneOverride(const MObject& obj) : MPxSubSceneOverride(obj),
-                                                                   p_data(new VDBSubSceneOverrideData)
+                                                                   p_data(new VDBSubSceneOverrideData),
+                                                                   m_sliced_display(*this)
     {
         m_object = obj;
         MFnDependencyNode dnode(obj);
@@ -429,6 +445,25 @@ namespace MHWRender {
             container.add(bounding_box);
         }
 
+        MHWRender::MRenderItem* selection_bounding_box = container.find("selection_bounding_box");
+        if (selection_bounding_box == nullptr) {
+            selection_bounding_box = MHWRender::MRenderItem::Create(
+                "selection_bounding_box",
+                MHWRender::MRenderItem::NonMaterialSceneItem,
+                MHWRender::MGeometry::kTriangles);
+            selection_bounding_box->enable(true);
+            selection_bounding_box->setDrawMode(MHWRender::MGeometry::kSelectionOnly);
+            selection_bounding_box->depthPriority(MHWRender::MRenderItem::sSelectionDepthPriority);
+
+            MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
+                MHWRender::MShaderManager::k3dSolidShader, nullptr, nullptr);
+            if (shader) {
+                selection_bounding_box->setShader(shader);
+            }
+
+            container.add(selection_bounding_box);
+        }
+
         MHWRender::MRenderItem* point_cloud = container.find("point_cloud");
         if (point_cloud == nullptr) {
             point_cloud = MHWRender::MRenderItem::Create("point_cloud",
@@ -460,6 +495,8 @@ namespace MHWRender {
             data->old_bounding_box_enabled = bounding_box->isEnabled();
             point_cloud->enable(false);
             bounding_box->enable(false);
+            selection_bounding_box->enable(false);
+            m_sliced_display.enable(false);
             return;
         } else {
             point_cloud->enable(data->old_point_cloud_enabled);
@@ -478,10 +515,15 @@ namespace MHWRender {
             }
 
             setInstanceTransformArray(*bounding_box, matrix_arr);
+            if (matrix_arr.length() == 1)
+                selection_bounding_box->setMatrix(&matrix_arr[0]);
+            else
+                setInstanceTransformArray(*selection_bounding_box, matrix_arr);
+            m_sliced_display.setWorldMatrices(matrix_arr);
         };
 
         if (data->data_has_changed) {
-            auto setup_bounding_box = [this, &data]() -> bool {
+            auto setup_bounding_box = [this, &data, selection_bounding_box]() -> bool {
                 MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(this->p_bbox_position->acquire(8, true));
                 MFloatVector min = data->bbox.min();
                 MFloatVector max = data->bbox.max();
@@ -501,6 +543,14 @@ namespace MHWRender {
                 bbox_vertices[7] = MFloatVector(max.x, min.y, max.z);
                 this->p_bbox_position->commit(bbox_vertices);
                 set_bbox_indices(1, this->p_bbox_indices.get());
+
+                // Selection bbox.
+                p_selection_bbox_indices.reset(new MHWRender::MIndexBuffer(MHWRender::MGeometry::kUnsignedInt32));
+                set_bbox_indices_triangles(1, p_selection_bbox_indices.get());
+                MHWRender::MVertexBufferArray vertex_buffers;
+                vertex_buffers.addBuffer("", p_bbox_position.get());
+                setGeometryForRenderItem(*selection_bounding_box, vertex_buffers, *p_selection_bbox_indices.get(), &data->bbox);
+
                 return ret;
             };
 
@@ -514,6 +564,7 @@ namespace MHWRender {
             if (!file_exists || data->display_mode <= DISPLAY_GRID_BBOX) {
                 point_cloud->enable(false);
                 bounding_box->enable(true);
+                m_sliced_display.enable(false);
                 data->old_point_cloud_enabled = false;
                 data->old_bounding_box_enabled = true;
 
@@ -581,6 +632,7 @@ namespace MHWRender {
                 bounding_box->enable(false);
                 data->old_point_cloud_enabled = false;
                 point_cloud->enable(false);
+                m_sliced_display.enable(false);
                 if (data->display_mode == DISPLAY_POINT_CLOUD) {
                     try {
                         if (!data->vdb_file->isOpen()) {
@@ -763,6 +815,18 @@ namespace MHWRender {
                     p_point_cloud_shader->setParameter("jitter_size", MFloatVector(
                         data->voxel_size.x(), data->voxel_size.y(), data->voxel_size.y()) * data->point_jitter);
 
+                } else if (data->display_mode == DISPLAY_SLICED) {
+                    if (!data->vdb_file->isOpen()) {
+                        data->vdb_file->open(false);
+                    }
+                    if (hasChange(data->sliced_display_changes, VDBSlicedDisplayChangeSet::BOUNDING_BOX)) {
+                        p_bbox_position.reset(new MVertexBuffer(position_buffer_desc));
+                        p_bbox_indices.reset(new MIndexBuffer(MGeometry::kUnsignedInt32));
+                        setup_bounding_box();
+                    }
+                    selection_bounding_box->enable(true);
+                    m_sliced_display.enable(true);
+                    m_sliced_display.update(container, data->vdb_file.get(), data->bbox, data->sliced_display_data, data->sliced_display_changes);
                 }
             }
 
@@ -837,13 +901,17 @@ namespace MHWRender {
             tbb::parallel_sort(data->point_cloud_data.begin(), data->point_cloud_data.end(), sorting_function);
         } else if (sorting_mode == POINT_SORT_GPU_CPU) {
             if (cuda_enabled) {
+#ifdef USE_CUDA
                 sort_points(reinterpret_cast<PointData*>(data->point_cloud_data.data()), data->point_cloud_data.size(), &camera_pos.x);
+#endif
             } else {
                 tbb::parallel_sort(data->point_cloud_data.begin(), data->point_cloud_data.end(), sorting_function);
             }
         } else if (sorting_mode == POINT_SORT_GPU) {
             if (cuda_enabled) {
+#ifdef USE_CUDA
                 sort_points(reinterpret_cast<PointData*>(data->point_cloud_data.data()), data->point_cloud_data.size(), &camera_pos.x);
+#endif
             }
         }
 
@@ -875,6 +943,10 @@ namespace MHWRender {
     }
 
     void VDBSubSceneOverride::init_gpu() {
+#ifdef USE_CUDA
         cuda_enabled = cuda_available();
+#else
+        cuda_enabled = false;
+#endif
     }
 }
