@@ -6,15 +6,15 @@ option(BUILD_MTOA_EXTENSION "Build the MtoA extension." ON)
 option(BUILD_ARNOLD_SHADER "Build the Arnold shader." ON)
 option(BUILD_USD_TOOLS "Build the various USD tools." ON)
 option(USE_CUDA "Use CUDA." ON)
-option(INCLUDE_HEADERS_IN_BUILD "Include the headers next to the source files for IDEs that need this." OFF)
+option(INCLUDE_HEADERS_IN_BUILD "Include the headers next to the source files for IDEs that need this." ON)
 
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_definitions(-std=c++11)
+set(CMAKE_CXX_STANDARD 11)
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 else ()
-    add_definitions(-Wall -Wextra -fPIC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -fPIC")
 endif ()
 
 if (WIN32)
