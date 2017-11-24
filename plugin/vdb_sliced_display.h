@@ -4,7 +4,6 @@
 #include <maya/MPxCommand.h>
 #include <memory>
 
-
 enum class VDBSlicedDisplayChangeSet : uint32_t {
     NO_CHANGES = 0,
     SHADER_PARAM = 1,
@@ -23,25 +22,33 @@ enum class VDBSlicedDisplayChangeSet : uint32_t {
     ALL = 2 * LAST - 1,
     ALL_CHANNELS = DENSITY_CHANNEL | SCATTER_COLOR_CHANNEL |TRANSPARENT_CHANNEL | EMISSION_CHANNEL | TEMPERATURE_CHANNEL
 };
-inline VDBSlicedDisplayChangeSet& operator|=(VDBSlicedDisplayChangeSet& lhs, VDBSlicedDisplayChangeSet rhs)
+
+inline VDBSlicedDisplayChangeSet&
+operator|=(VDBSlicedDisplayChangeSet& lhs, VDBSlicedDisplayChangeSet rhs)
 {
     return lhs = VDBSlicedDisplayChangeSet(uint32_t(lhs) | uint32_t(rhs));
 }
-inline VDBSlicedDisplayChangeSet operator|(VDBSlicedDisplayChangeSet lhs, VDBSlicedDisplayChangeSet rhs)
+
+constexpr inline VDBSlicedDisplayChangeSet
+operator|(VDBSlicedDisplayChangeSet lhs, VDBSlicedDisplayChangeSet rhs)
 {
-    lhs |= rhs;
-    return lhs;
+    return VDBSlicedDisplayChangeSet(uint32_t(lhs) | uint32_t(rhs));
 }
-inline VDBSlicedDisplayChangeSet& operator&=(VDBSlicedDisplayChangeSet& lhs, VDBSlicedDisplayChangeSet rhs)
+
+inline VDBSlicedDisplayChangeSet&
+operator&=(VDBSlicedDisplayChangeSet& lhs, VDBSlicedDisplayChangeSet rhs)
 {
     return lhs = VDBSlicedDisplayChangeSet(uint32_t(lhs) & uint32_t(rhs));
 }
-inline VDBSlicedDisplayChangeSet operator&(VDBSlicedDisplayChangeSet lhs, VDBSlicedDisplayChangeSet rhs)
+
+constexpr inline VDBSlicedDisplayChangeSet
+operator&(VDBSlicedDisplayChangeSet lhs, VDBSlicedDisplayChangeSet rhs)
 {
-    lhs &= rhs;
-    return lhs;
+    return VDBSlicedDisplayChangeSet(uint32_t(lhs) & uint32_t(rhs));
 }
-inline bool hasChange(VDBSlicedDisplayChangeSet change_set, VDBSlicedDisplayChangeSet mask)
+
+constexpr inline bool
+hasChange(VDBSlicedDisplayChangeSet change_set, VDBSlicedDisplayChangeSet mask)
 {
     return (change_set & mask) != VDBSlicedDisplayChangeSet::NO_CHANGES;
 }
@@ -50,7 +57,11 @@ class VDBSlicedDisplayImpl;
 
 class VDBSlicedDisplay {
 public:
-    VDBSlicedDisplay(MHWRender::MPxSubSceneOverride& parent);
+    explicit VDBSlicedDisplay(MHWRender::MPxSubSceneOverride& parent);
+    VDBSlicedDisplay(const VDBSlicedDisplay&) = delete;
+    VDBSlicedDisplay(VDBSlicedDisplay&&) = delete;
+    VDBSlicedDisplay& operator=(const VDBSlicedDisplay&) = delete;
+    VDBSlicedDisplay& operator=(VDBSlicedDisplay&&) = delete;
     ~VDBSlicedDisplay();
     bool update(
         MHWRender::MSubSceneContainer& container,
@@ -65,14 +76,19 @@ private:
 };
 
 class VDBVolumeCacheCmd : public MPxCommand {
+private:
+    VDBVolumeCacheCmd() = default;
 public:
-    VDBVolumeCacheCmd() {}
-    ~VDBVolumeCacheCmd() {}
+    VDBVolumeCacheCmd(const VDBVolumeCacheCmd&) = delete;
+    VDBVolumeCacheCmd(VDBVolumeCacheCmd&&) = delete;
+    VDBVolumeCacheCmd& operator=(const VDBVolumeCacheCmd&) = delete;
+    VDBVolumeCacheCmd& operator=(VDBVolumeCacheCmd&&) = delete;
+    ~VDBVolumeCacheCmd() override = default;
 
     static const char* COMMAND_STRING;
 
     static void* creator() { return new VDBVolumeCacheCmd(); }
     static MSyntax create_syntax();
 
-    MStatus doIt(const MArgList& args);
+    MStatus doIt(const MArgList& args) override;
 };

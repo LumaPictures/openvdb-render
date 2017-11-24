@@ -7,7 +7,6 @@
 #include <maya/MRampAttribute.h>
 
 #include <maya/MFnTypedAttribute.h>
-#include <maya/MFnDependencyNode.h>
 
 VDBGradientParams::VDBGradientParams(const char* _gradient_name) : gradient_name(_gradient_name)
 {
@@ -235,16 +234,6 @@ MStatus VDBSamplerNode::initialize()
 MStatus VDBSamplerNode::compute(const MPlug&, MDataBlock&)
 {
     return MS::kUnknownParameter;
-}
-
-VDBSamplerNode::VDBSamplerNode()
-{
-
-}
-
-VDBSamplerNode::~VDBSamplerNode()
-{
-
 }
 
 void VDBSamplerNode::postConstructor()

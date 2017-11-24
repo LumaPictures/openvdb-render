@@ -383,9 +383,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
         self.create_gradient_params("simpleFire", node_name)
         self.endLayout()
 
-        self.endLayout()
-
-        self.beginLayout("Standard Volume shader", collapse=False)
+        self.beginLayout("Standard Volume shader", collapse=True)
 
         def AddRamp(ramp_name):
             pm.mel.eval('source AEaddRampControl.mel; AEaddRampControl("%s.%s")' % (node_name, ramp_name))
@@ -429,6 +427,7 @@ class AEvdb_visualizerTemplate(pm.uitypes.AETemplate, channelController):
 
         self.endLayout()
 
+        self.endLayout()
 
         self.endLayout()
 

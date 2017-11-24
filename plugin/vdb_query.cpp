@@ -68,16 +68,6 @@ namespace {
     }
 }
 
-VDBQueryCmd::VDBQueryCmd()
-{
-
-}
-
-VDBQueryCmd::~VDBQueryCmd()
-{
-
-}
-
 void* VDBQueryCmd::creator()
 {
     return new VDBQueryCmd();

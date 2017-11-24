@@ -37,14 +37,19 @@ struct VDBSimpleShaderParams {
 };
 
 class VDBSimpleShaderNode : public MPxNode {
+private:
+    VDBSimpleShaderNode() = default;
 public:
     static void* creator();
 
-    VDBSimpleShaderNode();
+    VDBSimpleShaderNode(const VDBSimpleShaderNode&) = delete;
+    VDBSimpleShaderNode(VDBSimpleShaderNode&&) = delete;
+    VDBSimpleShaderNode& operator=(const VDBSimpleShaderNode&) = delete;
+    VDBSimpleShaderNode& operator=(VDBSimpleShaderNode&&) = delete;
 
-    ~VDBSimpleShaderNode();
+    ~VDBSimpleShaderNode() override = default;
 
-    virtual MStatus compute(const MPlug& plug, MDataBlock& dataBlock);
+    MStatus compute(const MPlug& plug, MDataBlock& dataBlock) override;
 
     static MStatus initialize();
 

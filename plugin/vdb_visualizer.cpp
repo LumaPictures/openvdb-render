@@ -230,11 +230,6 @@ void VDBVisualizerData::clear(const MBoundingBox& bb)
     bbox = bb;
 }
 
-VDBVisualizerShape::VDBVisualizerShape()
-{
-
-}
-
 VDBVisualizerShape::~VDBVisualizerShape()
 {
     if (MGlobal::mayaState() == MGlobal::kInteractive) {
@@ -813,6 +808,7 @@ MStatus VDBVisualizerShape::initialize()
 
     s_shader_mode = eAttr.create("shaderMode", "shader_mode");
     eAttr.addField("Simple Shader", SHADER_MODE_SIMPLE);
+    eAttr.addField("Standard Volume", SHADER_MODE_STANDARD_VOLUME);
     eAttr.setDefault(SHADER_MODE_DEFAULT);
     addAttribute(s_shader_mode);
 
@@ -1016,15 +1012,6 @@ void VDBVisualizerShape::postConstructor()
         emission_ramp.addEntries(positions, colors, interps, &status);
         CHECK_MSTATUS(status);
     }
-}
-
-VDBVisualizerShapeUI::VDBVisualizerShapeUI()
-{
-
-}
-
-VDBVisualizerShapeUI::~VDBVisualizerShapeUI()
-{
 }
 
 void* VDBVisualizerShapeUI::creator()

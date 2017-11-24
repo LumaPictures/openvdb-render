@@ -13,9 +13,7 @@ public:
     {
     }
 
-    ~Gradient()
-    {
-    }
+    ~Gradient() override = default;
 
     inline void update(const VDBGradientParams& params, const MObject& tmo)
     {

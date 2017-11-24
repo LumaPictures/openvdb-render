@@ -2,11 +2,10 @@
 
 #include <maya/MGlobal.h>
 
-
 ProgressBar::ProgressBar(
         const MString& msg,
-        const uint32_t max_progress,
-        const bool is_interruptible)
+        uint32_t max_progress,
+        bool is_interruptible)
     : m_show_progress_bar(MGlobal::mayaState() == MGlobal::kInteractive)
     , m_is_interruptible(is_interruptible)
 {
@@ -24,7 +23,7 @@ ProgressBar::~ProgressBar()
     endProgress();
 }
 
-void ProgressBar::reset(const MString& msg, const uint32_t max_progress)
+void ProgressBar::reset(const MString& msg, uint32_t max_progress)
 {
     if (!m_show_progress_bar)
         return;
@@ -47,14 +46,6 @@ void ProgressBar::addProgress(uint32_t progress_to_add)
         tbb::mutex::scoped_lock lock(m_mutex);
         m_computation.setProgress(new_percents);
     }
-}
-
-void ProgressBar::setProgress(const int percent)
-{
-    if (!m_show_progress_bar)
-        return;
-
-    m_computation.setProgress(percent);
 }
 
 bool ProgressBar::isCancelled()

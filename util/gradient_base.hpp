@@ -314,10 +314,7 @@ public:
         m_channel_mode = CHANNEL_MODE_RAW;
     }
 
-    ~GradientBase()
-    {
-
-    }
+    virtual ~GradientBase() = default;
 
     inline Color evaluate(float v) const
     {

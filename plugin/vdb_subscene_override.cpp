@@ -183,9 +183,9 @@ namespace MHWRender {
 
     void VDBSubSceneOverrideData::clear()
     {
-        scattering_grid = 0;
-        attenuation_grid = 0;
-        emission_grid = 0;
+        scattering_grid = nullptr;
+        attenuation_grid = nullptr;
+        emission_grid = nullptr;
         vdb_file.reset();
     }
 
@@ -200,7 +200,8 @@ namespace MHWRender {
                 dg_node.setObject(dg_copy.node());
                 if (dg_node.isIntermediateObject()) {
                     return false;
-                } else if (!dg_node.findPlug("visibility").asBool()) {
+                }
+                if (!dg_node.findPlug("visibility").asBool()) {
                     return false;
                 }
             }
@@ -231,7 +232,7 @@ namespace MHWRender {
             camera_has_changed = true;
             camera_matrix = inc_camera_matrix;
         }
-        const bool matrix_changed = world_has_changed | camera_has_changed;
+        const bool matrix_changed = world_has_changed || camera_has_changed;
         // TODO: we can limit some of the comparisons to the display mode
         // ie, we don't need to compare certain things if we are using the bounding
         // box mode
@@ -239,7 +240,7 @@ namespace MHWRender {
         const bool visibility_changed = setup_parameter(visible, !inc_world_matrices.empty());
 
         if (data == nullptr || update_trigger == data->update_trigger) {
-            return matrix_changed | visibility_changed;
+            return matrix_changed || visibility_changed;
         }
 
         update_trigger = data->update_trigger;
@@ -272,7 +273,7 @@ namespace MHWRender {
 
         const bool display_mode_changed = setup_parameter(display_mode, data->display_mode);
         const bool bbox_changed = setup_parameter(bbox, data->bbox);
-        data_has_changed |= display_mode_changed | bbox_changed;
+        data_has_changed |= display_mode_changed || bbox_changed;
         data_has_changed |= setup_parameter(shader_mode, data->shader_mode);
         data_has_changed |= setup_parameter(scattering_color, data->scattering_color);
         data_has_changed |= setup_parameter(attenuation_color, data->attenuation_color);
@@ -352,7 +353,7 @@ namespace MHWRender {
             data_has_changed |= (sliced_display_changes != VDBSlicedDisplayChangeSet::NO_CHANGES);
         }
 
-        return data_has_changed | shader_has_changed | matrix_changed | visibility_changed;
+        return data_has_changed || shader_has_changed || matrix_changed || visibility_changed;
     }
 
     MString VDBSubSceneOverride::registrantId("VDBVisualizerSubSceneOverride");
@@ -372,9 +373,9 @@ namespace MHWRender {
         m_object = obj;
         MFnDependencyNode dnode(obj);
         p_vdb_visualizer = dynamic_cast<VDBVisualizerShape*>(dnode.userNode());
-        auto shmgr = get_shader_manager();
-        if (shmgr != nullptr) {
-            p_point_cloud_shader.reset(shmgr->getEffectsBufferShader(
+        auto shader_manager = get_shader_manager();
+        if (shader_manager != nullptr) {
+            p_point_cloud_shader.reset(shader_manager->getEffectsBufferShader(
                 point_cloud_technique, static_cast<unsigned int>(strlen(point_cloud_technique)), "Main", 0, 0, false,
                 pre_point_cloud_render, post_point_cloud_render));
 
@@ -384,7 +385,7 @@ namespace MHWRender {
                 MGlobal::displayError(MString("[vdb_subscene_override] Error compiling point cloud shader!"));
             }
 
-            p_green_wire_shader.reset(shmgr->getStockShader(
+            p_green_wire_shader.reset(shader_manager->getStockShader(
                 MHWRender::MShaderManager::k3dSolidShader, nullptr, nullptr));
             if (p_green_wire_shader) {
                 // Set the color on the shader instance using the parameter interface
@@ -392,7 +393,7 @@ namespace MHWRender {
                 p_green_wire_shader->setParameter("solidColor", color);
             }
 
-            p_red_wire_shader.reset(shmgr->getStockShader(
+            p_red_wire_shader.reset(shader_manager->getStockShader(
                 MHWRender::MShaderManager::k3dDashLineShader, nullptr, nullptr));
             if (p_red_wire_shader) {
                 // Set the color on the shader instance using the parameter interface
@@ -402,9 +403,9 @@ namespace MHWRender {
         }
     }
 
-    VDBSubSceneOverride::~VDBSubSceneOverride()
+    /*VDBSubSceneOverride::~VDBSubSceneOverride()
     {
-    }
+    }*/
 
     MHWRender::DrawAPI VDBSubSceneOverride::supportedDrawAPIs() const
     {
@@ -457,7 +458,7 @@ namespace MHWRender {
 
             MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
                 MHWRender::MShaderManager::k3dSolidShader, nullptr, nullptr);
-            if (shader) {
+            if (shader != nullptr) {
                 selection_bounding_box->setShader(shader);
             }
 
@@ -478,7 +479,7 @@ namespace MHWRender {
             if (p_point_cloud_shader == nullptr) {
                 MHWRender::MShaderInstance* shader = shader_manager->getStockShader(
                     MHWRender::MShaderManager::k3dCPVFatPointShader, nullptr, nullptr);
-                if (shader) {
+                if (shader != nullptr) {
                     point_cloud->setShader(shader);
                 }
             } else {
@@ -498,10 +499,10 @@ namespace MHWRender {
             selection_bounding_box->enable(false);
             m_sliced_display.enable(false);
             return;
-        } else {
-            point_cloud->enable(data->old_point_cloud_enabled);
-            bounding_box->enable(data->old_bounding_box_enabled);
         }
+
+        point_cloud->enable(data->old_point_cloud_enabled);
+        bounding_box->enable(data->old_bounding_box_enabled);
 
         auto setup_matrices = [&] () {
             // also because of sorting I'm only displaying the first one.
@@ -509,7 +510,7 @@ namespace MHWRender {
 
             static MMatrixArray matrix_arr;
             const auto matrix_count = data->world_matrices.size();
-            matrix_arr.setLength(matrix_count);
+            matrix_arr.setLength(static_cast<unsigned int>(matrix_count));
             for (auto i = decltype(matrix_count){0}; i < matrix_count; ++i) {
                 matrix_arr[i] = data->world_matrices[i];
             }
@@ -524,7 +525,7 @@ namespace MHWRender {
 
         if (data->data_has_changed) {
             auto setup_bounding_box = [this, &data, selection_bounding_box]() -> bool {
-                MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(this->p_bbox_position->acquire(8, true));
+                auto* bbox_vertices = reinterpret_cast<MFloatVector*>(this->p_bbox_position->acquire(8, true));
                 MFloatVector min = data->bbox.min();
                 MFloatVector max = data->bbox.max();
                 bool ret = true;
@@ -549,7 +550,7 @@ namespace MHWRender {
                 set_bbox_indices_triangles(1, p_selection_bbox_indices.get());
                 MHWRender::MVertexBufferArray vertex_buffers;
                 vertex_buffers.addBuffer("", p_bbox_position.get());
-                setGeometryForRenderItem(*selection_bounding_box, vertex_buffers, *p_selection_bbox_indices.get(), &data->bbox);
+                setGeometryForRenderItem(*selection_bounding_box, vertex_buffers, *p_selection_bbox_indices, &data->bbox);
 
                 return ret;
             };
@@ -584,7 +585,7 @@ namespace MHWRender {
                             data->vdb_file->open(false);
                         }
                         openvdb::GridPtrVecPtr grids = data->vdb_file->readAllGridMetadata();
-                        if (grids->size() == 0) {
+                        if (grids->empty()) {
                             throw std::exception();
                         }
                         std::vector<MFloatVector> vertices;
@@ -601,12 +602,12 @@ namespace MHWRender {
                             }
                         }
 
-                        const unsigned int vertex_count = static_cast<unsigned int>(vertices.size());
+                        const auto vertex_count = static_cast<unsigned int>(vertices.size());
 
                         if (vertex_count > 0) {
                             p_bbox_position.reset(new MVertexBuffer(position_buffer_desc));
                             p_bbox_indices.reset(new MIndexBuffer(MGeometry::kUnsignedInt32));
-                            MFloatVector* bbox_vertices = reinterpret_cast<MFloatVector*>(p_bbox_position->acquire(
+                            auto* bbox_vertices = reinterpret_cast<MFloatVector*>(p_bbox_position->acquire(
                                 vertex_count, true));
                             for (unsigned int i = 0; i < vertex_count; ++i) {
                                 bbox_vertices[i] = vertices[i];
@@ -626,7 +627,7 @@ namespace MHWRender {
                 }
 
                 vertex_buffers.addBuffer("", p_bbox_position.get());
-                setGeometryForRenderItem(*bounding_box, vertex_buffers, *p_bbox_indices.get(), &data->bbox);
+                setGeometryForRenderItem(*bounding_box, vertex_buffers, *p_bbox_indices, &data->bbox);
             } else {
                 data->old_bounding_box_enabled = false;
                 bounding_box->enable(false);
@@ -655,7 +656,7 @@ namespace MHWRender {
                         p_bbox_indices.reset(new MIndexBuffer(MGeometry::kUnsignedInt32));
                         setup_bounding_box();
                         vertex_buffers.addBuffer("", p_bbox_position.get());
-                        setGeometryForRenderItem(*bounding_box, vertex_buffers, *p_bbox_indices.get(), &data->bbox);
+                        setGeometryForRenderItem(*bounding_box, vertex_buffers, *p_bbox_indices, &data->bbox);
                         bounding_box->setShader(p_red_wire_shader.get());
                         return;
                     }
@@ -696,7 +697,7 @@ namespace MHWRender {
                     }
 
                     data->point_cloud_data.shrink_to_fit();
-                    const unsigned int vertex_count = static_cast<unsigned int>(data->point_cloud_data.size());
+                    const auto vertex_count = static_cast<unsigned int>(data->point_cloud_data.size());
 
                     delete iter;
 
@@ -713,8 +714,7 @@ namespace MHWRender {
                             data->scattering_grid->getName() != data->scattering_channel) {
                             data->scattering_grid = data->vdb_file->readGrid(data->scattering_channel);
                         }
-                    }
-                    catch (...) {
+                    } catch (...) {
                         data->scattering_grid = nullptr;
                     }
 
@@ -761,7 +761,7 @@ namespace MHWRender {
                         }
                     }
 
-                    RGBSampler* attenuation_sampler = 0;
+                    RGBSampler* attenuation_sampler = nullptr;
 
                     if (data->attenuation_grid->valueType() == "float") {
                         attenuation_sampler = new(m_attenuation_sampler.data()) FloatToRGBSampler(
@@ -880,7 +880,7 @@ namespace MHWRender {
 
         VDBSubSceneOverrideData* data = p_data.get();
 
-        if (data->point_cloud_data.size() == 0) {
+        if (data->point_cloud_data.empty()) {
             return;
         }
 
@@ -920,9 +920,9 @@ namespace MHWRender {
         p_position_buffer.reset(new MVertexBuffer(position_buffer_desc));
         p_color_buffer.reset(new MVertexBuffer(color_buffer_desc));
 
-        MFloatVector* vertices = reinterpret_cast<MFloatVector*>(p_position_buffer->acquire(
+        auto* vertices = reinterpret_cast<MFloatVector*>(p_position_buffer->acquire(
             vertex_count, true));
-        MColor* colors = reinterpret_cast<MColor*>(p_color_buffer->acquire(vertex_count, true));
+        auto* colors = reinterpret_cast<MColor*>(p_color_buffer->acquire(vertex_count, true));
 
         tbb::parallel_for(tbb::blocked_range<unsigned int>(0, vertex_count),
                           [&](const tbb::blocked_range<unsigned int>& r) {

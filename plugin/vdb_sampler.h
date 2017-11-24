@@ -4,7 +4,7 @@
 #include <maya/MString.h>
 
 struct VDBGradientParams {
-    VDBGradientParams(const char* _gradient_name);
+    explicit VDBGradientParams(const char* _gradient_name);
 
     void create_params();
 
@@ -41,18 +41,23 @@ struct VDBGradientParams {
 };
 
 class VDBSamplerNode : public MPxNode {
+private:
+    VDBSamplerNode() = default;
 public:
     static void* creator();
 
-    VDBSamplerNode();
+    VDBSamplerNode(const VDBSamplerNode&) = delete;
+    VDBSamplerNode(VDBSamplerNode&&) = delete;
+    VDBSamplerNode& operator=(const VDBSamplerNode&) = delete;
+    VDBSamplerNode& operator=(VDBSamplerNode&&) = delete;
 
-    ~VDBSamplerNode();
+    ~VDBSamplerNode() override = default;
 
-    virtual MStatus compute(const MPlug& plug, MDataBlock& dataBlock);
+    MStatus compute(const MPlug&, MDataBlock&) override;
 
     static MStatus initialize();
 
-    virtual void postConstructor();
+    void postConstructor() override;
 
     static const MTypeId s_type_id;
     static const MString s_type_name;

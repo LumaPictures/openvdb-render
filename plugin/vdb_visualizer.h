@@ -26,6 +26,7 @@ enum VDBDisplayMode {
 
 enum VDBShaderMode {
     SHADER_MODE_SIMPLE = 0,
+    SHADER_MODE_STANDARD_VOLUME,
     SHADER_MODE_DEFAULT = SHADER_MODE_SIMPLE
 };
 
@@ -54,9 +55,9 @@ enum class VDBEmissionMode {
 template <typename T>
 struct RampData {
     std::vector<T> samples;
-    float input_min;
-    float input_max;
-    RampData() : input_min(-1), input_max(-1) {}
+    float input_min = -1;
+    float input_max = -1;
+    RampData() = default;
 };
 
 struct VDBSlicedDisplayData {
@@ -161,6 +162,10 @@ struct VDBVisualizerData {
     VDBSlicedDisplayData sliced_display_data;
 
     VDBVisualizerData();
+    VDBVisualizerData(const VDBVisualizerData&) = delete;
+    VDBVisualizerData(VDBVisualizerData&&) = delete;
+    VDBVisualizerData& operator=(const VDBVisualizerData&) = delete;
+    VDBVisualizerData& operator=(VDBVisualizerData&&) = delete;
 
     ~VDBVisualizerData();
 
@@ -168,38 +173,48 @@ struct VDBVisualizerData {
 };
 
 class VDBVisualizerShapeUI : public MPxSurfaceShapeUI {
+private:
+    VDBVisualizerShapeUI() = default;
 public:
-    VDBVisualizerShapeUI();
+    VDBVisualizerShapeUI(const VDBVisualizerShapeUI&) = delete;
+    VDBVisualizerShapeUI(VDBVisualizerShapeUI&&) = delete;
+    VDBVisualizerShapeUI& operator=(const VDBVisualizerShapeUI&) = delete;
+    VDBVisualizerShapeUI& operator=(VDBVisualizerShapeUI&&) = delete;
 
-    ~VDBVisualizerShapeUI();
+    ~VDBVisualizerShapeUI() override = default;
 
     static void* creator();
 
-    virtual bool select(
+    bool select(
         MSelectInfo& selectInfo,
         MSelectionList& selectionList,
-        MPointArray& worldSpaceSelectPts) const;
+        MPointArray& worldSpaceSelectPts) const override;
 
-    virtual bool canDrawUV() const;
+    bool canDrawUV() const override;
 };
 
 class VDBVisualizerShape : public MPxSurfaceShape {
+private:
+    VDBVisualizerShape() = default;
 public:
-    VDBVisualizerShape();
+    VDBVisualizerShape(const VDBVisualizerShape&) = delete;
+    VDBVisualizerShape(VDBVisualizerShape&&) = delete;
+    VDBVisualizerShape& operator=(const VDBVisualizerShape&) = delete;
+    VDBVisualizerShape& operator=(VDBVisualizerShape&&) = delete;
 
-    ~VDBVisualizerShape();
+    ~VDBVisualizerShape() override;
 
     static void* creator();
 
-    virtual bool isBounded() const;
+    bool isBounded() const override;
 
-    virtual MBoundingBox boundingBox() const;
+    MBoundingBox boundingBox() const override;
 
-    MStatus compute(const MPlug& plug, MDataBlock& dataBlock);
+    MStatus compute(const MPlug& plug, MDataBlock& dataBlock) override;
 
     static MStatus initialize();
 
-    void postConstructor();
+    void postConstructor() override;
 
     static const MTypeId typeId;
     static const MString typeName;

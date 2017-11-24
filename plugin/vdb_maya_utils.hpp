@@ -5,7 +5,23 @@
 #include <maya/MBoundingBox.h>
 #include <maya/MMatrix.h>
 
-inline bool read_grid_transformed_bbox_wire(openvdb::GridBase::ConstPtr grid, std::array<MFloatVector, 8>& vertices)
+inline bool
+grid_is_empty(const openvdb::GridBase::ConstPtr& grid)
+{
+    const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
+    if (file_bbox_min.x() == std::numeric_limits<int>::max() ||
+        file_bbox_min.y() == std::numeric_limits<int>::max() ||
+        file_bbox_min.z() == std::numeric_limits<int>::max()) {
+        return true;
+    }
+    const openvdb::Vec3i file_bbox_max = grid->metaValue<openvdb::Vec3i>("file_bbox_max");
+    return file_bbox_max.x() == std::numeric_limits<int>::min() ||
+           file_bbox_max.y() == std::numeric_limits<int>::min() ||
+           file_bbox_max.z() == std::numeric_limits<int>::min();
+}
+
+inline bool
+read_grid_transformed_bbox_wire(const openvdb::GridBase::ConstPtr& grid, std::array<MFloatVector, 8>& vertices)
 {
     const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
     if (file_bbox_min.x() == std::numeric_limits<int>::max() ||
@@ -49,21 +65,8 @@ inline bool read_grid_transformed_bbox_wire(openvdb::GridBase::ConstPtr grid, st
     return true;
 }
 
-inline bool grid_is_empty(openvdb::GridBase::ConstPtr grid)
-{
-    const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
-    if (file_bbox_min.x() == std::numeric_limits<int>::max() ||
-        file_bbox_min.y() == std::numeric_limits<int>::max() ||
-        file_bbox_min.z() == std::numeric_limits<int>::max()) {
-            return true;
-    }
-    const openvdb::Vec3i file_bbox_max = grid->metaValue<openvdb::Vec3i>("file_bbox_max");
-    return file_bbox_max.x() == std::numeric_limits<int>::min() ||
-           file_bbox_max.y() == std::numeric_limits<int>::min() ||
-           file_bbox_max.z() == std::numeric_limits<int>::min();
-}
-
-inline bool read_transformed_bounding_box(openvdb::GridBase::ConstPtr grid, MBoundingBox& bbox)
+inline bool
+read_transformed_bounding_box(const openvdb::GridBase::ConstPtr& grid, MBoundingBox& bbox)
 {
     const openvdb::Vec3i file_bbox_min = grid->metaValue<openvdb::Vec3i>("file_bbox_min");
     if (file_bbox_min.x() == std::numeric_limits<int>::max() ||
@@ -110,8 +113,9 @@ inline bool read_transformed_bounding_box(openvdb::GridBase::ConstPtr grid, MBou
 constexpr float LINEAR_FROM_SRGB_EXPONENT = 2.2f;
 inline void LinearFromSRGB(float* data, size_t n)
 {
-    for (size_t i = 0; i < n; ++i)
+    for (size_t i = 0; i < n; ++i) {
         data[i] = std::pow(data[i], LINEAR_FROM_SRGB_EXPONENT);
+    }
 }
 
 inline MFloatVector LinearFromSRGB(const MFloatVector& color)
@@ -119,8 +123,8 @@ inline MFloatVector LinearFromSRGB(const MFloatVector& color)
     return { std::pow(color.x, LINEAR_FROM_SRGB_EXPONENT), std::pow(color.y, LINEAR_FROM_SRGB_EXPONENT), std::pow(color.z, LINEAR_FROM_SRGB_EXPONENT) };
 }
 
-constexpr float SRGB_FROM_LINEAR_EXPONENT = 1.0f / LINEAR_FROM_SRGB_EXPONENT;
 inline MFloatVector SRGBFromLinear(const MFloatVector& color)
 {
+    static constexpr float SRGB_FROM_LINEAR_EXPONENT = 1.0f / LINEAR_FROM_SRGB_EXPONENT;
     return { std::pow(color.x, SRGB_FROM_LINEAR_EXPONENT), std::pow(color.y, SRGB_FROM_LINEAR_EXPONENT), std::pow(color.z, SRGB_FROM_LINEAR_EXPONENT) };
 }

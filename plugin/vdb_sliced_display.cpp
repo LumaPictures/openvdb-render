@@ -1852,7 +1852,7 @@ private:
     VolumeParam m_temperature_channel;
 
     // Must be the same as Gradient resolution.
-    static const unsigned int RAMP_RESOLUTION;
+    static constexpr unsigned int RAMP_RESOLUTION = 128;
     FloatRampTexture m_density_ramp;
     RGBRampTexture m_scattering_ramp;
     RGBRampTexture m_emission_ramp;
@@ -1865,7 +1865,6 @@ private:
     bool m_enabled;
     bool m_selected;
 };
-const unsigned int VDBSlicedDisplayImpl::RAMP_RESOLUTION = 128;
 
 
 // === Sliced display mode implementation ===================================
@@ -1916,7 +1915,7 @@ void VDBSlicedDisplayImpl::enable(bool enable)
 
 namespace {
 
-    const char *SLICES_RENDER_ITEM_NAME = "vdb_volume_slices";
+    constexpr auto SLICES_RENDER_ITEM_NAME = "vdb_volume_slices";
 
 } // unnamed namespace
 
@@ -2218,7 +2217,7 @@ MStatus VDBVolumeCacheCmd::doIt(const MArgList& args)
     return MS::kSuccess;
 }
 
-const char *VDBVolumeCacheCmd::COMMAND_STRING = "vdb_visualizer_volume_cache";
+const char* VDBVolumeCacheCmd::COMMAND_STRING = "vdb_visualizer_volume_cache";
 
 VDBSlicedDisplay::VDBSlicedDisplay(MHWRender::MPxSubSceneOverride& parent)
     : m_impl(new VDBSlicedDisplayImpl(parent))

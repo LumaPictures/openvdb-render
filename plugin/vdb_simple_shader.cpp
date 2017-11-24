@@ -147,16 +147,6 @@ void* VDBSimpleShaderNode::creator()
     return new VDBSimpleShaderNode();
 }
 
-VDBSimpleShaderNode::VDBSimpleShaderNode()
-{
-
-}
-
-VDBSimpleShaderNode::~VDBSimpleShaderNode()
-{
-
-}
-
 MStatus VDBSimpleShaderNode::compute(const MPlug&, MDataBlock&)
 {
     return MS::kSuccess;

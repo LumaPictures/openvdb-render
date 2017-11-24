@@ -14,15 +14,19 @@ namespace MHWRender {
     public:
         static MPxSubSceneOverride* creator(const MObject& obj);
 
-        VDBSubSceneOverride(const MObject& obj);
+        explicit VDBSubSceneOverride(const MObject& obj);
+        VDBSubSceneOverride(const VDBSubSceneOverride&) = delete;
+        VDBSubSceneOverride(VDBSubSceneOverride&&) = delete;
+        VDBSubSceneOverride& operator=(const VDBSubSceneOverride&) = delete;
+        VDBSubSceneOverride& operator=(VDBSubSceneOverride&&) = delete;
 
-        virtual ~VDBSubSceneOverride();
+        ~VDBSubSceneOverride() override = default;
 
-        virtual MHWRender::DrawAPI supportedDrawAPIs() const;
+        MHWRender::DrawAPI supportedDrawAPIs() const override;
 
-        virtual void update(MSubSceneContainer& container, const MFrameContext& frameContext);
+        void update(MSubSceneContainer& container, const MFrameContext& frameContext) override;
 
-        virtual bool requiresUpdate(const MSubSceneContainer& container, const MFrameContext& frameContext) const;
+        bool requiresUpdate(const MSubSceneContainer& container, const MFrameContext& frameContext) const override;
 
         static MString registrantId;
 
@@ -69,7 +73,7 @@ namespace MHWRender {
 
         }
 
-        PointCloudVertex(const MFloatPoint& p) : position(p), color(0.0f, 0.0f, 0.0f, 0.0f) {
+        explicit PointCloudVertex(const MFloatPoint& p) : position(p), color(0.0f, 0.0f, 0.0f, 0.0f) {
 
         }
     };
@@ -124,6 +128,10 @@ namespace MHWRender {
         bool old_point_cloud_enabled;
 
         VDBSubSceneOverrideData();
+        VDBSubSceneOverrideData(VDBSubSceneOverrideData&) = delete;
+        VDBSubSceneOverrideData(VDBSubSceneOverrideData&&) = delete;
+        VDBSubSceneOverrideData& operator=(VDBSubSceneOverrideData&&) = delete;
+        VDBSubSceneOverrideData& operator=(VDBSubSceneOverrideData&) = delete;
         ~VDBSubSceneOverrideData();
         void clear();
         bool update(const VDBVisualizerData* data, const MObject& obj, const MFrameContext& frame_context);

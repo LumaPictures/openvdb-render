@@ -4,14 +4,19 @@
 #include <maya/MSyntax.h>
 
 class VDBQueryCmd : public MPxCommand {
+private:
+    VDBQueryCmd() = default;
 public:
-    VDBQueryCmd();
+    VDBQueryCmd(const VDBQueryCmd&) = delete;
+    VDBQueryCmd(VDBQueryCmd&&) = delete;
+    VDBQueryCmd& operator=(const VDBQueryCmd&) = delete;
+    VDBQueryCmd& operator=(VDBQueryCmd&&) = delete;
 
-    ~VDBQueryCmd();
+    ~VDBQueryCmd() override = default;
 
     static void* creator();
 
     static MSyntax create_syntax();
 
-    MStatus doIt(const MArgList& args);
+    MStatus doIt(const MArgList& args) override;
 };

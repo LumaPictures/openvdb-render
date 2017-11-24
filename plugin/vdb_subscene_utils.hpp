@@ -10,12 +10,9 @@ class RGBSampler {
     MFloatVector default_color;
 public:
     RGBSampler(const MFloatVector& dc = MFloatVector(1.0f, 1.0f, 1.0f)) : default_color(dc)
-    {
-    }
+    { }
 
-    virtual ~RGBSampler()
-    {
-    }
+    virtual ~RGBSampler() = default;
 
     virtual MFloatVector get_rgb(const openvdb::Vec3d&) const
     {
@@ -31,11 +28,9 @@ public:
     {
     }
 
-    ~FloatToRGBSampler()
-    {
-    }
+    ~FloatToRGBSampler() override = default;
 
-    MFloatVector get_rgb(const openvdb::Vec3d& wpos) const
+    MFloatVector get_rgb(const openvdb::Vec3d& wpos) const override
     {
         const float value = m_sampler.wsSample(wpos);
         return MFloatVector(value, value, value);
@@ -50,11 +45,9 @@ public:
     {
     }
 
-    ~Vec3SToRGBSampler()
-    {
-    }
+    ~Vec3SToRGBSampler() override = default;
 
-    MFloatVector get_rgb(const openvdb::Vec3d& wpos) const
+    MFloatVector get_rgb(const openvdb::Vec3d& wpos) const override
     {
         const openvdb::Vec3s value = m_sampler.wsSample(wpos);
         return MFloatVector(value.x(), value.y(), value.z());
@@ -69,9 +62,7 @@ public:
     {
     }
 
-    virtual ~FloatVoxelIterator()
-    {
-    }
+    virtual ~FloatVoxelIterator() = default;
 
     virtual bool is_valid() const
     {
@@ -107,26 +98,24 @@ public:
         m_active_voxel_count = grid->activeVoxelCount();
     }
 
-    ~FloatToFloatVoxelIterator()
-    {
-    }
+    ~FloatToFloatVoxelIterator() override = default;
 
-    bool is_valid() const
+    bool is_valid() const override
     {
         return iter.test();
     }
 
-    void get_next()
+    void get_next() override
     {
         ++iter;
     }
 
-    float get_value() const
+    float get_value() const override
     {
         return iter.getValue();
     }
 
-    openvdb::Coord get_coord() const
+    openvdb::Coord get_coord() const override
     {
         return iter.getCoord();
     }
@@ -141,27 +130,25 @@ public:
         m_active_voxel_count = grid->activeVoxelCount();
     }
 
-    ~Vec3SToFloatVoxelIterator()
-    {
-    }
+    ~Vec3SToFloatVoxelIterator() override = default;
 
-    bool is_valid() const
+    bool is_valid() const override
     {
         return iter.test();
     }
 
-    void get_next()
+    void get_next() override
     {
         ++iter;
     }
 
-    float get_value() const
+    float get_value() const override
     {
         openvdb::Vec3s value = iter.getValue();
         return (value.x() + value.y() + value.z()) / 3.0f;
     }
 
-    openvdb::Coord get_coord() const
+    openvdb::Coord get_coord() const override
     {
         return iter.getCoord();
     }
@@ -183,9 +170,8 @@ inline bool setup_parameter(T& target, const T& source)
     if (target != source) {
         target = source;
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 // this is not part of c++11
@@ -196,7 +182,7 @@ inline bool setup_parameter(T& target, const T& source)
 
 inline void set_bbox_indices(const unsigned int num_bboxes, MHWRender::MIndexBuffer* bbox_indices)
 {
-    unsigned int* indices = reinterpret_cast<unsigned int*>(bbox_indices->acquire(24 * num_bboxes, true));
+    auto* indices = reinterpret_cast<unsigned int*>(bbox_indices->acquire(24 * num_bboxes, true));
     unsigned int id = 0;
     for (unsigned int bbox = 0; bbox < num_bboxes; ++bbox) {
         const unsigned int bbox_base = bbox * 8;
@@ -232,7 +218,7 @@ inline void set_bbox_indices(const unsigned int num_bboxes, MHWRender::MIndexBuf
 
 inline void set_bbox_indices_triangles(const unsigned int num_bboxes, MHWRender::MIndexBuffer* bbox_indices)
 {
-    unsigned int* indices = reinterpret_cast<unsigned int*>(bbox_indices->acquire(36 * num_bboxes, true));
+    auto* indices = reinterpret_cast<unsigned int*>(bbox_indices->acquire(36 * num_bboxes, true));
     unsigned int id = 0;
     for (unsigned int bbox = 0; bbox < num_bboxes; ++bbox)
     {
