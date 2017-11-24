@@ -190,7 +190,7 @@ protected:
 
     inline Color convertToRGB(const Color& color) const
     {
-        const float hue6 = fmod(color_r(color), 1.0f) * 6.0f;
+        const float hue6 = fmodf(color_r(color), 1.0f) * 6.0f;
         float hue2 = hue6;
 
         if (hue6 > 4.0f) {

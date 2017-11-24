@@ -9,7 +9,7 @@
 #include "../util/gradient_base.hpp"
 
 template <typename arnold_t> inline
-arnold_t get_array_elem(AtArray* arr, unsigned int i) {
+arnold_t get_array_elem(AtArray* /*arr*/, unsigned int /*i*/) {
     return arnold_t();
 }
 

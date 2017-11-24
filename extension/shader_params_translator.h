@@ -17,17 +17,17 @@ convert_maya_to_arnold<AtRGB, MColor>(AtRGB& trg, const MColor& src) {
 };
 
 template <typename T> inline void
-set_arnold_arr_elem(AtArray* arr, unsigned int a_i, T st) {
+set_arnold_arr_elem(AtArray* /*arr*/, unsigned int /*a_i*/, const T& /*st*/) {
 
 }
 
 template <> inline void
-set_arnold_arr_elem<float>(AtArray* arr, unsigned int a_i, float st) {
+set_arnold_arr_elem<float>(AtArray* arr, unsigned int a_i, const float& st) {
     AiArraySetFlt(arr, a_i, st);
 }
 
 template <> inline void
-set_arnold_arr_elem<AtRGB>(AtArray* arr, unsigned int a_i, AtRGB st) {
+set_arnold_arr_elem<AtRGB>(AtArray* arr, unsigned int a_i, const AtRGB& st) {
     AiArraySetRGB(arr, a_i, st);
 }
 
@@ -35,7 +35,7 @@ template<typename translator_class>
 class VDBShaderParamsTranslator : public translator_class {
 public:
     template <typename value_array_t, typename arnold_type_t>
-    void export_gradient(AtNode* shader, const std::string& ramp_name, const std::string& type_name, int arnold_value_enum, MPlug plug) {
+    void export_gradient(AtNode* shader, const std::string& ramp_name, const std::string& type_name, uint8_t arnold_value_enum, MPlug plug) {
         MRampAttribute ramp_attr(plug);
         MIntArray indexes;
         MFloatArray positions;
@@ -67,8 +67,8 @@ public:
 
             AiNodeSetInt(shader, ramp_name.c_str(), indexes_size + 2);
             AiNodeSetInt(shader, float_ramp_interp_name.c_str(), 0);
-            AtArray* knots_arr = AiArrayAllocate(indexes_size + 2, 1, AI_TYPE_FLOAT);
-            AtArray* values_arr = AiArrayAllocate(indexes_size + 2, 1, arnold_value_enum);
+            auto* knots_arr = AiArrayAllocate(indexes_size + 2, 1, AI_TYPE_FLOAT);
+            auto* values_arr = AiArrayAllocate(indexes_size + 2, 1, arnold_value_enum);
             AiArraySetFlt(knots_arr, 0, 0.0f);
             AiArraySetFlt(knots_arr, indexes_size + 1, 1.0f);
             set_arnold_arr_elem(values_arr, 0, sorted_values.front().second);

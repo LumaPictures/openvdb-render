@@ -407,7 +407,7 @@ namespace {
 
         auto grid_ptr = openvdb::gridConstPtrCast<openvdb::FloatGrid>(grid_base_ptr);
         if (!grid_ptr) {
-			MGlobal::displayError(format("[openvdb] Grid '^1s' is not a FloatGrid.", grid_name.c_str()));
+            MGlobal::displayError(format("[openvdb] Grid '^1s' is not a FloatGrid.", grid_name.c_str()));
             return nullptr;
         }
 
@@ -776,12 +776,12 @@ void RampTextureBase::setResolution(unsigned int resolution)
         return;
     m_resolution = resolution;
 
-	auto renderer = MHWRender::MRenderer::theRenderer();
-	if (!renderer)
-		return;
-	auto tex_man = renderer->getTextureManager();
-	if (!tex_man)
-		return;
+    auto renderer = MHWRender::MRenderer::theRenderer();
+    if (!renderer)
+        return;
+    auto tex_man = renderer->getTextureManager();
+    if (!tex_man)
+        return;
 
     MHWRender::MTextureDescription ramp_desc;
     ramp_desc.fWidth = resolution;
@@ -1957,7 +1957,7 @@ void VDBSlicedDisplayImpl::updateSliceGeo(const MBoundingBox& bbox, int slice_co
 
     // - Vertices
     const auto vertex_count = slice_count * 4;
-    MFloatVector* positions = reinterpret_cast<MFloatVector*>(m_slices_renderable.position_buffer->acquire(vertex_count, true));
+    auto* positions = reinterpret_cast<MFloatVector*>(m_slices_renderable.position_buffer->acquire(vertex_count, true));
     for (int i = 0; i < slice_count; ++i) {
         const auto z = float(i);
         positions[4 * i + 0] = MFloatVector(0.0, 0.0, z);
@@ -1969,7 +1969,7 @@ void VDBSlicedDisplayImpl::updateSliceGeo(const MBoundingBox& bbox, int slice_co
 
     // - Indices
     const auto index_count = slice_count * 6;
-    unsigned int* indices = reinterpret_cast<unsigned int*>(m_slices_renderable.index_buffer->acquire(index_count, true));
+    auto* indices = reinterpret_cast<unsigned int*>(m_slices_renderable.index_buffer->acquire(index_count, true));
     for (int i = 0; i < slice_count; ++i) {
         indices[6 * i + 0] = 4 * i + 0;
         indices[6 * i + 1] = 4 * i + 1;

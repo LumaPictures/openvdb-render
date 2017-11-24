@@ -3,10 +3,7 @@
 #include <maya/MDrawRegistry.h>
 
 #include "vdb_subscene_override.h"
-#include "vdb_visualizer.h"
 #include "vdb_query.h"
-#include "vdb_sampler.h"
-#include "vdb_simple_shader.h"
 
 PLUGIN_EXPORT MStatus initializePlugin(MObject obj)
 {

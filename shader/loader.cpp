@@ -1,5 +1,4 @@
 #include <ai.h>
-#include <cstring>
 
 extern AtNodeMethods* openvdbSamplerMethods;
 extern AtNodeMethods* openvdbSimpleShaderMethods;
