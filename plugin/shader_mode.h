@@ -1,0 +1,7 @@
+#pragma once
+
+enum VDBShaderMode {
+    SHADER_MODE_SIMPLE = 0,
+    SHADER_MODE_STANDARD_VOLUME,
+    SHADER_MODE_DEFAULT = SHADER_MODE_SIMPLE
+};

@@ -13,6 +13,7 @@
 #include "vdb_sampler.h"
 #include "gradient.hpp"
 #include "vdb_simple_shader.h"
+#include "shader_mode.h"
 
 enum VDBDisplayMode {
     DISPLAY_AXIS_ALIGNED_BBOX = 0,
@@ -22,12 +23,6 @@ enum VDBDisplayMode {
     DISPLAY_SHADED,
     DISPLAY_MESH,
     DISPLAY_SLICED
-};
-
-enum VDBShaderMode {
-    SHADER_MODE_SIMPLE = 0,
-    SHADER_MODE_STANDARD_VOLUME,
-    SHADER_MODE_DEFAULT = SHADER_MODE_SIMPLE
 };
 
 enum VDBPointSort {
