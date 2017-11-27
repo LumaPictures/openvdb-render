@@ -136,9 +136,6 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     // some of the attributes that don't need to be animated has to be exported here
     if (usdTime.IsDefault()) {
         has_velocity_grids = export_grids(mUsdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
-#ifndef ARNOLD5
-        primSchema.CreateDsoAttr().Set(std::string("volume_openvdb"));
-#endif
     }
 
     if (usdTime.IsDefault() == getArgs().exportAnimation) {
@@ -159,12 +156,7 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     shapeApi.CreateAiMatteAttr().Set(volume_node.findPlug("matte").asBool(), usdTime);
     shapeApi.CreateAiReceiveShadowsAttr().Set(volume_node.findPlug("receiveShadows").asBool(), usdTime);
     shapeApi.CreateAiSelfShadowsAttr().Set(volume_node.findPlug("selfShadows").asBool(), usdTime);
-#ifdef ARNOLD5
     primSchema.CreateFilenameAttr().Set(SdfAssetPath(std::string(out_vdb_path.asChar())), usdTime);
-#else
-    get_attribute(mUsdPrim, nodeApi, filename_token, SdfValueTypeNames->String)
-        .Set(std::string(out_vdb_path.asChar()), usdTime);
-#endif
 
     if (has_velocity_grids) {
         get_attribute(mUsdPrim, nodeApi, velocity_scale_token, SdfValueTypeNames->Float)

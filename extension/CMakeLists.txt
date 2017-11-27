@@ -34,10 +34,6 @@ if ("${MTOA_ARCH_VERSION_NUM}" MATCHES "1")
         message(FATAL_ERROR "Unsupported MtoA 1.x version: ${MTOA_VERSION}")
     endif ()
 endif ()
-if (ARNOLD_VERSION_ARCH_NUM VERSION_GREATER "4")
-    target_compile_options(${PLUGIN_NAME} PRIVATE "-DARNOLD5")
-endif ()
-
 
 install(TARGETS ${PLUGIN_NAME}
         DESTINATION extensions)

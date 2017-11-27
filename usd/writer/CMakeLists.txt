@@ -17,9 +17,6 @@ add_library(${PLUGIN_NAME} SHARED ${SRC})
 set_target_properties(${PLUGIN_NAME} PROPERTIES PREFIX "")
 target_link_libraries(${PLUGIN_NAME} ${PARTIO_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MAYA_LIBS} tf gf sdf usd usdGeom ${USD_ARNOLD_LIBRARY} usdMaya)
 set_target_properties(${PLUGIN_NAME} PROPERTIES INSTALL_RPATH_USE_LINK_PATH ON)
-if (ARNOLD_VERSION_ARCH_NUM VERSION_GREATER "4")
-        target_compile_options(${PLUGIN_NAME} PRIVATE "-DARNOLD5")
-endif ()
 
 
 install(TARGETS ${PLUGIN_NAME}

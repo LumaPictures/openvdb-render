@@ -8,19 +8,11 @@ namespace {
         AtString channel;
         int interpolation;
 
-        void update(AtNode* node
-#ifndef ARNOLD5
-                    , AtParamValue* params
-#endif
-        )
+        void update(AtNode* node)
         {
             channel = AtString(AiNodeGetStr(node, "channel"));
             interpolation = AiNodeGetInt(node, "interpolation");
-            gradient.update("base", node
-#ifndef ARNOLD5
-                            , params
-#endif
-            );
+            gradient.update("base", node);
         }
 
         static void* operator new(size_t size)
@@ -45,23 +37,13 @@ node_parameters
     AiParameterVec("position_offset", 0, 0, 0);
     AiParameterEnum("interpolation", AI_VOLUME_INTERP_TRILINEAR, interpolations);
 
-#ifdef ARNOLD5
-    auto& _mds = nentry;
-#else
-    auto& _mds = mds;
-#endif
+    Gradient::parameters("base", params, nentry);
 
-    Gradient::parameters("base", params, _mds);
-
-    AiMetaDataSetBool(_mds, 0, "maya.hide", true);
-    AiMetaDataSetBool(_mds, "channel", "volume_sample", true);
+    AiMetaDataSetBool(nentry, 0, "maya.hide", true);
+    AiMetaDataSetBool(nentry, "channel", "volume_sample", true);
 }
 
-static void Initialize(AtNode* node
-#ifndef ARNOLD5
-                       , AtParamValue*
-#endif
-)
+static void Initialize(AtNode* node)
 //node_initialize
 {
     AiNodeSetLocalData(node, new ShaderData());
@@ -70,11 +52,7 @@ static void Initialize(AtNode* node
 node_update
 {
     auto* data = reinterpret_cast<ShaderData*>(AiNodeGetLocalData(node));
-    data->update(node
-#ifndef ARNOLD5
-        , params
-#endif
-    );
+    data->update(node);
 }
 
 node_finish
@@ -85,10 +63,5 @@ node_finish
 shader_evaluate
 {
     const auto* data = reinterpret_cast<const ShaderData*>(AiNodeGetLocalData(node));
-#ifdef ARNOLD5
-    sg->out.RGB()
-#else
-    sg->out.RGB
-#endif
-        = data->gradient.evaluate_arnold(sg, data->channel, data->interpolation);
+    sg->out.RGB() = data->gradient.evaluate_arnold(sg, data->channel, data->interpolation);
 }

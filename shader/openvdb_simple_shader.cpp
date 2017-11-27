@@ -37,11 +37,7 @@ namespace {
 
         }
 
-        void update(AtNode* node
-#ifndef ARNOLD5
-        , AtParamValue* params
-#endif
-        )
+        void update(AtNode* node)
         {
             smoke_channel = AtString(AiNodeGetStr(node, "smoke_channel"));
             opacity_channel = AtString(AiNodeGetStr(node, "opacity_channel"));
@@ -53,22 +49,9 @@ namespace {
 
             interpolation = AiNodeGetInt(node, "interpolation");
 
-            smoke_gradient.update("simpleSmoke", node
-#ifndef ARNOLD5
-                                  , params
-#endif
-            );
-            opacity_gradient.update("simpleOpacity", node
-#ifndef ARNOLD5
-                                    , params
-#endif
-            );
-            fire_gradient.update("simpleFire", node
-#ifndef ARNOLD5
-                                 , params
-#endif
-            );
-
+            smoke_gradient.update("simpleSmoke", node);
+            opacity_gradient.update("simpleOpacity", node);
+            fire_gradient.update("simpleFire", node);
         }
     };
 
@@ -112,28 +95,18 @@ node_parameters
     AiParameterEnum("interpolation", 0, interpolations);
     AiParameterBool("compensate_scaling", true);
 
-#ifdef ARNOLD5
-    auto& _mds = nentry;
-#else
-    auto& _mds = mds;
-#endif
+    Gradient::parameters("simpleSmoke", params, nentry);
+    Gradient::parameters("simpleOpacity", params, nentry);
+    Gradient::parameters("simpleFire", params, nentry);
 
-    Gradient::parameters("simpleSmoke", params, _mds);
-    Gradient::parameters("simpleOpacity", params, _mds);
-    Gradient::parameters("simpleFire", params, _mds);
-
-    AiMetaDataSetBool(_mds, nullptr, "maya.hide", true);
-    AiMetaDataSetBool(_mds, "smoke_channel", "volume_sample", true);
-    AiMetaDataSetBool(_mds, "opacity_channel", "volume_sample", true);
-    AiMetaDataSetBool(_mds, "fire_channel", "volume_sample", true);
+    AiMetaDataSetBool(nentry, nullptr, "maya.hide", true);
+    AiMetaDataSetBool(nentry, "smoke_channel", "volume_sample", true);
+    AiMetaDataSetBool(nentry, "opacity_channel", "volume_sample", true);
+    AiMetaDataSetBool(nentry, "fire_channel", "volume_sample", true);
 }
 
 //node_initialize
-static void Initialize(AtNode* node
-#ifndef ARNOLD5
-                       , AtParamValue*
-#endif
-)
+static void Initialize(AtNode* node)
 {
     AiNodeSetLocalData(node, new ShaderData());
 }
@@ -141,11 +114,7 @@ static void Initialize(AtNode* node
 node_update
 {
     auto* data = reinterpret_cast<ShaderData*>(AiNodeGetLocalData(node));
-    data->update(node
-#ifndef ARNOLD5
-                 , params
-#endif
-    );
+    data->update(node);
 }
 
 node_finish
@@ -160,11 +129,7 @@ shader_evaluate
     float scale_factor = 1.0f;
     if (data->compensate_scaling) {
         AtVector scaled_dir;
-#ifdef ARNOLD5
         scaled_dir = AiM4VectorByMatrixMult(sg->Minv, sg->Rd);
-#else
-        AiM4VectorByMatrixMult(&scaled_dir, sg->Minv, &sg->Rd);
-#endif
         scale_factor = AiV3Length(scaled_dir);
     }
 
@@ -175,12 +140,8 @@ shader_evaluate
         opacity *= (AiShaderEvalParamRGB(p_opacity) * AiShaderEvalParamRGB(p_opacity_shadow)) *
                    (AiShaderEvalParamFlt(p_opacity_intensity) * scale_factor);
         AiColorClipToZero(opacity);
-#ifdef ARNOLD5
         // TODO: test if this works properly!
         sg->out.CLOSURE() = AiClosureVolumeAbsorption(sg, opacity);
-#else
-        AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
-#endif
     } else {
         AtRGB opacity = AI_RGB_WHITE;
         if (data->sample_opacity) {
@@ -203,14 +164,8 @@ shader_evaluate
         AiColorClipToZero(smoke);
         AiColorClipToZero(opacity);
         AiColorClipToZero(fire);
-#ifdef ARNOLD5
         sg->out.CLOSURE() = AiClosureVolumeHenyeyGreenstein(
             sg, opacity,
             smoke, fire, AiShaderEvalParamFlt(p_anisotropy));
-#else
-        AiShaderGlobalsSetVolumeScattering(sg, smoke, AiShaderEvalParamFlt(p_anisotropy));
-        AiShaderGlobalsSetVolumeAttenuation(sg, opacity);
-        AiShaderGlobalsSetVolumeEmission(sg, fire);
-#endif
     }
 }

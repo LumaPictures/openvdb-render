@@ -23,6 +23,11 @@ namespace {
         }
     }
 
+    template <typename T> bool
+    is_in_vector(const std::vector<T>& elems, const T& elem) {
+        return std::find(elems.begin(), elems.end(), elem) != elems.end();
+    }
+
     inline
     void iterate_param_links(AtNode* node, const char* param_name, int param_type, link_function_t func) {
         constexpr static elems_name_t<3> rgb_elems = {"r", "g", "b"};
@@ -38,16 +43,9 @@ namespace {
                 iterate_param_elems<rgba_elems.size()>(node, param_name, rgba_elems, func);
                 break;
             case AI_TYPE_VECTOR:
-#ifndef ARNOLD5
-            case AI_TYPE_POINT:
-#endif
                 iterate_param_elems<vec_elems.size()>(node, param_name, vec_elems, func);
                 break;
-#ifdef ARNOLD5
             case AI_TYPE_VECTOR2:
-#else
-            case AI_TYPE_POINT2:
-#endif
                 iterate_param_elems<vec2_elems.size()>(node, param_name, vec2_elems, func);
                 break;
             default:
@@ -55,55 +53,74 @@ namespace {
         }
     }
 
-
-    inline
-    void check_arnold_nodes(AtNode* node, std::set<AtNode*>& checked_arnold_nodes, std::set<std::string>& out_grids)
+    inline void
+    check_arnold_nodes(AtNode* node, std::vector<AtNode*>& checked_arnold_nodes, std::set<std::string>& out_grids)
     {
         if (node == nullptr) {
             return;
         }
 
-        if (checked_arnold_nodes.find(node) != checked_arnold_nodes.end()) {
+        if (is_in_vector(checked_arnold_nodes, node)) {
             return;
         }
 
-        checked_arnold_nodes.insert(node);
+        checked_arnold_nodes.push_back(node);
 
         auto check_channel = [&node, &out_grids](const char* channel) {
-            auto ch = AiNodeGetStr(node, channel)
-#ifdef ARNOLD5
-            .c_str()
-#endif
-            ;
+            auto ch = AiNodeGetStr(node, channel).c_str();
             if (ch != nullptr && ch[0] != '\0') {
                 out_grids.insert(std::string(ch));
             }
         };
 
+        static const AtString standard_volume_str("standard_volume");
+        static const std::vector<const char*> standard_volume_channels = {
+            "density_channel",
+            "scatter_color_channel",
+            "transparent_channel",
+            "emission_channel",
+            "temperature_channel",
+        };
+
         const auto* node_entry = AiNodeGetNodeEntry(node);
         auto* param_iter = AiNodeEntryGetParamIterator(node_entry);
-        while (!AiParamIteratorFinished(param_iter)) {
-            const auto* param_entry = AiParamIteratorGetNext(param_iter);
-            auto param_name = AiParamGetName(param_entry);
-            const auto param_type = AiParamGetType(param_entry);
-            if (param_type == AI_TYPE_STRING) {
-                auto is_volume_sample = false;
-                constexpr auto volume_sample_name = "volume_sample";
-                if (AiMetaDataGetBool(node_entry, AiParamGetName(param_entry), volume_sample_name, &is_volume_sample) &&
-                is_volume_sample) {
-                    check_channel(AiParamGetName(param_entry));
-                }
-            } else {
+
+        if (AiNodeIs(node, standard_volume_str)) {
+            for (auto channel: standard_volume_channels) {
+                check_channel(channel);
+            }
+            while (!AiParamIteratorFinished(param_iter)) {
+                const auto* param_entry = AiParamIteratorGetNext(param_iter);
+                auto param_name = AiParamGetName(param_entry);
+                const auto param_type = AiParamGetType(param_entry);
                 iterate_param_links(node, param_name, param_type, [&checked_arnold_nodes, &out_grids] (AtNode* link) {
                     check_arnold_nodes(link, checked_arnold_nodes, out_grids);
                 });
+            }
+        } else {
+            while (!AiParamIteratorFinished(param_iter)) {
+                const auto* param_entry = AiParamIteratorGetNext(param_iter);
+                auto param_name = AiParamGetName(param_entry);
+                const auto param_type = AiParamGetType(param_entry);
+                if (param_type == AI_TYPE_STRING) {
+                    auto is_volume_sample = false;
+                    constexpr auto volume_sample_name = "volume_sample";
+                    if (AiMetaDataGetBool(node_entry, AiParamGetName(param_entry), volume_sample_name, &is_volume_sample) &&
+                        is_volume_sample) {
+                        check_channel(AiParamGetName(param_entry));
+                    }
+                } else {
+                    iterate_param_links(node, param_name, param_type, [&checked_arnold_nodes, &out_grids] (AtNode* link) {
+                        check_arnold_nodes(link, checked_arnold_nodes, out_grids);
+                    });
+                }
             }
         }
         AiParamIteratorDestroy(param_iter);
     }
 
-    inline
-    bool is_instance(const AtNode* node) {
+    inline bool
+    is_instance(const AtNode* node) {
         return node == nullptr ? false : (strcmp(
             AiNodeEntryGetName(AiNodeGetNodeEntry(node)), "ginstance" ) == 0);
     }
@@ -118,20 +135,14 @@ AtNode* OpenvdbTranslator::CreateArnoldNodes()
 {
     if (IsMasterInstance()) {
         AtNode* volume = AddArnoldNode("volume");
-#ifndef ARNOLD5
-        if (!FindMayaPlug("overrideShader").asBool()) {
-            AddArnoldNode("openvdb_simple_shader", "shader");
-        }
-#else
+        // TODO: !!!
         AddArnoldNode("standard_volume", "shader");
-#endif
         return volume;
-    } else {
-        return AddArnoldNode("ginstance");
     }
+    return AddArnoldNode("ginstance");
 }
 
-#ifndef ARNOLD5
+#if false
 void OpenvdbTranslator::Export(AtNode* volume)
 {
 #if MTOA12
@@ -312,25 +323,6 @@ void OpenvdbTranslator::Export(AtNode* volume)
     ProcessParameter(volume, "min", AI_TYPE_VECTOR, "bboxMin");
     ProcessParameter(volume, "max", AI_TYPE_VECTOR, "bboxMax");
 
-    // Grids.
-    std::set<std::string> out_grids;
-    const auto addIfNotEmpty = [&out_grids](const std::string& grid_name) {
-        if (!grid_name.empty())
-            out_grids.insert(grid_name);
-    };
-    addIfNotEmpty(FindMayaPlug("svDensityChannel").asString().asChar());
-    addIfNotEmpty(FindMayaPlug("svScatterColorChannel").asString().asChar());
-    addIfNotEmpty(FindMayaPlug("svTransparentChannel").asString().asChar());
-    addIfNotEmpty(FindMayaPlug("svEmissionChannel").asString().asChar());
-    addIfNotEmpty(FindMayaPlug("svTemperatureChannel").asString().asChar());
-    AtArray* grid_names = AiArrayAllocate(static_cast<unsigned int>(out_grids.size()), 1, AI_TYPE_STRING);
-    unsigned int id = 0;
-    for (const auto& out_grid : out_grids) {
-        AiArraySetStr(grid_names, id, out_grid.c_str());
-        ++id;
-    }
-    AiNodeSetArray(volume, "grids", grid_names);
-
     // Velocity grids.
     MString velocity_grids_string = FindMayaPlug("velocity_grids").asString();
     MStringArray velocity_grids;
@@ -360,35 +352,27 @@ void OpenvdbTranslator::Export(AtNode* volume)
     AiNodeSetByte(volume, "visibility", ComputeVisibility());
 
     AtByte visibility = 0;
-    if (FindMayaPlug("primaryVisibility").asBool()) {
-        visibility |= AI_RAY_CAMERA;
-    }
-    if (FindMayaPlug("castsShadows").asBool()) {
-        visibility |= AI_RAY_SHADOW;
-    }
-    if (FindMayaPlug("visibleInDiffuseTransmissions").asBool()) {
-        visibility |= AI_RAY_DIFFUSE_TRANSMIT;
-    }
-    if (FindMayaPlug("visibleInSpecularTransmissions").asBool()) {
-        visibility |= AI_RAY_SPECULAR_TRANSMIT;
-    }
-    if (FindMayaPlug("visibleInVolumes").asBool()) {
-        visibility |= AI_RAY_VOLUME;
-    }
-    if (FindMayaPlug("visibleInDiffuseReflections").asBool()) {
-        visibility |= AI_RAY_DIFFUSE_REFLECT;
-    }
-    if (FindMayaPlug("visibleInSpecularReflections").asBool()) {
-        visibility |= AI_RAY_SPECULAR_REFLECT;
-    }
-    if (FindMayaPlug("visibleInSubsurface").asBool()) {
-        visibility |= AI_RAY_SUBSURFACE;
+    static const std::vector<std::pair<const char*, uint8_t>> ray_types {
+        {"primaryVisibility", AI_RAY_CAMERA},
+        {"castsShadows", AI_RAY_SHADOW},
+        {"visibleInDiffuseTransmissions", AI_RAY_DIFFUSE_TRANSMIT},
+        {"visibleInSpecularTransmissions", AI_RAY_SPECULAR_TRANSMIT},
+        {"visibleInVolumes", AI_RAY_VOLUME},
+        {"visibleInDiffuseReflections", AI_RAY_DIFFUSE_REFLECT},
+        {"visibleInSpecularReflections", AI_RAY_SPECULAR_REFLECT},
+        {"visibleInSubsurface", AI_RAY_SUBSURFACE},
+    };
+    for (const auto& it: ray_types) {
+        const auto plug = FindMayaPlug(it.first);
+        if (!plug.isNull() && plug.asBool()) {
+            visibility = visibility | it.second;
+        }
     }
     AiNodeSetByte(volume, "visibility", visibility);
     AiNodeSetBool(volume, "self_shadows", FindMayaPlug("selfShadows").asBool());
 
     // Export standard volume shader.
-    AtNode* shader = GetArnoldNode("shader");
+    auto* shader = GetArnoldNode("shader");
     AiNodeSetPtr(volume, "shader", shader);
 
     ProcessParameter(shader, "density", AI_TYPE_FLOAT, "svDensity");
@@ -413,17 +397,36 @@ void OpenvdbTranslator::Export(AtNode* volume)
     ProcessParameter(shader, "blackbody_intensity", AI_TYPE_FLOAT, "svBlackbodyIntensity");
 
     ProcessParameter(shader, "interpolation", AI_TYPE_INT, "interpolation");
+
+    std::set<std::string> out_grids;
+    std::vector<AtNode*> checked_arnold_nodes;
+
+    check_arnold_nodes(shader, checked_arnold_nodes, out_grids);
+
+    MString additional_grids_string = FindMayaPlug("additional_channel_export").asString();
+    MStringArray additional_grids;
+    additional_grids_string.split(' ', additional_grids);
+    const unsigned int additional_grids_count = additional_grids.length();
+    for (unsigned int i = 0; i < additional_grids_count; ++i) {
+        const MString additional_grid = additional_grids[i];
+        if (additional_grid.length() > 0) {
+            out_grids.insert(additional_grid.asChar());
+        }
+    }
+
+    auto* grid_names = AiArrayAllocate(static_cast<unsigned int>(out_grids.size()), 1, AI_TYPE_STRING);
+
+    unsigned int id = 0;
+    for (const auto& out_grid : out_grids) {
+        AiArraySetStr(grid_names, id, out_grid.c_str());
+        ++id;
+    }
+
+    AiNodeSetArray(volume, "grids", grid_names);
 }
 #endif
 
-#ifdef MTOA12
-void OpenvdbTranslator::ExportMotion(AtNode* volume, unsigned int step)
-{
-    ExportMatrix(volume, step);
-}
-#else
 void OpenvdbTranslator::ExportMotion(AtNode* volume)
 {
     ExportMatrix(volume);
 }
-#endif
