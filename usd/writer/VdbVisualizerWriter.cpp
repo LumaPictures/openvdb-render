@@ -110,6 +110,9 @@ VdbVisualizerWriter::VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& u
 }
 
 VdbVisualizerWriter::~VdbVisualizerWriter() {
+}
+
+void VdbVisualizerWriter::postExport() {
     UsdAiVolume primSchema(mUsdPrim);
     UsdAiNodeAPI nodeApi(primSchema);
     UsdAiShapeAPI shapeApi(primSchema);

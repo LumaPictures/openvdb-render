@@ -11,6 +11,7 @@ public:
     VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
     virtual ~VdbVisualizerWriter();
 
+    virtual void postExport() override;
     virtual void write(const UsdTimeCode& usdTime) override;
 private:
     bool has_velocity_grids;
