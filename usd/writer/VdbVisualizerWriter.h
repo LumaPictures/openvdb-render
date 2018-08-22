@@ -2,17 +2,17 @@
 #define _openvdb_VdbVisualizerWriter_h_
 
 #include "pxr/pxr.h"
-#include "usdMaya/MayaTransformWriter.h"
+#include "usdMaya/transformWriter.h"
 
 PXR_NAMESPACE_OPEN_SCOPE
 
-class VdbVisualizerWriter : public MayaTransformWriter {
+class VdbVisualizerWriter : public UsdMayaTransformWriter {
 public:
-    VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx);
+    VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& uPath, UsdMayaWriteJobContext& jobCtx);
     virtual ~VdbVisualizerWriter();
 
-    virtual void postExport() override;
-    virtual void write(const UsdTimeCode& usdTime) override;
+    virtual void PostExport() override;
+    virtual void Write(const UsdTimeCode& usdTime) override;
 private:
     bool has_velocity_grids;
 };

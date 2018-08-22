@@ -100,20 +100,20 @@ namespace {
     }
 }
 
-VdbVisualizerWriter::VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& uPath, bool instanceSource, usdWriteJobCtx& jobCtx) :
-    MayaTransformWriter(iDag, uPath, instanceSource, jobCtx), has_velocity_grids(false) {
+VdbVisualizerWriter::VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& uPath, UsdMayaWriteJobContext& jobCtx) :
+    UsdMayaTransformWriter(iDag, uPath, jobCtx), has_velocity_grids(false) {
     UsdAiVolume primSchema =
-        UsdAiVolume::Define(getUsdStage(), getUsdPath());
+        UsdAiVolume::Define(GetUsdStage(), GetUsdPath());
     TF_AXIOM(primSchema);
-    mUsdPrim = primSchema.GetPrim();
-    TF_AXIOM(mUsdPrim);
+    _usdPrim = primSchema.GetPrim();
+    TF_AXIOM(_usdPrim);
 }
 
 VdbVisualizerWriter::~VdbVisualizerWriter() {
 }
 
-void VdbVisualizerWriter::postExport() {
-    UsdAiVolume primSchema(mUsdPrim);
+void VdbVisualizerWriter::PostExport() {
+    UsdAiVolume primSchema(_usdPrim);
     UsdAiNodeAPI nodeApi(primSchema);
     UsdAiShapeAPI shapeApi(primSchema);
     CleanupAttributeKeys(primSchema.GetStepSizeAttr());
@@ -128,20 +128,20 @@ void VdbVisualizerWriter::postExport() {
     CleanupAttributeKeys(nodeApi.GetUserAttribute(bounds_slack_token));
 }
 
-void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
-    UsdAiVolume primSchema(mUsdPrim);
+void VdbVisualizerWriter::Write(const UsdTimeCode& usdTime) {
+    UsdAiVolume primSchema(_usdPrim);
     UsdAiNodeAPI nodeApi(primSchema);
     UsdAiShapeAPI shapeApi(primSchema);
-    writeTransformAttrs(usdTime, primSchema);
+    UsdMayaTransformWriter::Write(usdTime);
 
-    const MFnDependencyNode volume_node(getDagPath().node());
+    const MFnDependencyNode volume_node(GetDagPath().node());
 
     // some of the attributes that don't need to be animated has to be exported here
     if (usdTime.IsDefault()) {
-        has_velocity_grids = export_grids(mUsdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
+        has_velocity_grids = export_grids(_usdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
     }
 
-    if (usdTime.IsDefault() != getArgs().timeInterval.IsEmpty()) {
+    if (usdTime.IsDefault() != _GetExportArgs().timeInterval.IsEmpty()) {
         return;
     }
 
@@ -162,17 +162,17 @@ void VdbVisualizerWriter::write(const UsdTimeCode& usdTime) {
     primSchema.CreateFilenameAttr().Set(SdfAssetPath(std::string(out_vdb_path.asChar())), usdTime);
 
     if (has_velocity_grids) {
-        get_attribute(mUsdPrim, nodeApi, velocity_scale_token, SdfValueTypeNames->Float)
+        get_attribute(_usdPrim, nodeApi, velocity_scale_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityScale").asFloat(), usdTime);
-        get_attribute(mUsdPrim, nodeApi, velocity_fps_token, SdfValueTypeNames->Float)
+        get_attribute(_usdPrim, nodeApi, velocity_fps_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityFps").asFloat(), usdTime);
-        get_attribute(mUsdPrim, nodeApi, velocity_shutter_start_token, SdfValueTypeNames->Float)
+        get_attribute(_usdPrim, nodeApi, velocity_shutter_start_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityShutterStart").asFloat(), usdTime);
-        get_attribute(mUsdPrim, nodeApi, velocity_shutter_end_token, SdfValueTypeNames->Float)
+        get_attribute(_usdPrim, nodeApi, velocity_shutter_end_token, SdfValueTypeNames->Float)
             .Set(volume_node.findPlug("velocityShutterEnd").asFloat(), usdTime);
     }
 
-    get_attribute(mUsdPrim, nodeApi, bounds_slack_token, SdfValueTypeNames->Float)
+    get_attribute(_usdPrim, nodeApi, bounds_slack_token, SdfValueTypeNames->Float)
         .Set(volume_node.findPlug("boundsSlack").asFloat());
 }
 

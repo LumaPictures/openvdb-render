@@ -5,12 +5,12 @@
 
 PXR_NAMESPACE_USING_DIRECTIVE
 
-TF_REGISTRY_FUNCTION_WITH_TAG(PxrUsdMayaPrimWriterRegistry, partioVisualizerWriter) {
-    PxrUsdMayaPrimWriterRegistry::Register("vdb_visualizer",
+TF_REGISTRY_FUNCTION_WITH_TAG(UsdMayaPrimWriterRegistry, partioVisualizerWriter) {
+    UsdMayaPrimWriterRegistry::Register("vdb_visualizer",
                  [](const MDagPath& iDag,
-                    const SdfPath& uPath, bool instanceSource,
-                    usdWriteJobCtx& jobCtx) -> MayaPrimWriterPtr { return std::make_shared<VdbVisualizerWriter>(
-                    iDag, uPath, instanceSource, jobCtx); });
+                    const SdfPath& uPath,
+                    UsdMayaWriteJobContext& jobCtx) -> UsdMayaPrimWriterSharedPtr { return std::make_shared<VdbVisualizerWriter>(
+                    iDag, uPath, jobCtx); });
 }
 
 MStatus initializePlugin(MObject /*obj*/)
