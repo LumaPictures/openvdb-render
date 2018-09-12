@@ -141,7 +141,7 @@ void VdbVisualizerWriter::Write(const UsdTimeCode& usdTime) {
         has_velocity_grids = export_grids(_usdPrim, nodeApi, volume_node, "velocity_grids", velocity_grids_token);
     }
 
-    if (usdTime.IsDefault() != _GetExportArgs().timeInterval.IsEmpty()) {
+    if (usdTime.IsDefault() != _GetExportArgs().timeSamples.empty()) {
         return;
     }
 
