@@ -201,7 +201,7 @@ namespace MHWRender {
                 if (dg_node.isIntermediateObject()) {
                     return false;
                 }
-                if (!dg_node.findPlug("visibility").asBool()) {
+                if (!dg_node.findPlug("visibility", true).asBool()) {
                     return false;
                 }
             }
@@ -468,9 +468,8 @@ namespace MHWRender {
         MHWRender::MRenderItem* point_cloud = container.find("point_cloud");
         if (point_cloud == nullptr) {
             point_cloud = MHWRender::MRenderItem::Create("point_cloud",
-                                                         MHWRender::MGeometry::kPoints,
-                                                         MHWRender::MGeometry::kAll,
-                                                         false);
+                                                         MHWRender::MRenderItem::MaterialSceneItem,
+                                                         MHWRender::MGeometry::kPoints);
             point_cloud->enable(false);
             point_cloud->setDrawMode(MGeometry::kAll);
             point_cloud->depthPriority(MRenderItem::sActivePointDepthPriority);
