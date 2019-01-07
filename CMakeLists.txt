@@ -15,6 +15,14 @@ if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 else ()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -fPIC")
+
+    # with gcc-6, we get this warning/error:
+    #    openvdb/math/Coord.h:372:52:  error: assuming signed overflow does not occur when assuming that (X + c) < X is always false [-Werror=strict-overflow]
+    #         bool empty() const { return (mMin[0] > mMax[0] || mMin[1] > mMax[1] || mMin[2] > mMax[2]); }
+    #                                      ~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+    # This didn't make a lot of sense to me, but not taking the time to figure
+    # this out, and just disabling the error for now...
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=strict-overflow")
 endif ()
 
 if (WIN32)

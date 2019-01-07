@@ -574,10 +574,16 @@ void VolumeCache::setMemoryLimitBytes(size_t mem_limit_bytes)
 }
 
 namespace {
+
+
+#ifndef NDEBUG
+    // This is only used in an assert, and will warn / error if not guarded
     size_t GetLSB(size_t val)
     {
         return val & -val;
     }
+#endif // NDEBUG
+
     size_t RoundUpToAlign(size_t val, size_t alignment)
     {
         // Require power of 2 alignment.
