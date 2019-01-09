@@ -8,7 +8,7 @@ PXR_NAMESPACE_OPEN_SCOPE
 
 class VdbVisualizerWriter : public UsdMayaTransformWriter {
 public:
-    VdbVisualizerWriter(const MDagPath & iDag, const SdfPath& uPath, UsdMayaWriteJobContext& jobCtx);
+    VdbVisualizerWriter(const MFnDependencyNode& depNodeFn, const SdfPath& uPath, UsdMayaWriteJobContext& jobCtx);
     virtual ~VdbVisualizerWriter();
 
     virtual void PostExport() override;
