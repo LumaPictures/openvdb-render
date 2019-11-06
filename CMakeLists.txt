@@ -60,5 +60,8 @@ endif ()
 install(FILES README.md
         DESTINATION docs/)
 
+install(FILES LICENSE
+        DESTINATION .)
+
 install(DIRECTORY katana
         DESTINATION .)
