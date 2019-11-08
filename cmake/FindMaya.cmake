@@ -90,8 +90,8 @@ endmacro(MAYA_SET_PLUGIN_PROPERTIES)
 
 
 #SET(MAYA_FOUND FALSE)
-set(_maya_TEST_VERSIONS)
-set(_maya_KNOWN_VERSIONS "2008" "2009" "2010" "2011" "2012" "2013" "2014" "2015" "2016" "2017" "2018")
+set(_maya_TEST_VERSIONS "2018")
+set(_maya_KNOWN_VERSIONS "2016" "2017" "2018")
 
 if(APPLE)
     set(MAYA_PLUGIN_SUFFIX ".bundle")
@@ -229,7 +229,7 @@ FIND_PATH(MAYA_DEVKIT_INC_DIR GL/glext.h
     ${MAYA_LOCATION}
     $ENV{DEVKIT_LOCATION}
   PATH_SUFFIXES
-	devkit/plug-ins/   # linux
+	devkit/plug-ins   # linux
 	../../devkit/plug-ins   # osx
   DOC "Maya's devkit headers path"
 )

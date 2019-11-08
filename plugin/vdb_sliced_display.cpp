@@ -124,13 +124,13 @@ namespace std {
             return res;
         }
     };
+}
 
-    bool operator==(const VDBVolumeSpec& lhs, const VDBVolumeSpec& rhs)
-    {
-        return lhs.vdb_file_name == rhs.vdb_file_name &&
-               lhs.vdb_grid_name == rhs.vdb_grid_name &&
-               lhs.texture_size == rhs.texture_size;
-    }
+bool operator==(const VDBVolumeSpec& lhs, const VDBVolumeSpec& rhs)
+{
+    return lhs.vdb_file_name == rhs.vdb_file_name &&
+           lhs.vdb_grid_name == rhs.vdb_grid_name &&
+           lhs.texture_size == rhs.texture_size;
 }
 
 // === SamplerState ========================================================
@@ -1882,7 +1882,6 @@ private:
     SamplerStatePtr m_volume_sampler_state;
 
     bool m_enabled;
-    bool m_selected;
 };
 
 
@@ -1893,7 +1892,7 @@ VDBSlicedDisplayImpl::VDBSlicedDisplayImpl(MHWRender::MPxSubSceneOverride& paren
     , m_density_channel("density"), m_scattering_channel("scattering"), m_emission_channel("emission"), m_transparency_channel("transparency"), m_temperature_channel("temperature")
     , m_density_ramp(RAMP_RESOLUTION), m_scattering_ramp(RAMP_RESOLUTION), m_emission_ramp(RAMP_RESOLUTION)
     , m_volume_sampler_state(createSamplerState(MHWRender::MSamplerState::kMinMagMipLinear, MHWRender::MSamplerState::kTexBorder))
-    , m_enabled(false), m_selected(false)
+    , m_enabled(false)
 {
     if (!m_volume_shader)
         return;
