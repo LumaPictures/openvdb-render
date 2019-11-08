@@ -12,7 +12,9 @@ if (USE_CUDA)
     find_package(CUDA)
 endif ()
 find_package(Maya)
-find_package(Boost COMPONENTS regex)
+find_package(Boost COMPONENTS regex iostreams)
+find_package(TBB REQUIRED)
+find_package(IlmBase REQUIRED)
 
 if (NOT ILMBASE_ROOT)
     set(ILMBASE_ROOT $ENV{ILMBASE_ROOT})
@@ -24,7 +26,8 @@ find_path(OPENVDB_INCLUDE
 include_directories(${LUMA_NODE_ID_INCLUDE})
 include_directories(${OPENVDB_INCLUDE})
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(SYSTEM ${ILMBASE_ROOT}/include) #register is deprecated with c++11
+include_directories(SYSTEM ${TBB_INCLUDE_DIRS})
+include_directories(SYSTEM ${IlmBase_INCLUDE_DIRS}) #register is deprecated with c++11
 
 include_directories(${MAYA_INCLUDE_DIRS})
 link_directories(${MAYA_LIBRARY_DIR})
@@ -64,7 +67,7 @@ if (WIN32)
     set_target_properties(${PLUGIN_NAME} PROPERTIES SUFFIX ".mll")
 endif ()
 
-target_link_libraries(${PLUGIN_NAME} ${OPENGL_gl_LIBRARY} ${MAYA_LIBS} ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES})
+target_link_libraries(${PLUGIN_NAME} ${OPENGL_gl_LIBRARY} ${TBB_LIBRARIES} ${IlmBase_LIBRARIES} ${MAYA_LIBS} ${OPENVDB_STATIC_LIBRARY} ${Boost_LIBRARIES} )
 if (USE_CUDA)
     target_link_libraries(${PLUGIN_NAME} ${CUDA_STATIC_LIBRARIES})
 endif ()
